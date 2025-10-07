@@ -31,6 +31,5 @@
     ```
 
 3.  애플리케이션이 `http://localhost:8080` 에서 정상적으로 실행되었는지 확인합니다.
-    * **Swagger UI**: `http://localhost:8080/swagger-ui.html`
     * **Grafana**: `http://localhost:3001`
     * **Prometheus**: `http://localhost:9090`
