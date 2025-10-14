@@ -18,6 +18,9 @@ public class SwaggerConfig {
     @Value("${swagger.local.server.url}")
     private String localServerUrl;
 
+    @Value("${swagger.dev.server.url}")
+    private String devServerUrl;
+
     @Bean
     public OpenAPI openAPI() {
         Info info = new Info()
@@ -25,22 +28,29 @@ public class SwaggerConfig {
                 .version("v1.0.0")
                 .description("모각작 프로젝트의 API 명세서입니다.");
 
-        Server localServer = new Server().url(localServerUrl).description("Local server");
+        Server localServer = new Server()
+                .url(localServerUrl)
+                .description("Local server");
 
-//        String jwtSchemeName = "jwtAuth";
-//        SecurityRequirement securityRequirement = new SecurityRequirement().addList(jwtSchemeName);
-//
-//        Components components = new Components()
-//                .addSecuritySchemes(jwtSchemeName, new SecurityScheme()
-//                        .name(jwtSchemeName)
-//                        .type(SecurityScheme.Type.HTTP)
-//                        .scheme("bearer")
-//                        .bearerFormat("JWT"));
+        Server devServer = new Server()
+                .url(devServerUrl)
+                .description("Dev server (NCP)");
+
+        String jwtSchemeName = "Bearer Authentication";
+        SecurityRequirement securityRequirement = new SecurityRequirement()
+                .addList(jwtSchemeName);
+
+        Components components = new Components()
+                .addSecuritySchemes(jwtSchemeName, new SecurityScheme()
+                        .name(jwtSchemeName)
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT"));
 
         return new OpenAPI()
-//                .components(components)
-//                .addSecurityItem(securityRequirement)
+                .components(components)
+                .addSecurityItem(securityRequirement)
                 .info(info)
-                .servers(List.of(localServer));
+                .servers(List.of(localServer, devServer));
     }
 }
