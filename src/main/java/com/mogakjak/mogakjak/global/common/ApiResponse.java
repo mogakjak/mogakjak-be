@@ -33,4 +33,8 @@ public class ApiResponse<T> {
     public static ApiResponse<Void> error(StatusCode statusCode) {
         return new ApiResponse<>(statusCode.getHttpStatus().value(), statusCode.getMessage());
     }
+
+    public static ApiResponse<Void> error(int statusCode, String message) {
+        return new ApiResponse<>(statusCode, message);
+    }
 }
