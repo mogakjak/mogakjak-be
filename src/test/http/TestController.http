@@ -5,4 +5,3 @@ Content-Type: application/json
 ### GET request to example server
 GET localhost:8080/api/test/failure
 Content-Type: application/json
-
