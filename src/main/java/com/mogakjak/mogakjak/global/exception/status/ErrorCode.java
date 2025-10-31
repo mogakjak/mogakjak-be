@@ -17,7 +17,10 @@ public enum ErrorCode implements StatusCode {
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 카테고리를 찾을 수 없습니다."),
     TODO_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 할 일을 찾을 수 없습니다."),
     FORBIDDEN_CATEGORY_ACCESS(HttpStatus.FORBIDDEN, "해당 카테고리에 접근 권한이 없습니다."),
-    FORBIDDEN_TODO_ACCESS(HttpStatus.FORBIDDEN, "해당 할 일에 접근 권한이 없습니다.");
+    FORBIDDEN_TODO_ACCESS(HttpStatus.FORBIDDEN, "해당 할 일에 접근 권한이 없습니다."),
+    NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
+    CHARACTER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 캐릭터를 찾을 수 없습니다."),
+    CHARACTER_NOT_OWNED(HttpStatus.FORBIDDEN, "보유하지 않은 캐릭터입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

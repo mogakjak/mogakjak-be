@@ -1,13 +1,13 @@
 package com.mogakjak.mogakjak.controller;
 
-import com.mogakjak.mogakjak.controller.dto.CategoryResponse;
-import com.mogakjak.mogakjak.controller.dto.CategoryWithTodosResponse;
-import com.mogakjak.mogakjak.controller.dto.CreateCategoryRequest;
-import com.mogakjak.mogakjak.controller.dto.CreateTodoRequest;
-import com.mogakjak.mogakjak.controller.dto.TodoResponse;
-import com.mogakjak.mogakjak.controller.dto.UpdateCategoryOrderRequest;
-import com.mogakjak.mogakjak.controller.dto.UpdateTodoRequest;
-import com.mogakjak.mogakjak.domain.user.service.TodoService;
+import com.mogakjak.mogakjak.controller.dto.todo.CategoryResponse;
+import com.mogakjak.mogakjak.controller.dto.todo.CategoryWithTodosResponse;
+import com.mogakjak.mogakjak.controller.dto.todo.CreateCategoryRequest;
+import com.mogakjak.mogakjak.controller.dto.todo.CreateTodoRequest;
+import com.mogakjak.mogakjak.controller.dto.todo.TodoResponse;
+import com.mogakjak.mogakjak.controller.dto.todo.UpdateCategoryOrderRequest;
+import com.mogakjak.mogakjak.controller.dto.todo.UpdateTodoRequest;
+import com.mogakjak.mogakjak.domain.service.TodoService;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
