@@ -36,7 +36,7 @@ public class TodoController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateCategoryRequest createCategoryRequest) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails);
         CategoryResponse categoryResponse = todoService.createCategory(userId, createCategoryRequest);
         return ApiResponse.success(SuccessCode.CREATED, categoryResponse);
     }
@@ -47,7 +47,7 @@ public class TodoController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody UpdateCategoryOrderRequest updateCategoryOrderRequest) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails);
         todoService.updateCategoryOrder(userId, updateCategoryOrderRequest);
         return ApiResponse.success(SuccessCode.OK);
     }
@@ -57,7 +57,7 @@ public class TodoController {
     public ApiResponse<List<CategoryResponse>> getCategories(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails);
         List<CategoryResponse> categories = todoService.getCategories(userId);
         return ApiResponse.success(SuccessCode.OK, categories);
     }
@@ -68,7 +68,7 @@ public class TodoController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID categoryId) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails);
         todoService.deleteCategory(userId, categoryId);
         return ApiResponse.success(SuccessCode.OK);
     }
@@ -82,7 +82,7 @@ public class TodoController {
     public ApiResponse<List<CategoryWithTodosResponse>> getTodayTodos(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails);
         List<CategoryWithTodosResponse> todayTodos = todoService.getTodosGroupedByCategory(userId, LocalDate.now());
         return ApiResponse.success(SuccessCode.OK, todayTodos);
     }
@@ -93,7 +93,7 @@ public class TodoController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam("date") LocalDate date) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails);
         List<CategoryWithTodosResponse> todos = todoService.getTodosGroupedByCategory(userId, date);
         return ApiResponse.success(SuccessCode.OK, todos);
     }
@@ -104,7 +104,7 @@ public class TodoController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateTodoRequest createTodoRequest) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails);
         TodoResponse newTodo = todoService.createTodo(userId, createTodoRequest);
         return ApiResponse.success(SuccessCode.CREATED, newTodo);
     }
@@ -116,7 +116,7 @@ public class TodoController {
             @PathVariable UUID todoId,
             @Valid @RequestBody UpdateTodoRequest updateTodoRequest) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails);
         TodoResponse updatedTodo = todoService.updateTodo(userId, todoId, updateTodoRequest);
         return ApiResponse.success(SuccessCode.OK, updatedTodo);
     }
@@ -127,7 +127,7 @@ public class TodoController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID todoId) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails);
         TodoResponse toggledTodo = todoService.toggleTodoComplete(userId, todoId);
         return ApiResponse.success(SuccessCode.OK, toggledTodo);
     }
@@ -138,8 +138,12 @@ public class TodoController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID todoId) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
-        todoService.deleteTodo(userId, todoId); // 5. 로직 호출
+        UUID userId = getUserId(userDetails);
+        todoService.deleteTodo(userId, todoId);
         return ApiResponse.success(SuccessCode.OK);
+    }
+
+    private UUID getUserId(CustomUserDetails userDetails) {
+        return UUID.fromString(userDetails.getUsername());
     }
 }

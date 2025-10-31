@@ -64,13 +64,15 @@ public class TodoServiceImpl implements TodoService {
     public void updateCategoryOrder(UUID userId, UpdateCategoryOrderRequest req) {
         User user = findUserById(userId);
 
-        // 유저가 소유한 모든 카테고리를 Map으로 조회 (성능 최적화)
         Map<UUID, Category> categoryMap = categoryRepository.findAllByUser(user).stream()
                 .collect(Collectors.toMap(Category::getId, c -> c));
 
         List<UUID> categoryIds = req.getCategoryIds();
 
-        // 요청받은 ID 목록이 유저의 카테고리가 맞는지 검증
+        if (req.getCategoryIds().size() != categoryMap.size()) {
+            throw new CustomException(ErrorCode.FORBIDDEN_CATEGORY_ACCESS);
+        }
+
         for (UUID id : categoryIds) {
             if (!categoryMap.containsKey(id)) {
                 throw new CustomException(ErrorCode.FORBIDDEN_CATEGORY_ACCESS);
@@ -82,7 +84,7 @@ public class TodoServiceImpl implements TodoService {
                 .forEach(index -> {
                     UUID categoryId = categoryIds.get(index);
                     Category category = categoryMap.get(categoryId);
-                    category.updateDisplayOrder(index + 1); // 1부터 순서 매기기
+                    category.updateDisplayOrder(index + 1);
                 });
     }
 

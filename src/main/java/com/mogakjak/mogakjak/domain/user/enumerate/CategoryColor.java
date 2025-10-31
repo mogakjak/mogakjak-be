@@ -6,6 +6,6 @@ public enum CategoryColor {
     YELLOW,
     GREEN,
     BLUE,
-    SODOMY,
+    INDIGO,
     PURPLE
 }
