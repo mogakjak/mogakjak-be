@@ -1,6 +1,6 @@
 package com.mogakjak.mogakjak.global.auth.service;
 
-import com.mogakjak.mogakjak.domain.enumerate.ProviderType;
+import com.mogakjak.mogakjak.global.enumerate.ProviderType;
 import com.mogakjak.mogakjak.global.auth.dto.OAuth2UserInfo;
 import com.mogakjak.mogakjak.global.auth.security.constant.OAuth2AttributeKeys;
 import lombok.extern.slf4j.Slf4j;

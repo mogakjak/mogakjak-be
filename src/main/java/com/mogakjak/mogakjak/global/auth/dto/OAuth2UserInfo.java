@@ -1,6 +1,6 @@
 package com.mogakjak.mogakjak.global.auth.dto;
 
-import com.mogakjak.mogakjak.domain.enumerate.ProviderType;
+import com.mogakjak.mogakjak.global.enumerate.ProviderType;
 import com.mogakjak.mogakjak.global.auth.security.constant.OAuth2AttributeKeys;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
