@@ -1,8 +1,11 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
+import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStopResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.TimerSession;
 import com.mogakjak.mogakjak.domain.user.entity.User;
+
+import java.util.UUID;
 
 public interface TimerService {
 
@@ -24,5 +27,10 @@ public interface TimerService {
     /**
      * 타이머 종료
      */
-    TimerSession stopTimer(User user);
+    TimerStopResponse stopTimer(User user);
+
+    /**
+     * (뽀모도로의 경우) 다음 단계로 전환
+     */
+    void nextPomodoroPhase(UUID sessionId);
 }

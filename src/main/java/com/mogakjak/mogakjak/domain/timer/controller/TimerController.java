@@ -1,16 +1,16 @@
 package com.mogakjak.mogakjak.domain.timer.controller;
 
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
+import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStopResponse;
 import com.mogakjak.mogakjak.domain.timer.service.TimerService;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/timers")
@@ -41,8 +41,14 @@ public class TimerController {
     }
 
     @PostMapping("/stop")
-    public ApiResponse<Void> stopTimer(@CurrentUser User user) {
-        timerService.stopTimer(user);
+    public ApiResponse<TimerStopResponse> stopTimer(@CurrentUser User user) {
+        TimerStopResponse response = timerService.stopTimer(user);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @PostMapping("/{sessionId}/next-phase")
+    public ApiResponse<Void> nextPomodoroPhase(@PathVariable UUID sessionId) {
+        timerService.nextPomodoroPhase(sessionId);
         return ApiResponse.success(SuccessCode.OK);
     }
 }

@@ -1,12 +1,16 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
+import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStopResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.TimerInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.TimerSession;
+import com.mogakjak.mogakjak.domain.timer.enumerate.TimerMode;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.timer.repository.TimerIntervalRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.TimerSessionRepository;
 import com.mogakjak.mogakjak.domain.user.entity.User;
+import com.mogakjak.mogakjak.global.exception.CustomException;
+import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -46,13 +51,11 @@ public class TimerServiceImpl implements TimerService {
 
         TimerSession saved = sessionRepository.save(session);
 
-        // 첫 interval 생성 (시작 시간 기록)
-        TimerInterval interval = TimerInterval.builder()
-                .sessionId(saved.getId())
-                .startedAt(now)
-                .build();
-
-        intervalRepository.save(interval);
+        if (request.timerMode() == TimerMode.POMODORO) {
+            createPomodoroFocus(saved, now, 1);
+        } else {
+            createNormalInterval(saved, now);
+        }
 
         return saved;
     }
@@ -61,102 +64,209 @@ public class TimerServiceImpl implements TimerService {
     @Transactional
     public void pauseTimer(User user) {
         TimerSession session = sessionRepository.findByUserIdAndStatus(user.getId(), TimerStatus.RUNNING)
-                .orElseThrow(() -> new IllegalStateException("진행 중인 타이머가 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.TIMER_NOT_RUNNING));
 
         LocalDateTime now = LocalDateTime.now();
 
         // 마지막 interval 종료
         List<TimerInterval> intervals = intervalRepository.findAllBySessionId(session.getId());
-        TimerInterval last = intervals.get(intervals.size() - 1);
-        last = TimerInterval.builder()
+        TimerInterval last = intervals.getLast();
+
+        TimerInterval closed = TimerInterval.builder()
                 .id(last.getId())
                 .sessionId(last.getSessionId())
                 .startedAt(last.getStartedAt())
                 .endedAt(now)
                 .build();
-        intervalRepository.save(last);
+        intervalRepository.save(closed);
 
         // 상태 변경
-        session = TimerSession.builder()
+        TimerSession paused = TimerSession.builder()
                 .id(session.getId())
                 .userId(session.getUserId())
                 .mode(session.getMode())
                 .startedAt(session.getStartedAt())
                 .targetDuration(session.getTargetDuration())
+                .focusDuration(session.getFocusDuration())
+                .breakDuration(session.getBreakDuration())
+                .repeatCount(session.getRepeatCount())
                 .status(TimerStatus.PAUSED)
                 .build();
-        sessionRepository.save(session);
+        sessionRepository.save(paused);
     }
 
     @Override
     @Transactional
     public void resumeTimer(User user) {
         TimerSession session = sessionRepository.findByUserIdAndStatus(user.getId(), TimerStatus.PAUSED)
-                .orElseThrow(() -> new IllegalStateException("일시정지된 타이머가 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.TIMER_NOT_PAUSED));
 
         LocalDateTime now = LocalDateTime.now();
 
-        // 새 interval 생성
-        TimerInterval newInterval = TimerInterval.builder()
-                .sessionId(session.getId())
-                .startedAt(now)
-                .build();
-        intervalRepository.save(newInterval);
+        if (session.getMode() == TimerMode.POMODORO) {
+            List<TimerInterval> intervals = intervalRepository.findAllBySessionId(session.getId());
+            TimerInterval last = intervals.getLast();
 
-        // 상태 복귀
-        session = TimerSession.builder()
+            intervalRepository.save(
+                    TimerInterval.builder()
+                            .sessionId(session.getId())
+                            .startedAt(now)
+                            .type(last.getType())
+                            .round(last.getRound())
+                            .build()
+            );
+        } else {
+            createNormalInterval(session, now);
+        }
+
+        TimerSession running = TimerSession.builder()
                 .id(session.getId())
                 .userId(session.getUserId())
                 .mode(session.getMode())
                 .startedAt(session.getStartedAt())
                 .targetDuration(session.getTargetDuration())
+                .focusDuration(session.getFocusDuration())
+                .breakDuration(session.getBreakDuration())
+                .repeatCount(session.getRepeatCount())
                 .status(TimerStatus.RUNNING)
                 .build();
-        sessionRepository.save(session);
+        sessionRepository.save(running);
     }
 
     @Override
     @Transactional
-    public TimerSession stopTimer(User user) {
+    public TimerStopResponse stopTimer(User user) {
         TimerSession session = sessionRepository.findByUserIdAndStatus(user.getId(), TimerStatus.RUNNING)
-                .orElseThrow(() -> new IllegalStateException("진행 중인 타이머가 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.TIMER_NOT_RUNNING));
 
         LocalDateTime now = LocalDateTime.now();
 
-        // 마지막 interval 종료
         List<TimerInterval> intervals = intervalRepository.findAllBySessionId(session.getId());
         TimerInterval last = intervals.get(intervals.size() - 1);
-        last = TimerInterval.builder()
+
+        TimerInterval closed = TimerInterval.builder()
                 .id(last.getId())
                 .sessionId(last.getSessionId())
                 .startedAt(last.getStartedAt())
                 .endedAt(now)
+                .type(last.getType())
+                .round(last.getRound())
                 .build();
-        intervalRepository.save(last);
+        intervalRepository.save(closed);
 
-        // 총 집중시간 계산
-        long totalSeconds = intervals.stream()
+        long totalSeconds = intervalRepository.findAllBySessionId(session.getId()).stream()
                 .filter(i -> i.getStartedAt() != null && i.getEndedAt() != null)
                 .mapToLong(i -> Duration.between(i.getStartedAt(), i.getEndedAt()).getSeconds())
                 .sum();
 
-        session = TimerSession.builder()
-                .id(session.getId())
-                .userId(session.getUserId())
-                .mode(session.getMode())
-                .startedAt(session.getStartedAt())
+        TimerSession finished = session.toBuilder()
                 .endedAt(now)
-                .targetDuration(session.getTargetDuration())
                 .totalDuration(totalSeconds)
                 .status(TimerStatus.FINISHED)
                 .build();
 
-        return sessionRepository.save(session);
+        TimerSession saved = sessionRepository.save(finished);
+
+        return TimerStopResponse.builder()
+                .sessionId(saved.getId())
+                .mode(saved.getMode())
+                .status(saved.getStatus())
+                .startedAt(saved.getStartedAt())
+                .endedAt(saved.getEndedAt())
+                .targetDuration(saved.getTargetDuration())
+                .totalDuration(saved.getTotalDuration())
+                .build();
     }
 
-    /**
-     * 기존 세션 종료 처리 (중복 세션 방지)
-     */
+    @Override
+    @Transactional
+    public void nextPomodoroPhase(UUID sessionId) {
+        TimerSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TIMER_NOT_FOUND));
+
+        if (session.getMode() != TimerMode.POMODORO) {
+            throw new CustomException(ErrorCode.INVALID_POMODORO_SESSION);
+        }
+
+        List<TimerInterval> intervals = intervalRepository.findAllBySessionId(session.getId());
+        if (intervals.isEmpty()) {
+            createPomodoroFocus(session, LocalDateTime.now(), 1);
+            return;
+        }
+
+        TimerInterval last = intervals.get(intervals.size() - 1);
+
+        // 지금까지 완료된 집중 구간 개수
+        long doneFocusCount = intervals.stream()
+                .filter(it -> "FOCUS".equals(it.getType()))
+                .count();
+
+        // 반복 다 끝났으면 종료
+        if (session.getRepeatCount() != null && doneFocusCount >= session.getRepeatCount()) {
+            finishPomodoro(session);
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if ("FOCUS".equals(last.getType())) {
+            // 집중 끝났으니 휴식으로
+            createPomodoroBreak(session, now, (int) doneFocusCount);
+        } else {
+            // 휴식 끝났으니 다음 집중으로
+            createPomodoroFocus(session, now, (int) doneFocusCount + 1);
+        }
+    }
+
+    private void finishPomodoro(TimerSession session) {
+        sessionRepository.save(
+                TimerSession.builder()
+                        .id(session.getId())
+                        .userId(session.getUserId())
+                        .mode(session.getMode())
+                        .startedAt(session.getStartedAt())
+                        .endedAt(LocalDateTime.now())
+                        .targetDuration(session.getTargetDuration())
+                        .focusDuration(session.getFocusDuration())
+                        .breakDuration(session.getBreakDuration())
+                        .repeatCount(session.getRepeatCount())
+                        .status(TimerStatus.FINISHED)
+                        .build()
+        );
+    }
+
+    private void createPomodoroFocus(TimerSession session, LocalDateTime now, int round) {
+        intervalRepository.save(
+                TimerInterval.builder()
+                        .sessionId(session.getId())
+                        .startedAt(now)
+                        .type("FOCUS")
+                        .round(round)
+                        .build()
+        );
+    }
+
+    private void createPomodoroBreak(TimerSession session, LocalDateTime now, int round) {
+        intervalRepository.save(
+                TimerInterval.builder()
+                        .sessionId(session.getId())
+                        .startedAt(now)
+                        .type("BREAK")
+                        .round(round)
+                        .build()
+        );
+    }
+
+    private void createNormalInterval(TimerSession session, LocalDateTime now) {
+        intervalRepository.save(
+                TimerInterval.builder()
+                        .sessionId(session.getId())
+                        .startedAt(now)
+                        .type("NORMAL")
+                        .build()
+        );
+    }
+
     private void pauseOrFinishSession(TimerSession session, TimerStatus newStatus) {
         sessionRepository.save(
                 TimerSession.builder()
