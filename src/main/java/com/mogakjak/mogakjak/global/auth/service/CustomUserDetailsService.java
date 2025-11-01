@@ -1,7 +1,7 @@
 package com.mogakjak.mogakjak.global.auth.service;
 
-import com.mogakjak.mogakjak.domain.entity.User;
-import com.mogakjak.mogakjak.domain.repository.UserRepository;
+import com.mogakjak.mogakjak.user.entity.User;
+import com.mogakjak.mogakjak.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

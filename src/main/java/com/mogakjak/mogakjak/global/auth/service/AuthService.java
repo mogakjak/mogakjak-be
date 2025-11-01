@@ -1,11 +1,11 @@
 package com.mogakjak.mogakjak.global.auth.service;
 
-import com.mogakjak.mogakjak.domain.entity.User;
-import com.mogakjak.mogakjak.domain.entity.UserProvider;
-import com.mogakjak.mogakjak.domain.enumerate.ProviderType;
-import com.mogakjak.mogakjak.domain.repository.UserProviderRepository;
-import com.mogakjak.mogakjak.domain.repository.UserRepository;
-import com.mogakjak.mogakjak.domain.service.UserService;
+import com.mogakjak.mogakjak.user.entity.User;
+import com.mogakjak.mogakjak.user.entity.UserProvider;
+import com.mogakjak.mogakjak.global.enumerate.ProviderType;
+import com.mogakjak.mogakjak.user.repository.UserProviderRepository;
+import com.mogakjak.mogakjak.user.repository.UserRepository;
+import com.mogakjak.mogakjak.user.service.UserService;
 import com.mogakjak.mogakjak.global.auth.dto.LoginResponse;
 import com.mogakjak.mogakjak.global.auth.dto.TokenRefreshResponse;
 import com.mogakjak.mogakjak.global.auth.exception.AuthExceptionCode;
