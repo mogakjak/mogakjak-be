@@ -234,16 +234,8 @@ public class TimerServiceImpl implements TimerService {
 
     private void finishPomodoro(TimerSession session) {
         sessionRepository.save(
-                TimerSession.builder()
-                        .id(session.getId())
-                        .userId(session.getUserId())
-                        .mode(session.getMode())
-                        .startedAt(session.getStartedAt())
+                session.toBuilder()
                         .endedAt(LocalDateTime.now())
-                        .targetDuration(session.getTargetDuration())
-                        .focusDuration(session.getFocusDuration())
-                        .breakDuration(session.getBreakDuration())
-                        .repeatCount(session.getRepeatCount())
                         .status(TimerStatus.FINISHED)
                         .build()
         );
