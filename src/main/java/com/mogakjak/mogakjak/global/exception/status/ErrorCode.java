@@ -30,7 +30,8 @@ public enum ErrorCode implements StatusCode {
     INVALID_TIMER_MODE(HttpStatus.BAD_REQUEST, "잘못된 타이머 모드 요청입니다."),
     INVALID_POMODORO_SESSION(HttpStatus.BAD_REQUEST, "POMODORO 모드가 아닌 세션입니다."),
     POMODORO_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 모든 뽀모도로 라운드가 완료되었습니다."),
-    POMODORO_INTERVAL_NOT_FOUND(HttpStatus.NOT_FOUND, "유효한 POMODORO 구간을 찾을 수 없습니다.")
+    POMODORO_INTERVAL_NOT_FOUND(HttpStatus.NOT_FOUND, "유효한 POMODORO 구간을 찾을 수 없습니다."),
+    FORBIDDEN_TIMER_ACCESS(HttpStatus.FORBIDDEN, "해당 타이머에 접근 권한이 없습니다.")
     ;
 
     private final HttpStatus httpStatus;

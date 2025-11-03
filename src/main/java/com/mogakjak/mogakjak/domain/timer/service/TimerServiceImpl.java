@@ -194,10 +194,13 @@ public class TimerServiceImpl implements TimerService {
 
     @Override
     @Transactional
-    public void nextPomodoroPhase(UUID sessionId) {
+    public void nextPomodoroPhase(User user, UUID sessionId) {
         TimerSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TIMER_NOT_FOUND));
 
+        if (!session.getUserId().equals(user.getId())) {
+            throw new CustomException(ErrorCode.FORBIDDEN_TIMER_ACCESS);
+        }
         if (session.getMode() != TimerMode.POMODORO) {
             throw new CustomException(ErrorCode.INVALID_POMODORO_SESSION);
         }

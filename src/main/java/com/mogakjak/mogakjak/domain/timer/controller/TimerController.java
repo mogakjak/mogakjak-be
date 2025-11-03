@@ -47,8 +47,11 @@ public class TimerController {
     }
 
     @PostMapping("/{sessionId}/next-phase")
-    public ApiResponse<Void> nextPomodoroPhase(@PathVariable UUID sessionId) {
-        timerService.nextPomodoroPhase(sessionId);
+    public ApiResponse<Void> nextPomodoroPhase(
+            @CurrentUser User user,
+            @PathVariable UUID sessionId
+    ) {
+        timerService.nextPomodoroPhase(user, sessionId);
         return ApiResponse.success(SuccessCode.OK);
     }
 }

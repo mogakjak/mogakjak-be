@@ -32,5 +32,5 @@ public interface TimerService {
     /**
      * (뽀모도로의 경우) 다음 단계로 전환
      */
-    void nextPomodoroPhase(UUID sessionId);
+    void nextPomodoroPhase(User user, UUID sessionId);
 }
