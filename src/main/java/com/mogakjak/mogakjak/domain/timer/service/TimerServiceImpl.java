@@ -37,12 +37,28 @@ public class TimerServiceImpl implements TimerService {
 
         LocalDateTime now = LocalDateTime.now();
 
+        // 모드별 유효성
+        if (request.timerMode() == TimerMode.TIMER && (request.targetSeconds() == null || request.targetSeconds() <= 0)) {
+            throw new CustomException(ErrorCode.INVALID_TIMER_MODE);
+        }
+        if (request.timerMode() == TimerMode.POMODORO) {
+            if (request.focusSeconds() == null || request.breakSeconds() == null || request.repeatCount() == null) {
+                throw new CustomException(ErrorCode.INVALID_POMODORO_SESSION);
+            }
+        }
+
+        Long targetForSave = switch (request.timerMode()) {
+            case STOPWATCH -> 0L;                    // 또는 null로 두고 DB nullable 허용
+            case TIMER -> request.targetSeconds();
+            case POMODORO -> request.targetSeconds(); // 필요시 null 유지 가능
+        };
+
         // 세션 생성
         TimerSession session = TimerSession.builder()
                 .userId(user.getId())
                 .mode(request.timerMode())
                 .startedAt(now)
-                .targetDuration(request.targetSeconds())
+                .targetDuration(targetForSave)
                 .focusDuration(request.focusSeconds())
                 .breakDuration(request.breakSeconds())
                 .repeatCount(request.repeatCount())
@@ -70,6 +86,10 @@ public class TimerServiceImpl implements TimerService {
 
         // 마지막 interval 종료
         List<TimerInterval> intervals = intervalRepository.findAllBySessionId(session.getId());
+        if (intervals.isEmpty()) {
+            createNormalInterval(session, now); // 이론상 start 직후엔 최소 1개가 있어야 함. 없으면 복구
+            intervals = intervalRepository.findAllBySessionId(session.getId());
+        }
         TimerInterval last = intervals.getLast();
 
         TimerInterval closed = TimerInterval.builder()
@@ -77,19 +97,13 @@ public class TimerServiceImpl implements TimerService {
                 .sessionId(last.getSessionId())
                 .startedAt(last.getStartedAt())
                 .endedAt(now)
+                .type(last.getType())
+                .round(last.getRound())
                 .build();
         intervalRepository.save(closed);
 
         // 상태 변경
-        TimerSession paused = TimerSession.builder()
-                .id(session.getId())
-                .userId(session.getUserId())
-                .mode(session.getMode())
-                .startedAt(session.getStartedAt())
-                .targetDuration(session.getTargetDuration())
-                .focusDuration(session.getFocusDuration())
-                .breakDuration(session.getBreakDuration())
-                .repeatCount(session.getRepeatCount())
+        TimerSession paused = session.toBuilder()
                 .status(TimerStatus.PAUSED)
                 .build();
         sessionRepository.save(paused);
@@ -105,29 +119,24 @@ public class TimerServiceImpl implements TimerService {
 
         if (session.getMode() == TimerMode.POMODORO) {
             List<TimerInterval> intervals = intervalRepository.findAllBySessionId(session.getId());
-            TimerInterval last = intervals.getLast();
-
-            intervalRepository.save(
-                    TimerInterval.builder()
-                            .sessionId(session.getId())
-                            .startedAt(now)
-                            .type(last.getType())
-                            .round(last.getRound())
-                            .build()
-            );
+            if (intervals.isEmpty()) {
+                createPomodoroFocus(session, now, 1); // 이렇게 복구 로직이 있는 것 / 상응하는 에러를 던지는 것에 대한 추가 고민 필요
+            } else {
+                TimerInterval last = intervals.getLast();
+                intervalRepository.save(
+                        TimerInterval.builder()
+                                .sessionId(session.getId())
+                                .startedAt(now)
+                                .type(last.getType())
+                                .round(last.getRound())
+                                .build()
+                );
+            }
         } else {
             createNormalInterval(session, now);
         }
 
-        TimerSession running = TimerSession.builder()
-                .id(session.getId())
-                .userId(session.getUserId())
-                .mode(session.getMode())
-                .startedAt(session.getStartedAt())
-                .targetDuration(session.getTargetDuration())
-                .focusDuration(session.getFocusDuration())
-                .breakDuration(session.getBreakDuration())
-                .repeatCount(session.getRepeatCount())
+        TimerSession running = session.toBuilder()
                 .status(TimerStatus.RUNNING)
                 .build();
         sessionRepository.save(running);
@@ -142,17 +151,20 @@ public class TimerServiceImpl implements TimerService {
         LocalDateTime now = LocalDateTime.now();
 
         List<TimerInterval> intervals = intervalRepository.findAllBySessionId(session.getId());
-        TimerInterval last = intervals.get(intervals.size() - 1);
-
-        TimerInterval closed = TimerInterval.builder()
-                .id(last.getId())
-                .sessionId(last.getSessionId())
-                .startedAt(last.getStartedAt())
-                .endedAt(now)
-                .type(last.getType())
-                .round(last.getRound())
-                .build();
-        intervalRepository.save(closed);
+        if (!intervals.isEmpty()) {
+            TimerInterval last = intervals.getLast();
+            if (last.getEndedAt() == null) {
+                TimerInterval closed = TimerInterval.builder()
+                        .id(last.getId())
+                        .sessionId(last.getSessionId())
+                        .startedAt(last.getStartedAt())
+                        .endedAt(now)
+                        .type(last.getType())
+                        .round(last.getRound())
+                        .build();
+                intervalRepository.save(closed);
+            }
+        }
 
         long totalSeconds = intervalRepository.findAllBySessionId(session.getId()).stream()
                 .filter(i -> i.getStartedAt() != null && i.getEndedAt() != null)
@@ -167,13 +179,15 @@ public class TimerServiceImpl implements TimerService {
 
         TimerSession saved = sessionRepository.save(finished);
 
+        Long safeTarget = saved.getTargetDuration() == null ? 0L : saved.getTargetDuration();
+
         return TimerStopResponse.builder()
                 .sessionId(saved.getId())
                 .mode(saved.getMode())
                 .status(saved.getStatus())
                 .startedAt(saved.getStartedAt())
                 .endedAt(saved.getEndedAt())
-                .targetDuration(saved.getTargetDuration())
+                .targetDuration(safeTarget)
                 .totalDuration(saved.getTotalDuration())
                 .build();
     }
@@ -269,11 +283,7 @@ public class TimerServiceImpl implements TimerService {
 
     private void pauseOrFinishSession(TimerSession session, TimerStatus newStatus) {
         sessionRepository.save(
-                TimerSession.builder()
-                        .id(session.getId())
-                        .userId(session.getUserId())
-                        .mode(session.getMode())
-                        .startedAt(session.getStartedAt())
+                session.toBuilder()
                         .endedAt(LocalDateTime.now())
                         .status(newStatus)
                         .build()
