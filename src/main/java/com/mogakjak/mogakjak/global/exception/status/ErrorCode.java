@@ -25,7 +25,8 @@ public enum ErrorCode implements StatusCode {
     // Timer Errors
     TIMER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 타이머 세션을 찾을 수 없습니다."),
     TIMER_ALREADY_RUNNING(HttpStatus.CONFLICT, "이미 진행 중인 타이머가 존재합니다."),
-    TIMER_NOT_RUNNING(HttpStatus.BAD_REQUEST, "진행 중인 타이머가 없습니다."),
+    TIMER_NOT_RUNNING(HttpStatus.BAD_REQUEST, "실행 중인 타이머가 없습니다."),
+    NO_ACTIVE_TIMER_SESSION(HttpStatus.BAD_REQUEST, "실행 중이거나 일시정지된 타이머가 없습니다."),
     TIMER_NOT_PAUSED(HttpStatus.BAD_REQUEST, "일시정지된 타이머가 없습니다."),
     INVALID_TIMER_MODE(HttpStatus.BAD_REQUEST, "잘못된 타이머 모드 요청입니다."),
     INVALID_POMODORO_SESSION(HttpStatus.BAD_REQUEST, "POMODORO 모드가 아닌 세션입니다."),

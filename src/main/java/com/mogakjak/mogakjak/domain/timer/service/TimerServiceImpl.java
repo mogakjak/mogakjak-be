@@ -146,7 +146,8 @@ public class TimerServiceImpl implements TimerService {
     @Transactional
     public TimerStopResponse stopTimer(User user) {
         TimerSession session = sessionRepository.findByUserIdAndStatus(user.getId(), TimerStatus.RUNNING)
-                .orElseThrow(() -> new CustomException(ErrorCode.TIMER_NOT_RUNNING));
+                .or(() -> sessionRepository.findByUserIdAndStatus(user.getId(), TimerStatus.PAUSED))
+                .orElseThrow(() -> new CustomException(ErrorCode.NO_ACTIVE_TIMER_SESSION));
 
         LocalDateTime now = LocalDateTime.now();
 
