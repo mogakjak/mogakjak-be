@@ -1,7 +1,7 @@
-package com.mogakjak.mogakjak.controller.dto;
+package com.mogakjak.mogakjak.domain.todo.controller.dto;
 
 import com.mogakjak.mogakjak.domain.user.entity.Category;
-import com.mogakjak.mogakjak.domain.user.enumerate.CategoryColor;
+import com.mogakjak.mogakjak.global.enumerate.CategoryColor;
 import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;

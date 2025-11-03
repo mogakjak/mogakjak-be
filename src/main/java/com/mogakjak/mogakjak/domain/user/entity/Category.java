@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.user.entity;
 
-import com.mogakjak.mogakjak.domain.user.enumerate.CategoryColor;
+import com.mogakjak.mogakjak.domain.todo.entity.Todo;
+import com.mogakjak.mogakjak.global.enumerate.CategoryColor;
 import com.mogakjak.mogakjak.global.common.BaseSchema;
 import jakarta.persistence.*;
 import lombok.*;

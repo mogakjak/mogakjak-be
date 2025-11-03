@@ -1,6 +1,8 @@
-package com.mogakjak.mogakjak.domain.user.entity;
+package com.mogakjak.mogakjak.domain.todo.entity;
 
 import com.mogakjak.mogakjak.global.common.BaseSchema;
+import com.mogakjak.mogakjak.domain.user.entity.Category;
+import com.mogakjak.mogakjak.domain.user.entity.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.*;

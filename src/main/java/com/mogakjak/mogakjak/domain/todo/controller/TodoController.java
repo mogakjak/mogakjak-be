@@ -1,16 +1,16 @@
-package com.mogakjak.mogakjak.controller;
+package com.mogakjak.mogakjak.domain.todo.controller;
 
-import com.mogakjak.mogakjak.controller.dto.CategoryResponse;
-import com.mogakjak.mogakjak.controller.dto.CategoryWithTodosResponse;
-import com.mogakjak.mogakjak.controller.dto.CreateCategoryRequest;
-import com.mogakjak.mogakjak.controller.dto.CreateTodoRequest;
-import com.mogakjak.mogakjak.controller.dto.TodoResponse;
-import com.mogakjak.mogakjak.controller.dto.UpdateCategoryOrderRequest;
-import com.mogakjak.mogakjak.controller.dto.UpdateTodoRequest;
-import com.mogakjak.mogakjak.domain.user.service.TodoService;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.CategoryResponse;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.CategoryWithTodosResponse;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.CreateCategoryRequest;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.CreateTodoRequest;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.TodoResponse;
+import com.mogakjak.mogakjak.domain.todo.service.TodoService;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateCategoryOrderRequest;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateTodoRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

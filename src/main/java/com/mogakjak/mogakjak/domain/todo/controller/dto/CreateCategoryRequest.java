@@ -1,6 +1,6 @@
-package com.mogakjak.mogakjak.controller.dto;
+package com.mogakjak.mogakjak.domain.todo.controller.dto;
 
-import com.mogakjak.mogakjak.domain.user.enumerate.CategoryColor;
+import com.mogakjak.mogakjak.global.enumerate.CategoryColor;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

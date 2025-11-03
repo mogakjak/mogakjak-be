@@ -1,6 +1,6 @@
 package com.mogakjak.mogakjak.domain.user.entity;
 
-import com.mogakjak.mogakjak.domain.user.enumerate.ProviderType;
+import com.mogakjak.mogakjak.global.enumerate.ProviderType;
 import com.mogakjak.mogakjak.global.common.BaseSchema;
 import jakarta.persistence.*;
 import lombok.*;

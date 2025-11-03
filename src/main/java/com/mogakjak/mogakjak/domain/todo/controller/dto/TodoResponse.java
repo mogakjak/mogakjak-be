@@ -1,6 +1,6 @@
-package com.mogakjak.mogakjak.controller.dto;
+package com.mogakjak.mogakjak.domain.todo.controller.dto;
 
-import com.mogakjak.mogakjak.domain.user.entity.Todo;
+import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import java.time.LocalDate;
 import java.util.UUID;
 import lombok.AllArgsConstructor;

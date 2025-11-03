@@ -1,8 +1,9 @@
-package com.mogakjak.mogakjak.domain.user.entity;
+package com.mogakjak.mogakjak.domain.group.entity;
 
 import com.mogakjak.mogakjak.global.common.BaseSchema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import lombok.*;
 
 @Entity
@@ -10,15 +11,9 @@ import lombok.*;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
-public class User extends BaseSchema {
+@Table(name = "mogak_groups")
+public class Group extends BaseSchema {
 
-    @Column(nullable = false, unique = true)
-    private String email;
-
-    @Column(nullable = false)
+    @Column(nullable = false, length = 30)
     private String name;
-
-    public void updateProfile(String newName) {
-        this.name = newName;
-    }
 }

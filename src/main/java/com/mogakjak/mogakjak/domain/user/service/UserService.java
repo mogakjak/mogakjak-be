@@ -1,8 +1,8 @@
 package com.mogakjak.mogakjak.domain.user.service;
 
+import com.mogakjak.mogakjak.global.enumerate.ProviderType;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserProvider;
-import com.mogakjak.mogakjak.domain.user.enumerate.ProviderType;
 import com.mogakjak.mogakjak.domain.user.repository.UserProviderRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

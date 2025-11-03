@@ -1,4 +1,4 @@
-package com.mogakjak.mogakjak.domain.user.enumerate;
+package com.mogakjak.mogakjak.global.enumerate;
 
 public enum CategoryColor {
     RED,

@@ -1,7 +1,7 @@
 package com.mogakjak.mogakjak.domain.user.repository;
 
+import com.mogakjak.mogakjak.global.enumerate.ProviderType;
 import com.mogakjak.mogakjak.domain.user.entity.UserProvider;
-import com.mogakjak.mogakjak.domain.user.enumerate.ProviderType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

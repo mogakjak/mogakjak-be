@@ -1,17 +1,17 @@
-package com.mogakjak.mogakjak.domain.user.service;
+package com.mogakjak.mogakjak.domain.todo.service;
 
-import com.mogakjak.mogakjak.controller.dto.CategoryResponse;
-import com.mogakjak.mogakjak.controller.dto.CategoryWithTodosResponse;
-import com.mogakjak.mogakjak.controller.dto.CreateCategoryRequest;
-import com.mogakjak.mogakjak.controller.dto.CreateTodoRequest;
-import com.mogakjak.mogakjak.controller.dto.TodoResponse;
-import com.mogakjak.mogakjak.controller.dto.UpdateCategoryOrderRequest;
-import com.mogakjak.mogakjak.controller.dto.UpdateTodoRequest;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.CategoryResponse;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.CategoryWithTodosResponse;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.CreateCategoryRequest;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.CreateTodoRequest;
+import com.mogakjak.mogakjak.domain.todo.entity.Todo;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.TodoResponse;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateCategoryOrderRequest;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateTodoRequest;
+import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.entity.Category;
-import com.mogakjak.mogakjak.domain.user.entity.Todo;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.CategoryRepository;
-import com.mogakjak.mogakjak.domain.user.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;

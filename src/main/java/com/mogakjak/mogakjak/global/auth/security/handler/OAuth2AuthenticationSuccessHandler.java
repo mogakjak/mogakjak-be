@@ -1,6 +1,6 @@
 package com.mogakjak.mogakjak.global.auth.security.handler;
 
-import com.mogakjak.mogakjak.domain.user.enumerate.ProviderType;
+import com.mogakjak.mogakjak.global.enumerate.ProviderType;
 import com.mogakjak.mogakjak.global.auth.dto.LoginResponse;
 import com.mogakjak.mogakjak.global.auth.exception.AuthExceptionCode;
 import com.mogakjak.mogakjak.global.auth.security.constant.OAuth2AttributeKeys;
