@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
+import com.mogakjak.mogakjak.domain.timer.dto.response.DailyFocusStatsResponse;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStopResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.TimerInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.TimerSession;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Date;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -237,6 +239,18 @@ public class TimerServiceImpl implements TimerService {
             // 휴식 끝났으니 다음 집중으로
             createPomodoroFocus(session, now, (int) doneFocusCount + 1);
         }
+    }
+
+    @Override
+    public List<DailyFocusStatsResponse> getDailyFocusDurations(User user) {
+        List<Object[]> rows = intervalRepository.findDailyFocusDurationsByUser(user.getId());
+
+        return rows.stream()
+                .map(row -> new DailyFocusStatsResponse(
+                        ((Date) row[0]).toLocalDate(),
+                        ((Number) row[1]).longValue()
+                ))
+                .toList();
     }
 
     private void finishPomodoro(TimerSession session) {
