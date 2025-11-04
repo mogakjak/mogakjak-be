@@ -27,6 +27,7 @@ public class TimerInterval extends BaseSchema {
     private LocalDateTime endedAt;
 
     @Column(name = "type")
+    @Enumerated(EnumType.STRING)
     private IntervalType type;   // FOCUS | BREAK - 뽀모도로 / NORMAL - 일반
 
     @Column(name = "round")
