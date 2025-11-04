@@ -4,6 +4,7 @@ import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStopResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.TimerInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.TimerSession;
+import com.mogakjak.mogakjak.domain.timer.enumerate.IntervalType;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerMode;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.timer.repository.TimerIntervalRepository;
@@ -42,7 +43,9 @@ public class TimerServiceImpl implements TimerService {
             throw new CustomException(ErrorCode.INVALID_TIMER_MODE);
         }
         if (request.timerMode() == TimerMode.POMODORO) {
-            if (request.focusSeconds() == null || request.breakSeconds() == null || request.repeatCount() == null) {
+            if (request.focusSeconds() == null || request.focusSeconds() <= 0 ||
+                    request.breakSeconds() == null || request.breakSeconds() <= 0 ||
+                    request.repeatCount() == null || request.repeatCount() <= 0) {
                 throw new CustomException(ErrorCode.INVALID_POMODORO_SESSION);
             }
         }
@@ -212,11 +215,11 @@ public class TimerServiceImpl implements TimerService {
             return;
         }
 
-        TimerInterval last = intervals.get(intervals.size() - 1);
+        TimerInterval last = intervals.getLast();
 
         // 지금까지 완료된 집중 구간 개수
         long doneFocusCount = intervals.stream()
-                .filter(it -> "FOCUS".equals(it.getType()))
+                .filter(it -> it.getType() == IntervalType.FOCUS)
                 .count();
 
         // 반복 다 끝났으면 종료
@@ -227,7 +230,7 @@ public class TimerServiceImpl implements TimerService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        if ("FOCUS".equals(last.getType())) {
+        if (last.getType() == IntervalType.FOCUS) {
             // 집중 끝났으니 휴식으로
             createPomodoroBreak(session, now, (int) doneFocusCount);
         } else {
@@ -250,7 +253,7 @@ public class TimerServiceImpl implements TimerService {
                 TimerInterval.builder()
                         .sessionId(session.getId())
                         .startedAt(now)
-                        .type("FOCUS")
+                        .type(IntervalType.FOCUS)
                         .round(round)
                         .build()
         );
@@ -261,7 +264,7 @@ public class TimerServiceImpl implements TimerService {
                 TimerInterval.builder()
                         .sessionId(session.getId())
                         .startedAt(now)
-                        .type("BREAK")
+                        .type(IntervalType.BREAK)
                         .round(round)
                         .build()
         );
@@ -272,7 +275,7 @@ public class TimerServiceImpl implements TimerService {
                 TimerInterval.builder()
                         .sessionId(session.getId())
                         .startedAt(now)
-                        .type("NORMAL")
+                        .type(IntervalType.NORMAL)
                         .build()
         );
     }
