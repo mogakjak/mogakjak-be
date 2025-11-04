@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Date;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -247,7 +246,7 @@ public class TimerServiceImpl implements TimerService {
 
         return rows.stream()
                 .map(row -> new DailyFocusStatsResponse(
-                        ((Date) row[0]).toLocalDate(),
+                        ((java.sql.Date) row[0]).toLocalDate(),
                         ((Number) row[1]).longValue()
                 ))
                 .toList();
