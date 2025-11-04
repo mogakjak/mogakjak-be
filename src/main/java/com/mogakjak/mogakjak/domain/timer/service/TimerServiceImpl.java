@@ -90,8 +90,8 @@ public class TimerServiceImpl implements TimerService {
         // 마지막 interval 종료
         List<TimerInterval> intervals = intervalRepository.findAllBySessionId(session.getId());
         if (intervals.isEmpty()) {
-            createNormalInterval(session, now); // 이론상 start 직후엔 최소 1개가 있어야 함. 없으면 복구
-            intervals = intervalRepository.findAllBySessionId(session.getId());
+            TimerInterval newInterval = createNormalInterval(session, now);
+            intervals.add(newInterval);
         }
         TimerInterval last = intervals.getLast();
 
@@ -270,8 +270,8 @@ public class TimerServiceImpl implements TimerService {
         );
     }
 
-    private void createNormalInterval(TimerSession session, LocalDateTime now) {
-        intervalRepository.save(
+    private TimerInterval createNormalInterval(TimerSession session, LocalDateTime now) {
+        return intervalRepository.save(
                 TimerInterval.builder()
                         .sessionId(session.getId())
                         .startedAt(now)
