@@ -11,6 +11,7 @@ public enum ErrorCode implements StatusCode {
     // Common Errors
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
+    DEPRECATED_ENDPOINT(HttpStatus.GONE, "더 이상 사용되지 않는 엔드포인트입니다."),
 
     // todo Errors
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 사용자를 찾을 수 없습니다."),
@@ -32,8 +33,23 @@ public enum ErrorCode implements StatusCode {
     INVALID_POMODORO_SESSION(HttpStatus.BAD_REQUEST, "POMODORO 모드가 아닌 세션입니다."),
     POMODORO_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 모든 뽀모도로 라운드가 완료되었습니다."),
     POMODORO_INTERVAL_NOT_FOUND(HttpStatus.NOT_FOUND, "유효한 POMODORO 구간을 찾을 수 없습니다."),
-    FORBIDDEN_TIMER_ACCESS(HttpStatus.FORBIDDEN, "해당 타이머에 접근 권한이 없습니다.")
-    ;
+    FORBIDDEN_TIMER_ACCESS(HttpStatus.FORBIDDEN, "해당 타이머에 접근 권한이 없습니다."),
+
+    // Auth Errors
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
+    FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다."),
+
+    // Group Errors
+    GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "그룹을 찾을 수 없습니다."),
+    NOT_GROUP_MEMBER(HttpStatus.FORBIDDEN, "그룹의 멤버가 아닙니다."),
+    CANNOT_LEAVE_AS_HOST(HttpStatus.BAD_REQUEST, "방장은 다른 멤버가 있을 경우 그룹을 탈퇴할 수 없습니다."),
+    ALREADY_GROUP_MEMBER(HttpStatus.CONFLICT, "이미 그룹에 속한 멤버입니다."),
+
+    // Invitation Errors
+    INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "초대를 찾을 수 없습니다."),
+    INVALID_INVITATION(HttpStatus.BAD_REQUEST, "유효하지 않은 초대입니다 (예: 만료, 이미 처리됨)."),
+    CANNOT_INVITE_SELF(HttpStatus.BAD_REQUEST, "자기 자신을 초대할 수 없습니다."),
+    ALREADY_INVITED(HttpStatus.CONFLICT, "이미 초대를 보낸 사용자입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
