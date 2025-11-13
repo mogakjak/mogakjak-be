@@ -1,19 +1,33 @@
 package com.mogakjak.mogakjak.domain.group.controller;
 
+import com.mogakjak.mogakjak.domain.group.controller.dto.CreateGroupRequest;
+import com.mogakjak.mogakjak.domain.group.controller.dto.GroupDetailResponse;
+import com.mogakjak.mogakjak.domain.group.controller.dto.MateResponse;
 import com.mogakjak.mogakjak.domain.group.controller.dto.MyGroupResponse;
+import com.mogakjak.mogakjak.domain.group.controller.dto.UpdateGroupRequest;
 import com.mogakjak.mogakjak.domain.group.service.GroupService;
+import com.mogakjak.mogakjak.domain.invitation.InvitationResponse;
+import com.mogakjak.mogakjak.domain.invitation.InviteMateRequest;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
+import com.mogakjak.mogakjak.global.exception.CustomException;
+import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Group", description = "그룹 관련 API")
 @RestController
 @RequestMapping("/api/groups")
 @RequiredArgsConstructor
@@ -21,18 +35,157 @@ public class GroupController {
 
     private final GroupService groupService;
 
-    @Operation(summary = "내 그룹 목록 조회", description = "사용자가 속한 그룹 목록을 조회합니다.")
-    @GetMapping("/my")
-    public ApiResponse<List<MyGroupResponse>> getMyGroups(
-            @AuthenticationPrincipal CustomUserDetails userDetails
+    @Operation(summary = "신규 그룹 생성", description = "새로운 스터디 그룹을 생성합니다. API를 호출한 사용자가 해당 그룹의 '방장(HOST)'이 됩니다.")
+    @PostMapping
+    public ApiResponse<GroupDetailResponse> createGroup(
+            @Valid @RequestBody CreateGroupRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         UUID userId = getUserId(userDetails);
+        GroupDetailResponse response = groupService.createGroup(request, userId);
+        return ApiResponse.success(SuccessCode.CREATED, response);
+    }
 
+    @Operation(summary = "내 그룹 목록 조회", description = "현재 로그인한 사용자가 '방장' 또는 '멤버'로 속한 모든 그룹의 목록을 조회합니다.")
+    @GetMapping("/my")
+    public ApiResponse<List<MyGroupResponse>> getMyGroups(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
         List<MyGroupResponse> response = groupService.getMyGroups(userId);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
+    @Operation(summary = "그룹 상세 정보 조회", description = "특정 그룹의 상세 정보와 해당 그룹에 속한 모든 멤버의 목록(닉네임, 역할 등)을 조회합니다. <br> 그룹 멤버가 아닌 경우 403 Forbidden 에러가 발생합니다.")
+    @GetMapping("/{groupId}")
+    public ApiResponse<GroupDetailResponse> getGroupDetail(
+            @Parameter(description = "조회할 그룹의 ID (UUID)", required = true)
+            @PathVariable UUID groupId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        GroupDetailResponse response = groupService.getGroupDetail(groupId, userId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "그룹 정보 수정 (방장 권한)", description = "그룹의 이름, 설명, 비밀번호를 수정합니다. 방장(HOST)만 이 API를 호출할 수 있습니다.")
+    @PutMapping("/{groupId}")
+    public ApiResponse<GroupDetailResponse> updateGroup(
+            @Parameter(description = "수정할 그룹의 ID (UUID)", required = true)
+            @PathVariable UUID groupId,
+            @Valid @RequestBody UpdateGroupRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        GroupDetailResponse response = groupService.updateGroup(groupId, request, userId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    // --- Member API ---
+
+    @Operation(summary = "메이트 조회 (전체/그룹별)",
+            description = "내 전체 메이트 또는 특정 그룹의 메이트를 페이지네이션으로 조회합니다. <br>" +
+                    "  - groupId 생략 시: '내 전체 메이트' (내가 속한 모든 그룹의 멤버)를 조회합니다."
+    )
+    @GetMapping("/mates")
+    public ApiResponse<Page<MateResponse>> getMates(
+            @Parameter(description = "특정 그룹 조회 시 사용할 그룹 ID (생략 시 전체 메이트 조회)")
+            @RequestParam(required = false) UUID groupId,
+
+            @Parameter(description = "검색할 메이트 닉네임(이름)")
+            @RequestParam(required = false) String search,
+
+            @Parameter(hidden = true) // Swagger UI에서 복잡한 Pageable 객체 입력을 숨깁니다.
+            @PageableDefault(size = 10) Pageable pageable,
+
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        Page<MateResponse> response = groupService.getMates(userId, groupId, search, pageable);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "그룹 탈퇴", description = "현재 로그인한 사용자가 속해있는 그룹에서 탈퇴합니다. <br> - 멤버가 탈퇴하면: 정상적으로 탈퇴 처리됩니다. <br> - 방장이 탈퇴하면: 그룹에 다른 멤버가 있을 경우 탈퇴가 거부됩니다. (400 Bad Request)")
+    @DeleteMapping("/{groupId}/members/me")
+    public ApiResponse<Void> leaveGroup(
+            @Parameter(description = "탈퇴할 그룹의 ID (UUID)", required = true)
+            @PathVariable UUID groupId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.leaveGroup(groupId, userId);
+        return ApiResponse.success(SuccessCode.OK);
+    }
+
+
+    // --- Invitation API ---
+
+    @Operation(summary = "그룹으로 메이트 초대 (방장 권한)", description = "다른 사용자를 그룹에 초대합니다. <br> 방장(HOST)만 이 API를 호출할 수 있습니다. <br> 초대받은 사용자는 '초대 수락' API를 호출하기 전까지 'PENDING' 상태가 됩니다.")
+    @PostMapping("/{groupId}/invitations")
+    public ApiResponse<Void> inviteMate(
+            @Parameter(description = "초대할 그룹의 ID (UUID)", required = true)
+            @PathVariable UUID groupId,
+            @Valid @RequestBody InviteMateRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID inviterId = getUserId(userDetails);
+        groupService.inviteMate(groupId, request, inviterId);
+        return ApiResponse.success(SuccessCode.CREATED);
+    }
+
+    @Operation(summary = "내가 받은 초대 목록 조회", description = "현재 로그인한 사용자가 받은 초대 중, 아직 수락/거절하지 않은 'PENDING' 상태의 초대 목록만 조회합니다.")
+    @GetMapping("/invitations/my")
+    public ApiResponse<List<InvitationResponse>> getMyInvitations(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        List<InvitationResponse> response = groupService.getMyInvitations(userId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "초대 수락", description = "받은 초대를 수락하고 해당 그룹의 '멤버(MEMBER)'가 됩니다.")
+    @PostMapping("/invitations/{invitationId}/accept")
+    public ApiResponse<Void> acceptInvitation(
+            @Parameter(description = "수락할 초대의 ID (UUID)", required = true)
+            @PathVariable UUID invitationId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.acceptInvitation(invitationId, userId);
+        return ApiResponse.success(SuccessCode.OK);
+    }
+
+    @Operation(summary = "초대 거절", description = "받은 초대를 거절합니다. (초대 상태가 'DECLINED'로 변경됩니다)")
+    @PostMapping("/invitations/{invitationId}/decline")
+    public ApiResponse<Void> declineInvitation(
+            @Parameter(description = "거절할 초대의 ID (UUID)", required = true)
+            @PathVariable UUID invitationId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.declineInvitation(invitationId, userId);
+        return ApiResponse.success(SuccessCode.OK);
+    }
+
+
+    // 주석 처리된 /total/mates API
+//    @Operation(summary = "전체 그룹에 해당하는 메이트 조회",
+//            description = "[권장] /api/groups/mates?groupId=null 사용. 이 엔드포인트는 이전 버전 호환성을 위해 존재합니다.")
+//    @GetMapping("/total/mates")
+//    public ApiResponse<Page<MateResponse>> getTotalGroupMates(
+//            @RequestParam(required = false) String search,
+//            @PageableDefault(size = 10) Pageable pageable,
+//            @AuthenticationPrincipal CustomUserDetails userDetails
+//    ) {
+//        UUID userId = getUserId(userDetails);
+//        Page<MateResponse> response = groupService.getMates(userId, null, search, pageable);
+//        return ApiResponse.success(SuccessCode.OK, response);
+//    }
+
     private UUID getUserId(CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED); // 인증되지 않은 사용자
+        }
         return UUID.fromString(userDetails.getUsername());
     }
 }
