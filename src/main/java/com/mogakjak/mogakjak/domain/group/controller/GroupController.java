@@ -95,7 +95,7 @@ public class GroupController {
             @Parameter(description = "검색할 메이트 닉네임(이름)")
             @RequestParam(required = false) String search,
 
-            @Parameter(hidden = true) // Swagger UI에서 복잡한 Pageable 객체 입력을 숨깁니다.
+            @Parameter(hidden = true)
             @PageableDefault(size = 10) Pageable pageable,
 
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
@@ -166,21 +166,6 @@ public class GroupController {
         groupService.declineInvitation(invitationId, userId);
         return ApiResponse.success(SuccessCode.OK);
     }
-
-
-    // 주석 처리된 /total/mates API
-//    @Operation(summary = "전체 그룹에 해당하는 메이트 조회",
-//            description = "[권장] /api/groups/mates?groupId=null 사용. 이 엔드포인트는 이전 버전 호환성을 위해 존재합니다.")
-//    @GetMapping("/total/mates")
-//    public ApiResponse<Page<MateResponse>> getTotalGroupMates(
-//            @RequestParam(required = false) String search,
-//            @PageableDefault(size = 10) Pageable pageable,
-//            @AuthenticationPrincipal CustomUserDetails userDetails
-//    ) {
-//        UUID userId = getUserId(userDetails);
-//        Page<MateResponse> response = groupService.getMates(userId, null, search, pageable);
-//        return ApiResponse.success(SuccessCode.OK, response);
-//    }
 
     private UUID getUserId(CustomUserDetails userDetails) {
         if (userDetails == null) {

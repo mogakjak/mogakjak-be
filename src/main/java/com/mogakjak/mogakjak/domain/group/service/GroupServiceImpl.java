@@ -50,7 +50,6 @@ public class GroupServiceImpl implements GroupService {
                 .collect(Collectors.toList());
     }
 
-    // 그룹 생성
     @Override
     @Transactional
     public GroupDetailResponse createGroup(CreateGroupRequest request, UUID userId) {
@@ -74,7 +73,6 @@ public class GroupServiceImpl implements GroupService {
         return getGroupDetail(group.getId(), userId);
     }
 
-    // 그룹 상세 정보 조회
     @Override
     @Transactional(readOnly = true)
     public GroupDetailResponse getGroupDetail(UUID groupId, UUID userId) {
@@ -94,7 +92,6 @@ public class GroupServiceImpl implements GroupService {
         return GroupDetailResponse.from(group, members);
     }
 
-    // 그룹 정보 수정
     @Override
     @Transactional
     public GroupDetailResponse updateGroup(UUID groupId, UpdateGroupRequest request, UUID userId) {
@@ -135,7 +132,6 @@ public class GroupServiceImpl implements GroupService {
         return userPage.map(MateResponse::from);
     }
 
-    // 그룹 탈퇴
     @Override
     @Transactional
     public void leaveGroup(UUID groupId, UUID userId) {
@@ -159,7 +155,6 @@ public class GroupServiceImpl implements GroupService {
         }
     }
 
-    // 메이트 초대
     @Override
     @Transactional
     public void inviteMate(UUID groupId, InviteMateRequest request, UUID inviterId) {
@@ -167,20 +162,16 @@ public class GroupServiceImpl implements GroupService {
         User invitee = findUserById(request.getInviteeId());
         Group group = findGroupById(groupId);
 
-        // 방장(HOST)만 초대 가능
         checkUserRole(inviter, group);
 
-        // 자기 자신을 초대하는 경우
         if (inviter.getId().equals(invitee.getId())) {
             throw new CustomException(ErrorCode.CANNOT_INVITE_SELF);
         }
 
-        // 이미 그룹 멤버인지 확인
         if (userGroupRepository.findByUserAndGroup(invitee, group).isPresent()) {
             throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
         }
 
-        // 이미 PENDING 상태의 초대가 있는지 확인
         invitationRepository.findByGroupAndInvitee(group, invitee)
                 .ifPresent(invitation -> {
                     if (invitation.getStatus() == InvitationStatus.PENDING) {
@@ -197,7 +188,6 @@ public class GroupServiceImpl implements GroupService {
         invitationRepository.save(invitation);
     }
 
-    // 받은 초대 목록 조회
     @Override
     @Transactional(readOnly = true)
     public List<InvitationResponse> getMyInvitations(UUID userId) {
@@ -207,49 +197,40 @@ public class GroupServiceImpl implements GroupService {
                 .collect(Collectors.toList());
     }
 
-    // 초대 수락
     @Override
     @Transactional
     public void acceptInvitation(UUID invitationId, UUID userId) {
         User user = findUserById(userId);
         Invitation invitation = findInvitationById(invitationId);
 
-        // 본인에게 온 초대가 맞는지 확인
         if (!invitation.getInvitee().getId().equals(user.getId())) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        // 대기중인 초대가 맞는지 확인
         if (invitation.getStatus() != InvitationStatus.PENDING) {
             throw new CustomException(ErrorCode.INVALID_INVITATION);
         }
 
-        // 초대 상태 변경
         invitation.accept();
 
-        // 그룹에 멤버로 추가
         UserGroup userGroup = UserGroup.create(user, invitation.getGroup(), GroupRole.MEMBER);
         userGroupRepository.save(userGroup);
     }
 
-    // 초대 거절
     @Override
     @Transactional
     public void declineInvitation(UUID invitationId, UUID userId) {
         User user = findUserById(userId);
         Invitation invitation = findInvitationById(invitationId);
 
-        // 본인에게 온 초대가 맞는지 확인
         if (!invitation.getInvitee().getId().equals(user.getId())) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        // 대기중인 초대가 맞는지 확인
         if (invitation.getStatus() != InvitationStatus.PENDING) {
             throw new CustomException(ErrorCode.INVALID_INVITATION);
         }
 
-        // 초대 상태 변경
         invitation.decline();
     }
 

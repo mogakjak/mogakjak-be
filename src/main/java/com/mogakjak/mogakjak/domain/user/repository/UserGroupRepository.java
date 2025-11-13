@@ -50,6 +50,5 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
             Pageable pageable
     );
 
-    // 그룹의 멤버 수 카운트
     long countByGroup(Group group);
 }
