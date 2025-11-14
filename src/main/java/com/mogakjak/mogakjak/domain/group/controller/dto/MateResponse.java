@@ -18,12 +18,6 @@ public class MateResponse {
     @Schema(description = "닉네임")
     private String nickname;
 
-    @Schema(description = "프로필 이미지 URL")
-    private String profileUrl;
-
-    @Schema(description = "현재 상태 메시지")
-    private String statusMessage;
-
     public static MateResponse from(User user) {
         return MateResponse.builder()
                 .userId(user.getId())

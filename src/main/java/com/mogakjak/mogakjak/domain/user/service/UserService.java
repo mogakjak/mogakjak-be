@@ -43,7 +43,7 @@ public class UserService {
 
     @Transactional
     public List<UserSearchResponse> searchUsers(String nickname) {
-        if (nickname == null || nickname.isBlank()) {
+        if (nickname.isBlank()) {
             return List.of();
         }
 

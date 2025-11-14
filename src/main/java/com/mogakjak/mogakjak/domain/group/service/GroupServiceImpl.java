@@ -69,8 +69,14 @@ public class GroupServiceImpl implements GroupService {
         UserGroup userGroup = UserGroup.create(user, group, GroupRole.HOST);
         userGroupRepository.save(userGroup);
 
+        GroupDetailResponse.MemberInfo hostInfo = GroupDetailResponse.MemberInfo.builder()
+                .userId(user.getId())
+                .nickname(user.getName())
+                .role(GroupRole.HOST.name())
+                .build();
+
         // 생성된 그룹의 상세 정보 반환
-        return getGroupDetail(group.getId(), userId);
+        return GroupDetailResponse.from(group, List.of(hostInfo));
     }
 
     @Override
@@ -111,7 +117,15 @@ public class GroupServiceImpl implements GroupService {
              group.updatePassword(request.getPassword());
         }
 
-        return getGroupDetail(groupId, userId);
+        List<GroupDetailResponse.MemberInfo> members = userGroupRepository.findAllByGroupWithUser(group).stream()
+                .map(ug -> GroupDetailResponse.MemberInfo.builder()
+                        .userId(ug.getUser().getId())
+                        .nickname(ug.getUser().getName())
+                        .role(ug.getRole().name())
+                        .build())
+                .collect(Collectors.toList());
+
+        return GroupDetailResponse.from(group, members);
     }
 
     @Override
@@ -209,6 +223,13 @@ public class GroupServiceImpl implements GroupService {
 
         if (invitation.getStatus() != InvitationStatus.PENDING) {
             throw new CustomException(ErrorCode.INVALID_INVITATION);
+        }
+
+        // 이미 그룹 멤버인 경우
+        if (userGroupRepository.findByUserAndGroup(user, invitation.getGroup()).isPresent()) {
+            // 초대는 수락 처리하되, 멤버로 추가하지 않음
+            invitation.accept();
+            throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
         }
 
         invitation.accept();

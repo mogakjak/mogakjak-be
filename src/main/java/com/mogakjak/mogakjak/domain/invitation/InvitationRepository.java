@@ -7,11 +7,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface InvitationRepository extends JpaRepository<Invitation, UUID> {
 
     // 내가 받은 초대 목록 조회 (대기 중인 것만)
-    List<Invitation> findByInviteeAndStatus(User invitee, InvitationStatus status);
+    @Query("SELECT i FROM Invitation i JOIN FETCH i.group JOIN FETCH i.inviter WHERE i.invitee = :invitee AND i.status = :status")
+    List<Invitation> findByInviteeAndStatus(@Param("invitee") User invitee, @Param("status") InvitationStatus status);
 
     // 이미 초대를 보냈는지 확인
     Optional<Invitation> findByGroupAndInvitee(Group group, User invitee);

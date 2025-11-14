@@ -133,40 +133,6 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.CREATED);
     }
 
-    @Operation(summary = "내가 받은 초대 목록 조회", description = "현재 로그인한 사용자가 받은 초대 중, 아직 수락/거절하지 않은 'PENDING' 상태의 초대 목록만 조회합니다.")
-    @GetMapping("/invitations/my")
-    public ApiResponse<List<InvitationResponse>> getMyInvitations(
-            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        UUID userId = getUserId(userDetails);
-        List<InvitationResponse> response = groupService.getMyInvitations(userId);
-        return ApiResponse.success(SuccessCode.OK, response);
-    }
-
-    @Operation(summary = "초대 수락", description = "받은 초대를 수락하고 해당 그룹의 '멤버(MEMBER)'가 됩니다.")
-    @PostMapping("/invitations/{invitationId}/accept")
-    public ApiResponse<Void> acceptInvitation(
-            @Parameter(description = "수락할 초대의 ID (UUID)", required = true)
-            @PathVariable UUID invitationId,
-            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        UUID userId = getUserId(userDetails);
-        groupService.acceptInvitation(invitationId, userId);
-        return ApiResponse.success(SuccessCode.OK);
-    }
-
-    @Operation(summary = "초대 거절", description = "받은 초대를 거절합니다. (초대 상태가 'DECLINED'로 변경됩니다)")
-    @PostMapping("/invitations/{invitationId}/decline")
-    public ApiResponse<Void> declineInvitation(
-            @Parameter(description = "거절할 초대의 ID (UUID)", required = true)
-            @PathVariable UUID invitationId,
-            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        UUID userId = getUserId(userDetails);
-        groupService.declineInvitation(invitationId, userId);
-        return ApiResponse.success(SuccessCode.OK);
-    }
-
     private UUID getUserId(CustomUserDetails userDetails) {
         if (userDetails == null) {
             throw new CustomException(ErrorCode.UNAUTHORIZED); // 인증되지 않은 사용자
