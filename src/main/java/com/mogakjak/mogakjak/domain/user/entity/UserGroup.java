@@ -22,4 +22,16 @@ public class UserGroup extends BaseSchema {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id", nullable = false)
     private Group group;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private GroupRole role;
+
+    public static UserGroup create(User user, Group group, GroupRole role) {
+        return UserGroup.builder()
+                .user(user)
+                .group(group)
+                .role(role)
+                .build();
+    }
 }

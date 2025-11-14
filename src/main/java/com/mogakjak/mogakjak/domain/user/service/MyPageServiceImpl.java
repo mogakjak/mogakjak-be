@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.user.service;
 
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
+import com.mogakjak.mogakjak.domain.user.controller.dto.UserSearchResponse;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.domain.user.controller.dto.CharacterBasketResponse;

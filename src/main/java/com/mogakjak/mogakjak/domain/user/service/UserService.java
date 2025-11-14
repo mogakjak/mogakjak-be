@@ -1,10 +1,13 @@
 package com.mogakjak.mogakjak.domain.user.service;
 
+import com.mogakjak.mogakjak.domain.user.controller.dto.UserSearchResponse;
 import com.mogakjak.mogakjak.global.enumerate.ProviderType;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserProvider;
 import com.mogakjak.mogakjak.domain.user.repository.UserProviderRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,5 +39,16 @@ public class UserService {
                 .build();
 
         return userProviderRepository.save(userProvider);
+    }
+
+    @Transactional
+    public List<UserSearchResponse> searchUsers(String nickname) {
+        if (nickname.isBlank()) {
+            return List.of();
+        }
+
+        return userRepository.findByNameContaining(nickname).stream()
+                .map(UserSearchResponse::from)
+                .collect(Collectors.toList());
     }
 }
