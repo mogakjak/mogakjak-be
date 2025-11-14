@@ -1,11 +1,14 @@
 package com.mogakjak.mogakjak.domain.user.service;
 
+import com.mogakjak.mogakjak.domain.user.controller.dto.MemberListResDto;
 import com.mogakjak.mogakjak.domain.user.controller.dto.UserSearchResponse;
 import com.mogakjak.mogakjak.global.enumerate.ProviderType;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserProvider;
 import com.mogakjak.mogakjak.domain.user.repository.UserProviderRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -50,5 +53,18 @@ public class UserService {
         return userRepository.findByNameContaining(nickname).stream()
                 .map(UserSearchResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    public List<MemberListResDto> findAll() {
+        List<User> members = userRepository.findAll();
+        List<MemberListResDto> memberListResDtos = new ArrayList<>();
+        for (User m : members){
+            MemberListResDto memberListResDto = new MemberListResDto();
+            memberListResDto.setId(m.getId());
+            memberListResDto.setEmail(m.getEmail());
+            memberListResDto.setName(m.getName());
+            memberListResDtos.add(memberListResDto);
+        }
+        return memberListResDtos;
     }
 }
