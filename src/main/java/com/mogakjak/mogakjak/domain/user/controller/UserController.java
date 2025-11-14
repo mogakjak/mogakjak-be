@@ -1,5 +1,6 @@
 package com.mogakjak.mogakjak.domain.user.controller;
 
+import com.mogakjak.mogakjak.domain.user.controller.dto.MemberListResDto;
 import com.mogakjak.mogakjak.domain.user.controller.dto.UserSearchResponse;
 import com.mogakjak.mogakjak.domain.user.service.UserService;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
@@ -29,5 +30,11 @@ public class UserController {
     ) {
         List<UserSearchResponse> response = userService.searchUsers(nickname);
         return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @GetMapping("/list")
+    public ApiResponse<List<MemberListResDto>> memberList(){
+        List<MemberListResDto> dtos = userService.findAll();
+        return ApiResponse.success(SuccessCode.OK, dtos);
     }
 }
