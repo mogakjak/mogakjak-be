@@ -25,8 +25,7 @@ import java.util.UUID;
 public abstract class BaseSchema {
 
     @Id
-//    @Column(nullable = false, updatable = false, columnDefinition = "BINARY(16)")
-    @Column(nullable = false, updatable = false, columnDefinition = "VARCHAR(36)")
+    @Column(nullable = false, updatable = false, columnDefinition = "BINARY(16)")
     @UuidGenerator(style = UuidGenerator.Style.TIME)
     UUID id;
 
