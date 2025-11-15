@@ -35,6 +35,8 @@ public class MyPageServiceImpl implements MyPageService {
     private final UserCharacterRepository userCharacterRepository;
     private final QuoteRepository quoteRepository;
 
+    private static final int DEFAULT_CHARACTER_LEVEL = 1;
+
     // 내 채소 바구니 정보 조회
     @Override
     public CharacterBasketResponse getCharacterBasket(UUID userId) {
@@ -140,7 +142,7 @@ public class MyPageServiceImpl implements MyPageService {
 
         ImageCharacter mainCharacter = userProfile.getMainImageCharacter();
         if (mainCharacter == null) {
-            mainCharacter = imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1)
+            mainCharacter = imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(DEFAULT_CHARACTER_LEVEL)
                     .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND));
         }
 
