@@ -22,9 +22,6 @@ public class GroupDetailResponse {
     @Schema(description = "그룹 설명")
     private String description;
 
-    @Schema(description = "비밀번호 존재 여부 (공개/비공개)")
-    private boolean isPrivate;
-
     @Schema(description = "그룹 멤버 목록")
     private List<MemberInfo> members;
 
@@ -38,8 +35,6 @@ public class GroupDetailResponse {
         private String nickname;
         @Schema(description = "유저 프로필 이미지 URL")
         private String profileUrl;
-        @Schema(description = "그룹 내 역할 (HOST, MEMBER)")
-        private String role;
     }
 
     public static GroupDetailResponse from(Group group, List<MemberInfo> members) {
@@ -47,7 +42,6 @@ public class GroupDetailResponse {
                 .groupId(group.getId())
                 .name(group.getName())
                 .description(group.getDescription())
-                .isPrivate(group.getPassword() != null && !group.getPassword().isEmpty())
                 .members(members)
                 .build();
     }
