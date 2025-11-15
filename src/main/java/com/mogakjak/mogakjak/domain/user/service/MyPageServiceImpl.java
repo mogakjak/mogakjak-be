@@ -152,12 +152,13 @@ public class MyPageServiceImpl implements MyPageService {
     }
 
     private Quote getRandomQuote() {
-        List<Quote> quotes = quoteRepository.findAll();
-        if (quotes.isEmpty()) {
+        long count = quoteRepository.count();
+        if (count == 0) {
             throw new CustomException(ErrorCode.QUOTE_NOT_FOUND);
         }
-        int index = (int) (Math.random() * quotes.size());
-        return quotes.get(index);
+
+        int randomIndex = (int) (Math.random() * count);
+        return quoteRepository.findRandomByOffset(randomIndex);
     }
 
     private User findUserById(UUID userId) {
