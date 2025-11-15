@@ -1,14 +1,15 @@
 package com.mogakjak.mogakjak.domain.user.controller;
 
+import com.mogakjak.mogakjak.domain.user.controller.dto.*;
+import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
+import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
-import com.mogakjak.mogakjak.domain.user.controller.dto.CharacterBasketResponse;
-import com.mogakjak.mogakjak.domain.user.controller.dto.CharacterGuideResponse;
 import com.mogakjak.mogakjak.domain.user.service.MyPageService;
-import com.mogakjak.mogakjak.domain.user.controller.dto.UpdateMainCharacterRequest;
-import com.mogakjak.mogakjak.domain.user.controller.dto.UpdateProfileRequest;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "MyPage", description = "마이페이지 관련 API")
 @RestController
 @RequestMapping("/api/mypage")
 @RequiredArgsConstructor
@@ -31,6 +33,15 @@ public class MyPageController {
         UUID userId = getUserId(userDetails);
 
         CharacterBasketResponse response = myPageService.getCharacterBasket(userId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "프로필 조회", description = "사용자의 프로필을 조회합니다.")
+    @GetMapping("/profile")
+    public ApiResponse<MyProfileResponse> getProfile(
+            @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        MyProfileResponse response = myPageService.getProfile(user);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 

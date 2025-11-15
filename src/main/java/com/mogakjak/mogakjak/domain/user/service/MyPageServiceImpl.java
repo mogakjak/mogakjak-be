@@ -1,13 +1,13 @@
 package com.mogakjak.mogakjak.domain.user.service;
 
+import com.mogakjak.mogakjak.domain.quote.dto.QuoteResponse;
+import com.mogakjak.mogakjak.domain.quote.entity.Quote;
+import com.mogakjak.mogakjak.domain.quote.repository.QuoteRepository;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
-import com.mogakjak.mogakjak.domain.user.controller.dto.UserSearchResponse;
+import com.mogakjak.mogakjak.domain.user.controller.dto.*;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
-import com.mogakjak.mogakjak.domain.user.controller.dto.CharacterBasketResponse;
-import com.mogakjak.mogakjak.domain.user.controller.dto.CharacterGuideResponse;
 import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
-import com.mogakjak.mogakjak.domain.user.controller.dto.UpdateProfileRequest;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserProfile;
 import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
@@ -33,6 +33,7 @@ public class MyPageServiceImpl implements MyPageService {
     private final TodoRepository todoRepository;
     private final ImageCharacterRepository imageCharacterRepository;
     private final UserCharacterRepository userCharacterRepository;
+    private final QuoteRepository quoteRepository;
 
     // 내 채소 바구니 정보 조회
     @Override
@@ -130,6 +131,33 @@ public class MyPageServiceImpl implements MyPageService {
         return imageCharacterRepository.findAllByOrderByLevelAsc().stream()
                 .map(this::toCharacterGuideDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public MyProfileResponse getProfile(User user) {
+
+        UserProfile userProfile = findOrCreateUserProfile(user);
+
+        ImageCharacter mainCharacter = userProfile.getMainImageCharacter();
+        if (mainCharacter == null) {
+            mainCharacter = imageCharacterRepository.findByLevel(1)
+                    .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND));
+        }
+
+        return MyProfileResponse.builder()
+                .nickname(user.getName())
+                .character(ImageCharacterResponse.from(mainCharacter))
+                .quote(QuoteResponse.from(getRandomQuote()))
+                .build();
+    }
+
+    private Quote getRandomQuote() {
+        List<Quote> quotes = quoteRepository.findAll();
+        if (quotes.isEmpty()) {
+            throw new CustomException(ErrorCode.QUOTE_NOT_FOUND);
+        }
+        int index = (int) (Math.random() * quotes.size());
+        return quotes.get(index);
     }
 
     private User findUserById(UUID userId) {
