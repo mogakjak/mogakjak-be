@@ -1,0 +1,22 @@
+package com.mogakjak.mogakjak.domain.user.service;
+
+import com.mogakjak.mogakjak.domain.user.controller.dto.ImageCharacterRequest;
+import com.mogakjak.mogakjak.domain.user.controller.dto.ImageCharacterResponse;
+
+import java.util.List;
+import java.util.UUID;
+
+public interface ImageCharacterService {
+
+    ImageCharacterResponse createCharacter(ImageCharacterRequest request);
+
+    List<ImageCharacterResponse> createCharacters(List<ImageCharacterRequest> requests);
+
+    List<ImageCharacterResponse> getAllCharacters();
+
+    ImageCharacterResponse getCharacter(UUID id);
+
+    ImageCharacterResponse updateCharacter(UUID id, ImageCharacterRequest request);
+
+    void deleteCharacter(UUID id);
+}
