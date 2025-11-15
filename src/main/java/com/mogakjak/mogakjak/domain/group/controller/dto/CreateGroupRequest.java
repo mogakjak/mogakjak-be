@@ -19,7 +19,4 @@ public class CreateGroupRequest {
     @Size(max = 100, message = "그룹 설명은 100자를 초과할 수 없습니다.")
     @Schema(description = "그룹 설명", example = "스프링 스터디 그룹입니다.")
     private String description;
-
-    @Schema(description = "비밀번호 (설정 시 비공개 그룹)", example = "1234")
-    private String password;
 }

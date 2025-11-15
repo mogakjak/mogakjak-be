@@ -55,12 +55,10 @@ public class GroupServiceImpl implements GroupService {
     public GroupDetailResponse createGroup(CreateGroupRequest request, UUID userId) {
         User user = findUserById(userId);
 
-        String groupPassword = request.getPassword();
-
         Group group = Group.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .password(groupPassword)
+                .password(null)
                 .build();
 
         groupRepository.save(group);
@@ -72,7 +70,6 @@ public class GroupServiceImpl implements GroupService {
         GroupDetailResponse.MemberInfo hostInfo = GroupDetailResponse.MemberInfo.builder()
                 .userId(user.getId())
                 .nickname(user.getName())
-                .role(GroupRole.HOST.name())
                 .build();
 
         // 생성된 그룹의 상세 정보 반환
@@ -85,13 +82,12 @@ public class GroupServiceImpl implements GroupService {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
 
-        checkUserInGroup(user, group);
+//        checkUserInGroup(user, group);
 
         List<GroupDetailResponse.MemberInfo> members = userGroupRepository.findAllByGroupWithUser(group).stream()
                 .map(ug -> GroupDetailResponse.MemberInfo.builder()
                         .userId(ug.getUser().getId())
                         .nickname(ug.getUser().getName())
-                        .role(ug.getRole().name())
                         .build())
                 .collect(Collectors.toList());
 
@@ -105,7 +101,7 @@ public class GroupServiceImpl implements GroupService {
         Group group = findGroupById(groupId);
 
         // 방장(HOST)만 수정 가능
-        checkUserRole(user, group);
+//        checkUserRole(user, group);
 
         if (StringUtils.hasText(request.getName())) {
              group.updateName(request.getName());
@@ -113,15 +109,11 @@ public class GroupServiceImpl implements GroupService {
         if (StringUtils.hasText(request.getDescription())) {
              group.updateDescription(request.getDescription());
         }
-        if (StringUtils.hasText(request.getPassword())) {
-             group.updatePassword(request.getPassword());
-        }
 
         List<GroupDetailResponse.MemberInfo> members = userGroupRepository.findAllByGroupWithUser(group).stream()
                 .map(ug -> GroupDetailResponse.MemberInfo.builder()
                         .userId(ug.getUser().getId())
                         .nickname(ug.getUser().getName())
-                        .role(ug.getRole().name())
                         .build())
                 .collect(Collectors.toList());
 
@@ -176,7 +168,7 @@ public class GroupServiceImpl implements GroupService {
         User invitee = findUserById(request.getInviteeId());
         Group group = findGroupById(groupId);
 
-        checkUserRole(inviter, group);
+//        checkUserRole(inviter, group);
 
         if (inviter.getId().equals(invitee.getId())) {
             throw new CustomException(ErrorCode.CANNOT_INVITE_SELF);
@@ -281,11 +273,11 @@ public class GroupServiceImpl implements GroupService {
         }
     }
 
-    private void checkUserRole(User user, Group group) {
-        if (!userGroupRepository.existsByUserAndGroupAndRole(user, group, GroupRole.HOST)) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
-        }
-    }
+//    private void checkUserRole(User user, Group group) {
+//        if (!userGroupRepository.existsByUserAndGroupAndRole(user, group, GroupRole.HOST)) {
+//            throw new CustomException(ErrorCode.FORBIDDEN);
+//        }
+//    }
 
     private MyGroupResponse toMyGroupDto(Group group) {
         return MyGroupResponse.builder()

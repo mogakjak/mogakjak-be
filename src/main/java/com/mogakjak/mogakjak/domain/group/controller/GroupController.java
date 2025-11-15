@@ -6,7 +6,6 @@ import com.mogakjak.mogakjak.domain.group.controller.dto.MateResponse;
 import com.mogakjak.mogakjak.domain.group.controller.dto.MyGroupResponse;
 import com.mogakjak.mogakjak.domain.group.controller.dto.UpdateGroupRequest;
 import com.mogakjak.mogakjak.domain.group.service.GroupService;
-import com.mogakjak.mogakjak.domain.invitation.InvitationResponse;
 import com.mogakjak.mogakjak.domain.invitation.InviteMateRequest;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
@@ -35,7 +34,7 @@ public class GroupController {
 
     private final GroupService groupService;
 
-    @Operation(summary = "신규 그룹 생성", description = "새로운 스터디 그룹을 생성합니다. API를 호출한 사용자가 해당 그룹의 '방장(HOST)'이 됩니다.")
+    @Operation(summary = "신규 그룹 생성", description = "새로운 스터디 그룹을 생성합니다.")
     @PostMapping
     public ApiResponse<GroupDetailResponse> createGroup(
             @Valid @RequestBody CreateGroupRequest request,
@@ -68,7 +67,7 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @Operation(summary = "그룹 정보 수정 (방장 권한)", description = "그룹의 이름, 설명, 비밀번호를 수정합니다. 방장(HOST)만 이 API를 호출할 수 있습니다.")
+    @Operation(summary = "그룹 정보 수정", description = "그룹의 이름, 설명을 수정합니다.")
     @PutMapping("/{groupId}")
     public ApiResponse<GroupDetailResponse> updateGroup(
             @Parameter(description = "수정할 그룹의 ID (UUID)", required = true)
@@ -120,7 +119,7 @@ public class GroupController {
 
     // --- Invitation API ---
 
-    @Operation(summary = "그룹으로 메이트 초대 (방장 권한)", description = "다른 사용자를 그룹에 초대합니다. <br> 방장(HOST)만 이 API를 호출할 수 있습니다. <br> 초대받은 사용자는 '초대 수락' API를 호출하기 전까지 'PENDING' 상태가 됩니다.")
+    @Operation(summary = "그룹으로 메이트 초대", description = "다른 사용자를 그룹에 초대합니다. <br> 초대받은 사용자는 '초대 수락' API를 호출하기 전까지 'PENDING' 상태가 됩니다.")
     @PostMapping("/{groupId}/invitations")
     public ApiResponse<Void> inviteMate(
             @Parameter(description = "초대할 그룹의 ID (UUID)", required = true)
