@@ -1,9 +1,8 @@
 package com.mogakjak.mogakjak.domain.user.service;
 
-import com.mogakjak.mogakjak.domain.user.controller.dto.CharacterBasketResponse;
-import com.mogakjak.mogakjak.domain.user.controller.dto.CharacterGuideResponse;
-import com.mogakjak.mogakjak.domain.user.controller.dto.UpdateProfileRequest;
-import com.mogakjak.mogakjak.domain.user.controller.dto.UserSearchResponse;
+import com.mogakjak.mogakjak.domain.user.controller.dto.*;
+import com.mogakjak.mogakjak.domain.user.entity.User;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -21,4 +20,6 @@ public interface MyPageService {
     // 채소 도감 조회
     List<CharacterGuideResponse> getCharacterGuide();
 
+    // 내 프로필 조회 (홈 용)
+    MyProfileResponse getProfile(User user);
 }
