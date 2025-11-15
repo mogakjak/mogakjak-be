@@ -140,7 +140,7 @@ public class MyPageServiceImpl implements MyPageService {
 
         ImageCharacter mainCharacter = userProfile.getMainImageCharacter();
         if (mainCharacter == null) {
-            mainCharacter = imageCharacterRepository.findByLevel(1)
+            mainCharacter = imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1)
                     .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND));
         }
 

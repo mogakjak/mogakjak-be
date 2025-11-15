@@ -13,4 +13,6 @@ public interface ImageCharacterRepository extends JpaRepository<ImageCharacter, 
     List<ImageCharacter> findAllByOrderByLevelAsc();
 
     Optional<ImageCharacter> findByLevel(int i);
+
+    Optional<ImageCharacter> findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(Integer level);
 }
