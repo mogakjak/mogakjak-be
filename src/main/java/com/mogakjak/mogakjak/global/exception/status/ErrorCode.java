@@ -49,7 +49,11 @@ public enum ErrorCode implements StatusCode {
     INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "초대를 찾을 수 없습니다."),
     INVALID_INVITATION(HttpStatus.BAD_REQUEST, "유효하지 않은 초대입니다 (예: 만료, 이미 처리됨)."),
     CANNOT_INVITE_SELF(HttpStatus.BAD_REQUEST, "자기 자신을 초대할 수 없습니다."),
-    ALREADY_INVITED(HttpStatus.CONFLICT, "이미 초대를 보낸 사용자입니다.");
+    ALREADY_INVITED(HttpStatus.CONFLICT, "이미 초대를 보낸 사용자입니다."),
+
+    // Quote Errors
+    QUOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "명언을 찾을 수 없습니다.")
+    ;
 
     private final HttpStatus httpStatus;
     private final String message;
