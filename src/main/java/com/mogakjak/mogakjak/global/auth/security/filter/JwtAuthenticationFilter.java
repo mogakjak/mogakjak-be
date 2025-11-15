@@ -77,7 +77,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         ApiResponse<?> apiResponse =
                 (e instanceof CustomException apiEx)
                         ? ApiResponse.error(apiEx.getStatusCode())
-                        : ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "알 수 없는 서버 오류가 발생했습니다.");
+                        : ApiResponse.error(HttpStatus.UNAUTHORIZED.value(), "유효하지 않은 토큰입니다.");
 
         String content = objectMapper.writeValueAsString(apiResponse);
 
