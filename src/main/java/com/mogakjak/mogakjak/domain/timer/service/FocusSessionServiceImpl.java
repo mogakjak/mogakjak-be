@@ -138,6 +138,8 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         if (!todo.getCategory().getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.FORBIDDEN_TODO_ACCESS);
         }
+
+        return todo;
     }
 
     private ActiveFocusSession getValidatedActiveFocusSession(UUID userId, UUID sessionId) {
