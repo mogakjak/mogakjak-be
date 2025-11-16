@@ -12,10 +12,6 @@ public record PomodoroStartRequest(
         UUID todoId,
 
         @NotNull
-        @Schema(description = "목표 시간(초 단위)", example = "1800")
-        Long targetSeconds,
-
-        @NotNull
         @Schema(description = "집중 시간(초 단위)", example = "1200")
         Long focusSeconds,
 
