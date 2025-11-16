@@ -44,7 +44,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         FocusSession focusSession = createFocusSession(TimerMode.TIMER, user, request.todoId(), now, request.targetSeconds());
 
-        return startCommon(user.getId(), request.todoId(), now, focusSession, todo);
+        return startCommon(user.getId(), now, focusSession, todo);
     }
 
     @Override
@@ -57,7 +57,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         FocusSession focusSession = createFocusSession(TimerMode.STOPWATCH, user, request.todoId(), now, null);
 
-        return startCommon(user.getId(), request.todoId(), now, focusSession, todo);
+        return startCommon(user.getId(), now, focusSession, todo);
     }
 
     @Override
@@ -139,18 +139,18 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 });
     }
 
-    private TimerResponse startCommon(UUID userId, UUID sessionId, LocalDateTime now, FocusSession focusSession, Todo todo) {
+    private TimerResponse startCommon(UUID userId, LocalDateTime now, FocusSession focusSession, Todo todo) {
         FocusSession savedFocusSession = focusSessionRepository.save(focusSession);
 
         ActiveFocusSession activeSession = ActiveFocusSession.create(
-                sessionId,
+                focusSession.getId(),
                 userId,
                 now
         );
         activeFocusSessionRepository.save(activeSession);
 
         FocusInterval focusInterval = FocusInterval.create(
-                sessionId,
+                focusSession.getId(),
                 now
         );
         focusIntervalRepository.save(focusInterval);
