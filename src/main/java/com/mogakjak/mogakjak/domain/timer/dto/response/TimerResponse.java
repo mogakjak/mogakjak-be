@@ -1,5 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.dto.response;
 
+import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerMode;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
@@ -40,7 +41,10 @@ public record TimerResponse(
         Integer progressRate,
 
         @Schema(description = "할 일(todo) 관련 dto")
-        SimpleTodoResponse todo
+        SimpleTodoResponse todo,
+
+        @Schema(description = "뽀모도로 관련 dto")
+        PomodoroInfoResponse pomodoroInfo
 
 ) {
     public static TimerResponse fromStart(FocusSession focusSession, Todo todo) {
@@ -54,7 +58,8 @@ public record TimerResponse(
                 focusSession.getTargetDuration(),
                 focusSession.getTotalDuration(),
                 focusSession.getProgressRate(),
-                SimpleTodoResponse.from(todo)
+                SimpleTodoResponse.from(todo),
+                null
         );
     }
 
@@ -69,6 +74,7 @@ public record TimerResponse(
                 focusSession.getTargetDuration(),
                 focusSession.getTotalDuration(),
                 focusSession.getProgressRate(),
+                null,
                 null
         );
     }
@@ -84,6 +90,7 @@ public record TimerResponse(
                 focusSession.getTargetDuration(),
                 focusSession.getTotalDuration(),
                 focusSession.getProgressRate(),
+                null,
                 null
         );
     }
@@ -99,7 +106,24 @@ public record TimerResponse(
                 focusSession.getTargetDuration(),
                 focusSession.getTotalDuration(),
                 focusSession.getProgressRate(),
+                null,
                 null
+        );
+    }
+
+    public static TimerResponse fromPomodoroPhaseChange(FocusSession focusSession, FocusInterval phaseInterval) {
+        return new TimerResponse(
+                focusSession.getId(),
+                focusSession.getMode(),
+                focusSession.getStatus(),
+                focusSession.getStartedAt(),
+                null,
+                focusSession.getEndedAt(),
+                focusSession.getTargetDuration(),
+                focusSession.getTotalDuration(),
+                focusSession.getProgressRate(),
+                null,
+                PomodoroInfoResponse.from(focusSession, phaseInterval)
         );
     }
 }
