@@ -164,8 +164,11 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         validateFinishableState(currentFocusSession);
 
         // 인터벌 종료
-        if (currentFocusSession.getStatus() != TimerStatus.PAUSED) currentInterval.end(now);
-        long intervalDurationSeconds = calculateIntervalDurationSeconds(currentInterval);
+        long intervalDurationSeconds = 0L;
+        if (currentFocusSession.getStatus() != TimerStatus.PAUSED) {
+            currentInterval.end(now);
+            intervalDurationSeconds = calculateIntervalDurationSeconds(currentInterval);
+        }
 
         // 활성 세션 종료 (세션 삭제)
         activeFocusSessionRepository.deleteById(currentActiveSession.getId());
