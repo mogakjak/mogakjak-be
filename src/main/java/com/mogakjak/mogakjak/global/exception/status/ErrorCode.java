@@ -61,9 +61,12 @@ public enum ErrorCode implements StatusCode {
 
     // Focus Session Errors
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "집중 세션을 찾을 수 없습니다."),
+    SESSION_ALREADY_RUNNING(HttpStatus.BAD_REQUEST, "세션이 실행 중인 상태입니다."),
     SESSION_ALREADY_PAUSED(HttpStatus.BAD_REQUEST, "세션은 정지된 상태입니다."),
     SESSION_ALREADY_FINISHED(HttpStatus.BAD_REQUEST, "세션은 종료된 상태입니다."),
     SESSION_NOT_RUNNING(HttpStatus.BAD_REQUEST, "세션이 실행 중이지 않습니다."),
+    SESSION_NOT_PAUSED(HttpStatus.BAD_REQUEST, "세션이 정지 상태이지 않습니다."),
+    SESSION_NOT_FINISHABLE(HttpStatus.BAD_REQUEST, "세션을 종료할 수 없습니다."),
 
     // Focus Interval Errors
     INTERVAL_NOT_FOUND(HttpStatus.NOT_FOUND, "집중 구간(Interval)을 찾을 수 없습니다."),

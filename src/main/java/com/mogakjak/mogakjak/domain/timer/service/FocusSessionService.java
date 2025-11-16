@@ -22,11 +22,11 @@ public interface FocusSessionService {
      * 타이머 재개
      */
     TimerResponse resumeTimer(User user, UUID sessionId);
-//
-//    /**
-//     * 타이머 종료
-//     */
-//    TimerStopResponse stopTimer(User user);
+
+    /**
+     * 타이머 종료
+     */
+    TimerResponse finishTimer(User user, UUID sessionId);
 //
 //    /**
 //     * (뽀모도로의 경우) 다음 단계로 전환

@@ -48,15 +48,15 @@ public class TimerController {
         TimerResponse response = timerService.resumeTimer(user, sessionId);
         return ApiResponse.success(SuccessCode.OK, response);
     }
-//
-//    @PostMapping("/stop/timer/{sessionId}")
-//    public ApiResponse<String> stopTimer(
-//            @Parameter(hidden = true) @CurrentUser User user,
-//            @PathVariable UUID sessionId
-//    ) {
-//        TimerStopResponse response = timerService.stopTimer(user, sessionId);
-//        return ApiResponse.success(SuccessCode.OK, "타이머가 성공적으로 중지 되었습니다.");
-//    }
+
+    @PostMapping("/finish/timer/{sessionId}")
+    public ApiResponse<TimerResponse> stopTimer(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID sessionId
+    ) {
+        TimerResponse response = timerService.finishTimer(user, sessionId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
 
 //    @PostMapping("/pause")
 //    public ApiResponse<Void> pauseTimer(@Parameter(hidden = true) @CurrentUser User user) {

@@ -97,15 +97,12 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         // 인터벌 종료
         currentInterval.end(now);
-        long intervalDurationSeconds = Duration.between(currentInterval.getStartedAt(), currentInterval.getEndedAt()).getSeconds();
+        long intervalDurationSeconds = calculateIntervalDurationSeconds(currentInterval);
 
         // 활성 세션은 그대로 유지
 
         // 집중 세션 상태 PAUSED로 변경 + 누적 몰입 시간 추가
-        currentFocusSession.addDuration(intervalDurationSeconds);
-
-        Integer progressRate = calculateProgressRate(currentFocusSession.getTargetDuration(), currentFocusSession.getTotalDuration());
-        currentFocusSession.pause(progressRate);
+        currentFocusSession.pause(intervalDurationSeconds);
 
         return TimerResponse.fromPause(currentFocusSession, now);
     }
@@ -126,6 +123,8 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         FocusSession currentFocusSession = focusSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
+        validateResumableState(currentFocusSession);
+
         // 인터벌 생성
         FocusInterval focusInterval = FocusInterval.create(
                 currentFocusSession.getId(),
@@ -141,28 +140,70 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         return TimerResponse.fromStartAndResume(currentFocusSession);
     }
 
+    @Override
+    @Transactional
+    public TimerResponse finishTimer(User user, UUID sessionId) {
+        LocalDateTime now = getCurrentTime();
+
+        // 활성 세션 있는지 확인
+        ActiveFocusSession currentActiveSession = activeFocusSessionRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
+        if (!currentActiveSession.getSessionId().equals(sessionId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACTIVE_SESSION);
+        }
+
+        // 집중 세션 있는지 확인
+        FocusSession currentFocusSession = focusSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+        // 인터벌 존재하는지 확인
+        FocusInterval currentInterval = focusIntervalRepository.findTopBySessionIdOrderByStartedAtDesc(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INTERVAL_NOT_FOUND));
+
+        // 중지 가능한 상태에 있는지 확인
+        validateFinishableState(currentFocusSession);
+
+        // 인터벌 종료
+        if (currentFocusSession.getStatus() != TimerStatus.PAUSED) currentInterval.end(now);
+        long intervalDurationSeconds = calculateIntervalDurationSeconds(currentInterval);
+
+        // 활성 세션 종료 (세션 삭제)
+        activeFocusSessionRepository.deleteById(currentActiveSession.getId());
+
+        // 집중 세션 상태 변경 및 종료 시간 기입
+        currentFocusSession.end(now, intervalDurationSeconds);
+
+        return TimerResponse.fromFinish(currentFocusSession);
+    }
+
+
     private LocalDateTime getCurrentTime() {
         return LocalDateTime.now();
     }
 
-    private static Integer calculateProgressRate(Long totalDuration, Long targetDuration) {
-        if (targetDuration == null || targetDuration <= 0) {
-            return null;
-        }
-        if (totalDuration == null || totalDuration <= 0) {
-            return 0;
-        }
-
-        double rate = (double) totalDuration / targetDuration * 100;
-        return (int) Math.min(100, Math.floor(rate));
+    private long calculateIntervalDurationSeconds(FocusInterval focusInterval) {
+        return Duration.between(focusInterval.getStartedAt(), focusInterval.getEndedAt()).getSeconds();
     }
 
-    private void validatePauseableState(FocusSession currentFocusSession) {
-        if (currentFocusSession.getStatus() != TimerStatus.RUNNING) {
-            if (currentFocusSession.getStatus() == TimerStatus.PAUSED) {
+    private void validateResumableState(FocusSession session) {
+        if (session.getStatus() != TimerStatus.PAUSED) {
+            if (session.getStatus() == TimerStatus.RUNNING) {
+                throw new CustomException(ErrorCode.SESSION_ALREADY_RUNNING);
+            }
+            if (session.getStatus() == TimerStatus.FINISHED) {
+                throw new CustomException(ErrorCode.SESSION_ALREADY_FINISHED);
+            }
+
+            throw new CustomException(ErrorCode.SESSION_NOT_PAUSED);
+        }
+    }
+
+    private void validatePauseableState(FocusSession session) {
+        if (session.getStatus() != TimerStatus.RUNNING) {
+            if (session.getStatus() == TimerStatus.PAUSED) {
                 throw new CustomException(ErrorCode.SESSION_ALREADY_PAUSED);
             }
-            if (currentFocusSession.getStatus() == TimerStatus.FINISHED) {
+            if (session.getStatus() == TimerStatus.FINISHED) {
                 throw new CustomException(ErrorCode.SESSION_ALREADY_FINISHED);
             }
 
@@ -170,57 +211,18 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         }
     }
 
-//
-//    @Override
-//    @Transactional
-//    public TimerStopResponse stopTimer(User user) {
-//        TimerSession session = sessionRepository.findByUserIdAndStatus(user.getId(), RUNNING)
-//                .or(() -> sessionRepository.findByUserIdAndStatus(user.getId(), TimerStatus.PAUSED))
-//                .orElseThrow(() -> new CustomException(ErrorCode.NO_ACTIVE_TIMER_SESSION));
-//
-//        LocalDateTime now = LocalDateTime.now();
-//
-//        List<TimerInterval> intervals = intervalRepository.findAllBySessionId(session.getId());
-//        if (!intervals.isEmpty()) {
-//            TimerInterval last = intervals.getLast();
-//            if (last.getEndedAt() == null) {
-//                TimerInterval closed = TimerInterval.builder()
-//                        .id(last.getId())
-//                        .sessionId(last.getSessionId())
-//                        .startedAt(last.getStartedAt())
-//                        .endedAt(now)
-//                        .type(last.getType())
-//                        .round(last.getRound())
-//                        .build();
-//                intervalRepository.save(closed);
-//            }
-//        }
-//
-//        long totalSeconds = intervalRepository.findAllBySessionId(session.getId()).stream()
-//                .filter(i -> i.getStartedAt() != null && i.getEndedAt() != null)
-//                .mapToLong(i -> Duration.between(i.getStartedAt(), i.getEndedAt()).getSeconds())
-//                .sum();
-//
-//        TimerSession finished = session.toBuilder()
-//                .endedAt(now)
-//                .totalDuration(totalSeconds)
-//                .status(TimerStatus.FINISHED)
-//                .build();
-//
-//        TimerSession saved = sessionRepository.save(finished);
-//
-//        Long safeTarget = saved.getTargetDuration() == null ? 0L : saved.getTargetDuration();
-//
-//        return TimerStopResponse.builder()
-//                .sessionId(saved.getId())
-//                .mode(saved.getMode())
-//                .status(saved.getStatus())
-//                .startedAt(saved.getStartedAt())
-//                .endedAt(saved.getEndedAt())
-//                .targetDuration(safeTarget)
-//                .totalDuration(saved.getTotalDuration())
-//                .build();
-//    }
+    private void validateFinishableState(FocusSession session) {
+        TimerStatus status = session.getStatus();
+
+        if (status == TimerStatus.FINISHED) {
+            throw new CustomException(ErrorCode.SESSION_ALREADY_FINISHED);
+        }
+
+        if (status != TimerStatus.RUNNING && status != TimerStatus.PAUSED) {
+            throw new CustomException(ErrorCode.SESSION_NOT_FINISHABLE);
+        }
+    }
+
 //
 //    @Override
 //    @Transactional
@@ -275,55 +277,5 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 //                        ((Number) row[1]).longValue()
 //                ))
 //                .toList();
-//    }
-//
-//    private void finishPomodoro(TimerSession session) {
-//        sessionRepository.save(
-//                session.toBuilder()
-//                        .endedAt(LocalDateTime.now())
-//                        .status(TimerStatus.FINISHED)
-//                        .build()
-//        );
-//    }
-//
-//    private void createPomodoroFocus(TimerSession session, LocalDateTime now, int round) {
-//        intervalRepository.save(
-//                TimerInterval.builder()
-//                        .sessionId(session.getId())
-//                        .startedAt(now)
-//                        .type(IntervalType.FOCUS)
-//                        .round(round)
-//                        .build()
-//        );
-//    }
-//
-//    private void createPomodoroBreak(TimerSession session, LocalDateTime now, int round) {
-//        intervalRepository.save(
-//                TimerInterval.builder()
-//                        .sessionId(session.getId())
-//                        .startedAt(now)
-//                        .type(IntervalType.BREAK)
-//                        .round(round)
-//                        .build()
-//        );
-//    }
-//
-//    private TimerInterval createNormalInterval(TimerSession session, LocalDateTime now) {
-//        return intervalRepository.save(
-//                TimerInterval.builder()
-//                        .sessionId(session.getId())
-//                        .startedAt(now)
-//                        .type(IntervalType.NORMAL)
-//                        .build()
-//        );
-//    }
-//
-//    private void pauseOrFinishSession(TimerSession session, TimerStatus newStatus) {
-//        sessionRepository.save(
-//                session.toBuilder()
-//                        .endedAt(LocalDateTime.now())
-//                        .status(newStatus)
-//                        .build()
-//        );
 //    }
 }
