@@ -32,4 +32,8 @@ public class FocusInterval extends BaseSchema {
                 null
         );
     }
+
+    public void end() {
+        this.endedAt = LocalDateTime.now();
+    }
 }

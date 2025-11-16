@@ -17,7 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class ActiveFocusSession extends BaseSchema {
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private UUID sessionId;
 
     @Column(nullable = false, unique = true)
