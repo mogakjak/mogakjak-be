@@ -60,6 +60,7 @@ public enum ErrorCode implements StatusCode {
     FORBIDDEN_ACTIVE_SESSION(HttpStatus.FORBIDDEN, "해당 활성 세션에 접근 권한이 없습니다."),
 
     // Focus Session Errors
+    FORBIDDEN_SESSION(HttpStatus.FORBIDDEN, "해당 집중 세션에 접근 권한이 없습니다."),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "집중 세션을 찾을 수 없습니다."),
     SESSION_ALREADY_RUNNING(HttpStatus.BAD_REQUEST, "세션이 실행 중인 상태입니다."),
     SESSION_ALREADY_PAUSED(HttpStatus.BAD_REQUEST, "세션은 정지된 상태입니다."),

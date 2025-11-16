@@ -8,24 +8,12 @@ import java.util.UUID;
 
 public interface FocusSessionService {
 
-    /**
-     * 타이머 시작
-     */
     TimerResponse startTimer(User user, TimerStartRequest request);
 
-    /**
-     * 타이머 일시정지
-     */
     TimerResponse pauseTimer(User user, UUID sessionId);
 
-    /**
-     * 타이머 재개
-     */
     TimerResponse resumeTimer(User user, UUID sessionId);
 
-    /**
-     * 타이머 종료
-     */
     TimerResponse finishTimer(User user, UUID sessionId);
 //
 //    /**
