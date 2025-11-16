@@ -55,7 +55,7 @@ public class TimerController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @Operation(summary = "개인 타이머/스톱워치 정지", description = "개인 타이머/스톱워치를 정지합니다.")
+    @Operation(summary = "개인 타이머/스톱워치/뽀모도로 정지", description = "개인 타이머/스톱워치/뽀모도로를 정지합니다.")
     @PostMapping("/pause/{sessionId}")
     public ApiResponse<TimerResponse> pauseSession(
             @Parameter(hidden = true) @CurrentUser User user,
@@ -65,7 +65,7 @@ public class TimerController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @Operation(summary = "개인 타이머/스톱워치 재개", description = "개인 타이머/스톱워치를 재개합니다.")
+    @Operation(summary = "개인 타이머/스톱워치/뽀모도로 재개", description = "개인 타이머/스톱워치/뽀모도로를 재개합니다.")
     @PostMapping("/resume/{sessionId}")
     public ApiResponse<TimerResponse> resumeSession(
             @Parameter(hidden = true) @CurrentUser User user,
@@ -75,7 +75,7 @@ public class TimerController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @Operation(summary = "개인 타이머/스톱워치 종료", description = "개인 타이머/스톱워치를 종료합니다.")
+    @Operation(summary = "개인 타이머/스톱워치/뽀모도로 종료", description = "개인 타이머/스톱워치/뽀모도로를 종료합니다.")
     @PostMapping("/finish/{sessionId}")
     public ApiResponse<TimerResponse> finishSession(
             @Parameter(hidden = true) @CurrentUser User user,
