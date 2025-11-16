@@ -67,6 +67,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     @Override
     @Transactional
     public void pauseTimer(User user, UUID sessionId) {
+        // TODO: 유효성 검사 메서드 뽑아서 한 곳에서 관리
         // 활성 세션 있는지 확인
         ActiveFocusSession currentActiveSession = activeFocusSessionRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
@@ -91,6 +92,32 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         // 집중 세션 상태도 PAUSED로 변경 + 누적 몰입 시간 추가
         currentFocusSession.addDuration(intervalDurationSeconds);
         currentFocusSession.pause();
+    }
+
+    @Override
+    @Transactional
+    public void resumeTimer(User user, UUID sessionId) {
+        // 활성 세션 있는지 확인
+        ActiveFocusSession currentActiveSession = activeFocusSessionRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
+        if (!currentActiveSession.getSessionId().equals(sessionId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACTIVE_SESSION);
+        }
+
+        // 집중 세션 있는지 확인
+        FocusSession currentFocusSession = focusSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+        // 인터벌 생성
+        FocusInterval focusInterval = FocusInterval.create(
+                currentFocusSession.getId()
+        );
+        focusIntervalRepository.save(focusInterval);
+
+        // 집중 세션 상태 변경
+        currentFocusSession.resume();
+
+        // 활성 세션은 그대로 유지
     }
 
 //

@@ -17,11 +17,11 @@ public interface FocusSessionService {
      * 타이머 일시정지
      */
     void pauseTimer(User user, UUID sessionId);
-//
-//    /**
-//     * 타이머 재개
-//     */
-//    void resumeTimer(User user);
+
+    /**
+     * 타이머 재개
+     */
+    void resumeTimer(User user, UUID sessionId);
 //
 //    /**
 //     * 타이머 종료

@@ -40,6 +40,15 @@ public class TimerController {
         return ApiResponse.success(SuccessCode.OK, "타이머가 성공적으로 중지되었습니다.");
     }
 
+    @PostMapping("/resume/timer/{sessionId}")
+    public ApiResponse<String> resumeTimer(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID sessionId
+    ) {
+        timerService.resumeTimer(user, sessionId);
+        return ApiResponse.success(SuccessCode.OK, "타이머가 성공적으로 재실행 되었습니다.");
+    }
+
 //    @PostMapping("/pause")
 //    public ApiResponse<Void> pauseTimer(@Parameter(hidden = true) @CurrentUser User user) {
 //        timerService.pauseTimer(user);

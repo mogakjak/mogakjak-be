@@ -67,6 +67,10 @@ public class FocusSession extends BaseSchema {
         this.status = TimerStatus.PAUSED;
     }
 
+    public void resume() {
+        this.status = TimerStatus.RUNNING;
+    }
+
     public void addDuration(Long seconds) {
         if (this.totalDuration == null) {
             this.totalDuration = 0L;
