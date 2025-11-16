@@ -170,40 +170,6 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         }
     }
 
-
-//
-//    @Override
-//    @Transactional
-//    public void resumeTimer(User user) {
-//        TimerSession session = sessionRepository.findByUserIdAndStatus(user.getId(), TimerStatus.PAUSED)
-//                .orElseThrow(() -> new CustomException(ErrorCode.TIMER_NOT_PAUSED));
-//
-//        LocalDateTime now = LocalDateTime.now();
-//
-//        if (session.getMode() == TimerMode.POMODORO) {
-//            List<TimerInterval> intervals = intervalRepository.findAllBySessionId(session.getId());
-//            if (intervals.isEmpty()) {
-//                createPomodoroFocus(session, now, 1); // 이렇게 복구 로직이 있는 것 / 상응하는 에러를 던지는 것에 대한 추가 고민 필요
-//            } else {
-//                TimerInterval last = intervals.getLast();
-//                intervalRepository.save(
-//                        TimerInterval.builder()
-//                                .sessionId(session.getId())
-//                                .startedAt(now)
-//                                .type(last.getType())
-//                                .round(last.getRound())
-//                                .build()
-//                );
-//            }
-//        } else {
-//            createNormalInterval(session, now);
-//        }
-//
-//        TimerSession running = session.toBuilder()
-//                .status(RUNNING)
-//                .build();
-//        sessionRepository.save(running);
-//    }
 //
 //    @Override
 //    @Transactional
