@@ -26,11 +26,11 @@ public class ActiveFocusSession extends BaseSchema {
     @Column(nullable = false)
     private LocalDateTime startedAt;
 
-    public static ActiveFocusSession create(UUID sessionId, UUID userId) {
+    public static ActiveFocusSession create(UUID sessionId, UUID userId, LocalDateTime startedAt) {
         return new ActiveFocusSession(
                 sessionId,
                 userId,
-                LocalDateTime.now()
+                startedAt
         );
     }
 }

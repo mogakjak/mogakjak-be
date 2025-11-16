@@ -25,15 +25,15 @@ public class FocusInterval extends BaseSchema {
 
     private LocalDateTime endedAt;
 
-    public static FocusInterval create(UUID sessionId) {
+    public static FocusInterval create(UUID sessionId, LocalDateTime startedAt) {
         return new FocusInterval(
                 sessionId,
-                LocalDateTime.now(),
+                startedAt,
                 null
         );
     }
 
-    public void end() {
-        this.endedAt = LocalDateTime.now();
+    public void end(LocalDateTime now) {
+        this.endedAt = now;
     }
 }

@@ -47,12 +47,12 @@ public class FocusSession extends BaseSchema {
     @Enumerated(EnumType.STRING)
     private TimerStatus status;
 
-    public static FocusSession createTimerSession(UUID userId, UUID todoId, Long targetDuration) {
+    public static FocusSession createTimerSession(UUID userId, UUID todoId, LocalDateTime startedAt, Long targetDuration) {
         return new FocusSession(
                 userId,
                 todoId,
                 TimerMode.TIMER,
-                LocalDateTime.now(),
+                startedAt,
                 null,
                 targetDuration,
                 0L,

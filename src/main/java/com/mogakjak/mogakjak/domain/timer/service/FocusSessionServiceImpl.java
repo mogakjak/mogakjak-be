@@ -1,10 +1,12 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
+import com.mogakjak.mogakjak.domain.timer.dto.response.TimerPauseResponse;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStartResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
+import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -32,6 +35,8 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     @Override
     @Transactional
     public TimerStartResponse startTimer(User user, TimerStartRequest request) {
+        LocalDateTime now = getCurrentTime();
+
         activeFocusSessionRepository.findByUserId(user.getId())
                 .ifPresent(active -> {
                     throw new CustomException(ErrorCode.ACTIVE_SESSION_EXISTS);
@@ -44,6 +49,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         FocusSession focusSession = FocusSession.createTimerSession(
                 user.getId(),
                 request.todoId(),
+                now,
                 request.targetSeconds()
         );
         FocusSession savedFocusSession = focusSessionRepository.save(focusSession);
@@ -51,13 +57,15 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         // 활성 세션 생성
         ActiveFocusSession activeSession = ActiveFocusSession.create(
                 savedFocusSession.getId(),
-                user.getId()
+                user.getId(),
+                now
         );
         activeFocusSessionRepository.save(activeSession);
 
         // 인터벌 생성
         FocusInterval focusInterval = FocusInterval.create(
-                savedFocusSession.getId()
+                savedFocusSession.getId(),
+                now
         );
         focusIntervalRepository.save(focusInterval);
 
@@ -66,7 +74,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
     @Override
     @Transactional
-    public void pauseTimer(User user, UUID sessionId) {
+    public TimerPauseResponse pauseTimer(User user, UUID sessionId) {
+        LocalDateTime now = getCurrentTime();
+
         // TODO: 유효성 검사 메서드 뽑아서 한 곳에서 관리
         // 활성 세션 있는지 확인
         ActiveFocusSession currentActiveSession = activeFocusSessionRepository.findByUserId(user.getId())
@@ -83,20 +93,28 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         FocusInterval currentInterval = focusIntervalRepository.findTopBySessionIdOrderByStartedAtDesc(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.INTERVAL_NOT_FOUND));
 
+        // 정지 가능한 상태에 있는지 확인
+        validatePauseableState(currentFocusSession);
+
         // 인터벌 종료
-        currentInterval.end();
+        currentInterval.end(now);
         long intervalDurationSeconds = Duration.between(currentInterval.getStartedAt(), currentInterval.getEndedAt()).getSeconds();
 
         // 활성 세션은 그대로 유지
 
-        // 집중 세션 상태도 PAUSED로 변경 + 누적 몰입 시간 추가
+        // 집중 세션 상태 PAUSED로 변경 + 누적 몰입 시간 추가
         currentFocusSession.addDuration(intervalDurationSeconds);
         currentFocusSession.pause();
+        Integer progressRate = calculateProgressRate(currentFocusSession.getTargetDuration(), currentFocusSession.getTotalDuration());
+
+        return TimerPauseResponse.from(currentFocusSession, now, progressRate);
     }
 
     @Override
     @Transactional
     public void resumeTimer(User user, UUID sessionId) {
+        LocalDateTime now = getCurrentTime();
+
         // 활성 세션 있는지 확인
         ActiveFocusSession currentActiveSession = activeFocusSessionRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
@@ -110,7 +128,8 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         // 인터벌 생성
         FocusInterval focusInterval = FocusInterval.create(
-                currentFocusSession.getId()
+                currentFocusSession.getId(),
+                now
         );
         focusIntervalRepository.save(focusInterval);
 
@@ -119,6 +138,36 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         // 활성 세션은 그대로 유지
     }
+
+    private LocalDateTime getCurrentTime() {
+        return LocalDateTime.now();
+    }
+
+    private static Integer calculateProgressRate(Long totalDuration, Long targetDuration) {
+        if (targetDuration == null || targetDuration <= 0) {
+            return null;
+        }
+        if (totalDuration == null || totalDuration <= 0) {
+            return 0;
+        }
+
+        double rate = (double) totalDuration / targetDuration * 100;
+        return (int) Math.min(100, Math.floor(rate));
+    }
+
+    private void validatePauseableState(FocusSession currentFocusSession) {
+        if (currentFocusSession.getStatus() != TimerStatus.RUNNING) {
+            if (currentFocusSession.getStatus() == TimerStatus.PAUSED) {
+                throw new CustomException(ErrorCode.SESSION_ALREADY_PAUSED);
+            }
+            if (currentFocusSession.getStatus() == TimerStatus.FINISHED) {
+                throw new CustomException(ErrorCode.SESSION_ALREADY_FINISHED);
+            }
+
+            throw new CustomException(ErrorCode.SESSION_NOT_RUNNING);
+        }
+    }
+
 
 //
 //    @Override

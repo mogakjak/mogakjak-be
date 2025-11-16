@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
+import com.mogakjak.mogakjak.domain.timer.dto.response.TimerPauseResponse;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStartResponse;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 
@@ -16,7 +17,7 @@ public interface FocusSessionService {
     /**
      * 타이머 일시정지
      */
-    void pauseTimer(User user, UUID sessionId);
+    TimerPauseResponse pauseTimer(User user, UUID sessionId);
 
     /**
      * 타이머 재개

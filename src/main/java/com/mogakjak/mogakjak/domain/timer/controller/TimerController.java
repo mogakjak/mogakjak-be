@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.timer.controller;
 
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
+import com.mogakjak.mogakjak.domain.timer.dto.response.TimerPauseResponse;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStartResponse;
 import com.mogakjak.mogakjak.domain.timer.service.FocusSessionService;
 import com.mogakjak.mogakjak.domain.user.entity.User;
@@ -32,12 +33,12 @@ public class TimerController {
     }
 
     @PostMapping("/pause/timer/{sessionId}")
-    public ApiResponse<String> pauseTimer(
+    public ApiResponse<TimerPauseResponse> pauseTimer(
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID sessionId
     ) {
-        timerService.pauseTimer(user, sessionId);
-        return ApiResponse.success(SuccessCode.OK, "타이머가 성공적으로 중지되었습니다.");
+        TimerPauseResponse response = timerService.pauseTimer(user, sessionId);
+        return ApiResponse.success(SuccessCode.OK, response);
     }
 
     @PostMapping("/resume/timer/{sessionId}")
@@ -48,6 +49,15 @@ public class TimerController {
         timerService.resumeTimer(user, sessionId);
         return ApiResponse.success(SuccessCode.OK, "타이머가 성공적으로 재실행 되었습니다.");
     }
+//
+//    @PostMapping("/stop/timer/{sessionId}")
+//    public ApiResponse<String> stopTimer(
+//            @Parameter(hidden = true) @CurrentUser User user,
+//            @PathVariable UUID sessionId
+//    ) {
+//        TimerStopResponse response = timerService.stopTimer(user, sessionId);
+//        return ApiResponse.success(SuccessCode.OK, "타이머가 성공적으로 중지 되었습니다.");
+//    }
 
 //    @PostMapping("/pause")
 //    public ApiResponse<Void> pauseTimer(@Parameter(hidden = true) @CurrentUser User user) {
