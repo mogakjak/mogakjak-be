@@ -39,6 +39,8 @@ public class FocusSession extends BaseSchema {
 
     private Long totalDuration;
 
+    private Integer progressRate;
+
     // 뽀모도로 용
     private Long focusDuration;
     private Long breakDuration;
@@ -56,6 +58,7 @@ public class FocusSession extends BaseSchema {
                 null,
                 targetDuration,
                 0L,
+                0,
                 null,
                 null,
                 null,
@@ -63,8 +66,10 @@ public class FocusSession extends BaseSchema {
         );
     }
 
-    public void pause() {
+    // TODO: progressRate 유효성 검사 고민
+    public void pause(Integer progressRate) {
         this.status = TimerStatus.PAUSED;
+        this.progressRate = progressRate;
     }
 
     public void resume() {

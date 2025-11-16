@@ -1,8 +1,7 @@
 package com.mogakjak.mogakjak.domain.timer.controller;
 
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
-import com.mogakjak.mogakjak.domain.timer.dto.response.TimerPauseResponse;
-import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStartResponse;
+import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.timer.service.FocusSessionService;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
@@ -24,30 +23,30 @@ public class TimerController {
     private final FocusSessionService timerService;
 
     @PostMapping("/start/timer")
-    public ApiResponse<TimerStartResponse> startTimer(
+    public ApiResponse<TimerResponse> startTimer(
             @Parameter(hidden = true) @CurrentUser User user,
             @RequestBody TimerStartRequest request
     ) {
-        TimerStartResponse response = timerService.startTimer(user, request);
+        TimerResponse response = timerService.startTimer(user, request);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
     @PostMapping("/pause/timer/{sessionId}")
-    public ApiResponse<TimerPauseResponse> pauseTimer(
+    public ApiResponse<TimerResponse> pauseTimer(
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID sessionId
     ) {
-        TimerPauseResponse response = timerService.pauseTimer(user, sessionId);
+        TimerResponse response = timerService.pauseTimer(user, sessionId);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
     @PostMapping("/resume/timer/{sessionId}")
-    public ApiResponse<String> resumeTimer(
+    public ApiResponse<TimerResponse> resumeTimer(
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID sessionId
     ) {
-        timerService.resumeTimer(user, sessionId);
-        return ApiResponse.success(SuccessCode.OK, "타이머가 성공적으로 재실행 되었습니다.");
+        TimerResponse response = timerService.resumeTimer(user, sessionId);
+        return ApiResponse.success(SuccessCode.OK, response);
     }
 //
 //    @PostMapping("/stop/timer/{sessionId}")

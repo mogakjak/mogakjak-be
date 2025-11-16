@@ -1,8 +1,7 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
-import com.mogakjak.mogakjak.domain.timer.dto.response.TimerPauseResponse;
-import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStartResponse;
+import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
@@ -34,7 +33,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
     @Override
     @Transactional
-    public TimerStartResponse startTimer(User user, TimerStartRequest request) {
+    public TimerResponse startTimer(User user, TimerStartRequest request) {
         LocalDateTime now = getCurrentTime();
 
         activeFocusSessionRepository.findByUserId(user.getId())
@@ -69,12 +68,12 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         );
         focusIntervalRepository.save(focusInterval);
 
-        return TimerStartResponse.from(savedFocusSession);
+        return TimerResponse.fromStartAndResume(savedFocusSession);
     }
 
     @Override
     @Transactional
-    public TimerPauseResponse pauseTimer(User user, UUID sessionId) {
+    public TimerResponse pauseTimer(User user, UUID sessionId) {
         LocalDateTime now = getCurrentTime();
 
         // TODO: 유효성 검사 메서드 뽑아서 한 곳에서 관리
@@ -104,15 +103,16 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         // 집중 세션 상태 PAUSED로 변경 + 누적 몰입 시간 추가
         currentFocusSession.addDuration(intervalDurationSeconds);
-        currentFocusSession.pause();
-        Integer progressRate = calculateProgressRate(currentFocusSession.getTargetDuration(), currentFocusSession.getTotalDuration());
 
-        return TimerPauseResponse.from(currentFocusSession, now, progressRate);
+        Integer progressRate = calculateProgressRate(currentFocusSession.getTargetDuration(), currentFocusSession.getTotalDuration());
+        currentFocusSession.pause(progressRate);
+
+        return TimerResponse.fromPause(currentFocusSession, now);
     }
 
     @Override
     @Transactional
-    public void resumeTimer(User user, UUID sessionId) {
+    public TimerResponse resumeTimer(User user, UUID sessionId) {
         LocalDateTime now = getCurrentTime();
 
         // 활성 세션 있는지 확인
@@ -137,6 +137,8 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         currentFocusSession.resume();
 
         // 활성 세션은 그대로 유지
+
+        return TimerResponse.fromStartAndResume(currentFocusSession);
     }
 
     private LocalDateTime getCurrentTime() {
