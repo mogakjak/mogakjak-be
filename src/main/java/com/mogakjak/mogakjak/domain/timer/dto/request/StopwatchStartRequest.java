@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
 
-public record StopWatchStartRequest(
+public record StopwatchStartRequest(
 
         @NotNull
         @Schema(description = "해당 스톱워치 세션의 todoId", example = "7f000001-9a3d-1f34-819a-3d92e3800004")

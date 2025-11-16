@@ -66,7 +66,7 @@ public class FocusSession extends BaseSchema {
         );
     }
 
-    public static FocusSession createStopWatchSession(UUID userId, UUID todoId, LocalDateTime startedAt) {
+    public static FocusSession createStopwatchSession(UUID userId, UUID todoId, LocalDateTime startedAt) {
         return new FocusSession(
                 userId,
                 todoId,

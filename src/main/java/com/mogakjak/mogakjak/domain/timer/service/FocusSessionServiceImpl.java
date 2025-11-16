@@ -1,6 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
-import com.mogakjak.mogakjak.domain.timer.dto.request.StopWatchStartRequest;
+import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
@@ -49,7 +49,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
     @Override
     @Transactional
-    public TimerResponse startStopWatch(User user, StopWatchStartRequest request) {
+    public TimerResponse startStopwatch(User user, StopwatchStartRequest request) {
         LocalDateTime now = getCurrentTime();
 
         ensureNoActiveSession(user.getId());
@@ -147,8 +147,8 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     private FocusSession createFocusSession(TimerMode mode, User user, UUID todoId, LocalDateTime now, Long targetSeconds) {
         return switch (mode) {
             case TIMER -> FocusSession.createTimerSession(user.getId(), todoId, now, targetSeconds);
-            case STOPWATCH -> FocusSession.createStopWatchSession(user.getId(), todoId, now);
-            case POMODORO -> FocusSession.createStopWatchSession(user.getId(), todoId, now); // 아직 포모도로 구현 전이라 가안으로!
+            case STOPWATCH -> FocusSession.createStopwatchSession(user.getId(), todoId, now);
+            case POMODORO -> FocusSession.createStopwatchSession(user.getId(), todoId, now); // 아직 포모도로 구현 전이라 가안으로!
         };
     }
 
