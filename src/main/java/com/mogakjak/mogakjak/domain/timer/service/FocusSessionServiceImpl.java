@@ -69,12 +69,16 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         FocusSession currentFocusSession = getValidatedFocusSession(user.getId(), sessionId);
         FocusInterval currentInterval = getLatestInterval(sessionId);
 
+        Todo todo = getValidatedTodo(user.getId(), currentFocusSession.getTodoId());
+
         validatePauseableState(currentFocusSession);
 
         currentInterval.end(now);
         long intervalDurationSeconds = calculateIntervalDurationSeconds(currentInterval);
 
-        currentFocusSession.pause(intervalDurationSeconds);
+        currentFocusSession.addDuration(intervalDurationSeconds);
+        Integer progressRate = calculateProgressRate(todo.getTargetTimeInSeconds(), currentFocusSession.getTotalDuration());
+        currentFocusSession.pause(progressRate);
 
         return TimerResponse.fromPause(currentFocusSession, now);
     }
@@ -109,6 +113,8 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         FocusSession currentFocusSession = getValidatedFocusSession(user.getId(), sessionId);
         FocusInterval currentInterval = getLatestInterval(sessionId);
 
+        Todo todo = getValidatedTodo(user.getId(), currentFocusSession.getTodoId());
+
         validateFinishableState(currentFocusSession);
 
         long intervalDurationSeconds = 0L;
@@ -119,9 +125,23 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         activeFocusSessionRepository.deleteById(currentActiveSession.getId());
 
-        currentFocusSession.end(now, intervalDurationSeconds);
+        currentFocusSession.addDuration(intervalDurationSeconds);
+        Integer progressRate = calculateProgressRate(todo.getTargetTimeInSeconds(), currentFocusSession.getTotalDuration());
+        currentFocusSession.end(now, progressRate);
 
         return TimerResponse.fromFinish(currentFocusSession);
+    }
+
+    private Integer calculateProgressRate(Integer todoTargetDuration, Long totalDuration) {
+        if (todoTargetDuration == null || todoTargetDuration <= 0) {
+            throw new CustomException(ErrorCode.INVALID_TARGET_TIME);
+        }
+        if (totalDuration == null || totalDuration <= 0) {
+            return 0;
+        }
+
+        double rate = (double) totalDuration / todoTargetDuration * 100;
+        return (int) Math.min(100, Math.floor(rate));
     }
 
     private FocusSession createFocusSession(TimerMode mode, User user, UUID todoId, LocalDateTime now, Long targetSeconds) {

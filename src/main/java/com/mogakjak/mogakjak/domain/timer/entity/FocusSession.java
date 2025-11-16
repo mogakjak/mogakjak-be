@@ -84,36 +84,22 @@ public class FocusSession extends BaseSchema {
     }
 
     // TODO: progressRate 유효성 검사 고민
-    public void pause(long intervalDurationSeconds) {
+    public void pause(Integer progressRate) {
         this.status = TimerStatus.PAUSED;
-        addDuration(intervalDurationSeconds);
-        this.progressRate = calculateProgressRate(this.targetDuration, this.totalDuration);
+        this.progressRate = progressRate;
     }
 
     public void resume() {
         this.status = TimerStatus.RUNNING;
     }
 
-    public void end(LocalDateTime endedAt, long intervalDurationSeconds) {
+    public void end(LocalDateTime endedAt, Integer progressRate) {
         this.status = TimerStatus.FINISHED;
         this.endedAt = endedAt;
-        addDuration(intervalDurationSeconds);
-        this.progressRate = calculateProgressRate(this.targetDuration, this.totalDuration);
+        this.progressRate = progressRate;
     }
 
-    private Integer calculateProgressRate(Long targetDuration, Long totalDuration) {
-        if (targetDuration == null || targetDuration <= 0) {
-            return null;
-        }
-        if (totalDuration == null || totalDuration <= 0) {
-            return 0;
-        }
-
-        double rate = (double) totalDuration / targetDuration * 100;
-        return (int) Math.min(100, Math.floor(rate));
-    }
-
-    private void addDuration(Long seconds) {
+    public void addDuration(Long seconds) {
         if (this.totalDuration == null) {
             this.totalDuration = 0L;
         }

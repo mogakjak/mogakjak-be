@@ -34,6 +34,7 @@ public enum ErrorCode implements StatusCode {
     POMODORO_ALREADY_COMPLETED(HttpStatus.CONFLICT, "이미 모든 뽀모도로 라운드가 완료되었습니다."),
     POMODORO_INTERVAL_NOT_FOUND(HttpStatus.NOT_FOUND, "유효한 POMODORO 구간을 찾을 수 없습니다."),
     FORBIDDEN_TIMER_ACCESS(HttpStatus.FORBIDDEN, "해당 타이머에 접근 권한이 없습니다."),
+    INVALID_TARGET_TIME(HttpStatus.BAD_REQUEST, "유효하지 않은 todo의 목표 시간입니다. 목표 시간은 1분(60초)에서 24시간(86400초) 사이여야 합니다."),
 
     // Auth Errors
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
