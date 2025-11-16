@@ -1,10 +1,12 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
+import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
+import com.mogakjak.mogakjak.domain.timer.enumerate.TimerMode;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
@@ -37,34 +39,25 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     public TimerResponse startTimer(User user, TimerStartRequest request) {
         LocalDateTime now = getCurrentTime();
 
-        activeFocusSessionRepository.findByUserId(user.getId())
-                .ifPresent(active -> {
-                    throw new CustomException(ErrorCode.ACTIVE_SESSION_EXISTS);
-                });
+        ensureNoActiveSession(user.getId());
         Todo todo = getValidatedTodo(user.getId(), request.todoId());
 
-        FocusSession focusSession = FocusSession.createTimerSession(
-                user.getId(),
-                request.todoId(),
-                now,
-                request.targetSeconds()
-        );
-        FocusSession savedFocusSession = focusSessionRepository.save(focusSession);
+        FocusSession focusSession = createFocusSession(TimerMode.TIMER, user, request.todoId(), now, request.targetSeconds());
 
-        ActiveFocusSession activeSession = ActiveFocusSession.create(
-                savedFocusSession.getId(),
-                user.getId(),
-                now
-        );
-        activeFocusSessionRepository.save(activeSession);
+        return startCommon(user.getId(), request.todoId(), now, focusSession, todo);
+    }
 
-        FocusInterval focusInterval = FocusInterval.create(
-                savedFocusSession.getId(),
-                now
-        );
-        focusIntervalRepository.save(focusInterval);
+    @Override
+    @Transactional
+    public TimerResponse startStopWatch(User user, StopwatchStartRequest request) {
+        LocalDateTime now = getCurrentTime();
 
-        return TimerResponse.fromStart(savedFocusSession, todo);
+        ensureNoActiveSession(user.getId());
+        Todo todo = getValidatedTodo(user.getId(), request.todoId());
+
+        FocusSession focusSession = createFocusSession(TimerMode.STOPWATCH, user, request.todoId(), now, null);
+
+        return startCommon(user.getId(), request.todoId(), now, focusSession, todo);
     }
 
     @Override
@@ -129,6 +122,40 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         currentFocusSession.end(now, intervalDurationSeconds);
 
         return TimerResponse.fromFinish(currentFocusSession);
+    }
+
+    private FocusSession createFocusSession(TimerMode mode, User user, UUID todoId, LocalDateTime now, Long targetSeconds) {
+        return switch (mode) {
+            case TIMER -> FocusSession.createTimerSession(user.getId(), todoId, now, targetSeconds);
+            case STOPWATCH -> FocusSession.createStopWatchSession(user.getId(), todoId, now);
+            case POMODORO -> FocusSession.createStopWatchSession(user.getId(), todoId, now); // 아직 포모도로 구현 전이라 가안으로!
+        };
+    }
+
+    private void ensureNoActiveSession(UUID userId) {
+        activeFocusSessionRepository.findByUserId(userId)
+                .ifPresent(active -> {
+                    throw new CustomException(ErrorCode.ACTIVE_SESSION_EXISTS);
+                });
+    }
+
+    private TimerResponse startCommon(UUID userId, UUID sessionId, LocalDateTime now, FocusSession focusSession, Todo todo) {
+        FocusSession savedFocusSession = focusSessionRepository.save(focusSession);
+
+        ActiveFocusSession activeSession = ActiveFocusSession.create(
+                sessionId,
+                userId,
+                now
+        );
+        activeFocusSessionRepository.save(activeSession);
+
+        FocusInterval focusInterval = FocusInterval.create(
+                sessionId,
+                now
+        );
+        focusIntervalRepository.save(focusInterval);
+
+        return TimerResponse.fromStart(savedFocusSession, todo);
     }
 
     private Todo getValidatedTodo(UUID userId, UUID todoId) {

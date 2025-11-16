@@ -66,23 +66,21 @@ public class FocusSession extends BaseSchema {
         );
     }
 
-    private Integer calculateProgressRate(Long targetDuration, Long totalDuration) {
-        if (targetDuration == null || targetDuration <= 0) {
-            return null;
-        }
-        if (totalDuration == null || totalDuration <= 0) {
-            return 0;
-        }
-
-        double rate = (double) totalDuration / targetDuration * 100;
-        return (int) Math.min(100, Math.floor(rate));
-    }
-
-    private void addDuration(Long seconds) {
-        if (this.totalDuration == null) {
-            this.totalDuration = 0L;
-        }
-        this.totalDuration += seconds;
+    public static FocusSession createStopWatchSession(UUID userId, UUID todoId, LocalDateTime startedAt) {
+        return new FocusSession(
+                userId,
+                todoId,
+                TimerMode.STOPWATCH,
+                startedAt,
+                null,
+                null,
+                0L,
+                0,
+                null,
+                null,
+                null,
+                TimerStatus.RUNNING
+        );
     }
 
     // TODO: progressRate 유효성 검사 고민
@@ -101,5 +99,24 @@ public class FocusSession extends BaseSchema {
         this.endedAt = endedAt;
         addDuration(intervalDurationSeconds);
         this.progressRate = calculateProgressRate(this.targetDuration, this.totalDuration);
+    }
+
+    private Integer calculateProgressRate(Long targetDuration, Long totalDuration) {
+        if (targetDuration == null || targetDuration <= 0) {
+            return null;
+        }
+        if (totalDuration == null || totalDuration <= 0) {
+            return 0;
+        }
+
+        double rate = (double) totalDuration / targetDuration * 100;
+        return (int) Math.min(100, Math.floor(rate));
+    }
+
+    private void addDuration(Long seconds) {
+        if (this.totalDuration == null) {
+            this.totalDuration = 0L;
+        }
+        this.totalDuration += seconds;
     }
 }
