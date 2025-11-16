@@ -1,6 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.controller;
 
-import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
+import com.mogakjak.mogakjak.domain.timer.dto.request.StopWatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.timer.service.FocusSessionService;
@@ -36,9 +36,9 @@ public class TimerController {
 
     @Operation(summary = "개인 스톱워치 시작", description = "개인 스톱워치를 시작합니다.")
     @PostMapping("/start/stopwatch")
-    public ApiResponse<TimerResponse> startStopwatch(
+    public ApiResponse<TimerResponse> startStopWatch(
             @Parameter(hidden = true) @CurrentUser User user,
-            @RequestBody StopwatchStartRequest request
+            @RequestBody StopWatchStartRequest request
     ) {
         TimerResponse response = focusSessionService.startStopWatch(user, request);
         return ApiResponse.success(SuccessCode.OK, response);

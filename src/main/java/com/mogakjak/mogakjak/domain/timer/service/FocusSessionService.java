@@ -1,6 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
-import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
+import com.mogakjak.mogakjak.domain.timer.dto.request.StopWatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.user.entity.User;
@@ -17,7 +17,7 @@ public interface FocusSessionService {
 
     TimerResponse finishSession(User user, UUID sessionId);
 
-    TimerResponse startStopWatch(User user, StopwatchStartRequest request);
+    TimerResponse startStopWatch(User user, StopWatchStartRequest request);
 //
 //    /**
 //     * (뽀모도로의 경우) 다음 단계로 전환

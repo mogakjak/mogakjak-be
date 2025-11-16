@@ -1,6 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
-import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
+import com.mogakjak.mogakjak.domain.timer.dto.request.StopWatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
@@ -49,7 +49,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
     @Override
     @Transactional
-    public TimerResponse startStopWatch(User user, StopwatchStartRequest request) {
+    public TimerResponse startStopWatch(User user, StopWatchStartRequest request) {
         LocalDateTime now = getCurrentTime();
 
         ensureNoActiveSession(user.getId());
