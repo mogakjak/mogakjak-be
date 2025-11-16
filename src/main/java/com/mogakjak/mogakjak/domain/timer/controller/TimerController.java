@@ -2,6 +2,7 @@ package com.mogakjak.mogakjak.domain.timer.controller;
 
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.DailyFocusStatsResponse;
+import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStartResponse;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStopResponse;
 import com.mogakjak.mogakjak.domain.timer.service.TimerService;
 import com.mogakjak.mogakjak.domain.user.entity.User;
@@ -9,12 +10,14 @@ import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "Timer", description = "타이머 관련 API")
 @RestController
 @RequestMapping("/api/timers")
 @RequiredArgsConstructor
@@ -22,13 +25,13 @@ public class TimerController {
 
     private final TimerService timerService;
 
-    @PostMapping("/start")
-    public ApiResponse<Void> startTimer(
+    @PostMapping("/start/timer")
+    public ApiResponse<TimerStartResponse> startTimer(
             @Parameter(hidden = true) @CurrentUser User user,
             @RequestBody TimerStartRequest request
     ) {
-        timerService.startTimer(user, request);
-        return ApiResponse.success(SuccessCode.OK);
+        TimerStartResponse response = timerService.startTimer(user, request);
+        return ApiResponse.success(SuccessCode.OK, response);
     }
 
     @PostMapping("/pause")

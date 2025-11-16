@@ -2,8 +2,8 @@ package com.mogakjak.mogakjak.domain.timer.service;
 
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.DailyFocusStatsResponse;
+import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStartResponse;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerStopResponse;
-import com.mogakjak.mogakjak.domain.timer.entity.TimerSession;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 
 import java.util.List;
@@ -14,7 +14,7 @@ public interface TimerService {
     /**
      * 타이머 시작
      */
-    TimerSession startTimer(User user, TimerStartRequest request);
+    TimerStartResponse startTimer(User user, TimerStartRequest request);
 
     /**
      * 타이머 일시정지

@@ -52,7 +52,10 @@ public enum ErrorCode implements StatusCode {
     ALREADY_INVITED(HttpStatus.CONFLICT, "이미 초대를 보낸 사용자입니다."),
 
     // Quote Errors
-    QUOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "명언을 찾을 수 없습니다.")
+    QUOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "명언을 찾을 수 없습니다."),
+
+    // Active Session Errors
+    ACTIVE_SESSION_EXISTS(HttpStatus.CONFLICT, "해당 계정에 이미 실행 중인 타이머가 있습니다.")
     ;
 
     private final HttpStatus httpStatus;
