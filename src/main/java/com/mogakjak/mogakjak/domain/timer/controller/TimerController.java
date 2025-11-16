@@ -20,14 +20,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TimerController {
 
-    private final FocusSessionService timerService;
+    private final FocusSessionService focusSessionService;
 
     @PostMapping("/start/timer")
     public ApiResponse<TimerResponse> startTimer(
             @Parameter(hidden = true) @CurrentUser User user,
             @RequestBody TimerStartRequest request
     ) {
-        TimerResponse response = timerService.startTimer(user, request);
+        TimerResponse response = focusSessionService.startTimer(user, request);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
@@ -36,7 +36,7 @@ public class TimerController {
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID sessionId
     ) {
-        TimerResponse response = timerService.pauseTimer(user, sessionId);
+        TimerResponse response = focusSessionService.pauseTimer(user, sessionId);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
@@ -45,7 +45,7 @@ public class TimerController {
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID sessionId
     ) {
-        TimerResponse response = timerService.resumeTimer(user, sessionId);
+        TimerResponse response = focusSessionService.resumeTimer(user, sessionId);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
@@ -54,7 +54,7 @@ public class TimerController {
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID sessionId
     ) {
-        TimerResponse response = timerService.finishTimer(user, sessionId);
+        TimerResponse response = focusSessionService.finishTimer(user, sessionId);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
