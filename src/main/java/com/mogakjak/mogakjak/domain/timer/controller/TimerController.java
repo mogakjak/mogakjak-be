@@ -57,24 +57,6 @@ public class TimerController {
         TimerResponse response = focusSessionService.finishTimer(user, sessionId);
         return ApiResponse.success(SuccessCode.OK, response);
     }
-
-//    @PostMapping("/pause")
-//    public ApiResponse<Void> pauseTimer(@Parameter(hidden = true) @CurrentUser User user) {
-//        timerService.pauseTimer(user);
-//        return ApiResponse.success(SuccessCode.OK);
-//    }
-//
-//    @PostMapping("/resume")
-//    public ApiResponse<Void> resumeTimer(@Parameter(hidden = true) @CurrentUser User user) {
-//        timerService.resumeTimer(user);
-//        return ApiResponse.success(SuccessCode.OK);
-//    }
-//
-//    @PostMapping("/stop")
-//    public ApiResponse<TimerStopResponse> stopTimer(@Parameter(hidden = true) @CurrentUser User user) {
-//        TimerStopResponse response = timerService.stopTimer(user);
-//        return ApiResponse.success(SuccessCode.OK, response);
-//    }
 //
 //    @PostMapping("/{sessionId}/next-phase")
 //    public ApiResponse<Void> nextPomodoroPhase(
