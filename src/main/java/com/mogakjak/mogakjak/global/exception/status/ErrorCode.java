@@ -52,7 +52,24 @@ public enum ErrorCode implements StatusCode {
     ALREADY_INVITED(HttpStatus.CONFLICT, "이미 초대를 보낸 사용자입니다."),
 
     // Quote Errors
-    QUOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "명언을 찾을 수 없습니다.")
+    QUOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "명언을 찾을 수 없습니다."),
+
+    // Active Focus Session Errors
+    ACTIVE_SESSION_EXISTS(HttpStatus.CONFLICT, "해당 계정에 이미 실행 중인 타이머가 있습니다."),
+    ACTIVE_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 계정에 활성화된 세션이 존재하지 않습니다."),
+    FORBIDDEN_ACTIVE_SESSION(HttpStatus.FORBIDDEN, "해당 활성 세션에 접근 권한이 없습니다."),
+
+    // Focus Session Errors
+    SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "집중 세션을 찾을 수 없습니다."),
+    SESSION_ALREADY_RUNNING(HttpStatus.BAD_REQUEST, "세션이 실행 중인 상태입니다."),
+    SESSION_ALREADY_PAUSED(HttpStatus.BAD_REQUEST, "세션은 정지된 상태입니다."),
+    SESSION_ALREADY_FINISHED(HttpStatus.BAD_REQUEST, "세션은 종료된 상태입니다."),
+    SESSION_NOT_RUNNING(HttpStatus.BAD_REQUEST, "세션이 실행 중이지 않습니다."),
+    SESSION_NOT_PAUSED(HttpStatus.BAD_REQUEST, "세션이 정지 상태이지 않습니다."),
+    SESSION_NOT_FINISHABLE(HttpStatus.BAD_REQUEST, "세션을 종료할 수 없습니다."),
+
+    // Focus Interval Errors
+    INTERVAL_NOT_FOUND(HttpStatus.NOT_FOUND, "집중 구간(Interval)을 찾을 수 없습니다."),
     ;
 
     private final HttpStatus httpStatus;
