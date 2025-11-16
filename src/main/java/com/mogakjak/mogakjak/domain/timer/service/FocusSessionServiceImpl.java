@@ -174,9 +174,10 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         }
 
         // 다음 단계로 전환
+        if (focusSession.getStatus() != TimerStatus.PAUSED) latestInterval.end(now);
+        focusSession.addDuration(accumulatedSeconds);
+
         if (currentPhase == PomodoroPhaseType.FOCUS && isPomodoroFinished(focusSession, intervals)) {
-            if (focusSession.getStatus() != TimerStatus.PAUSED) latestInterval.end(now);
-            focusSession.addDuration(accumulatedSeconds);
             focusSession.end(now, 100);
             activeFocusSessionRepository.deleteById(currentActiveSession.getId());
             return TimerResponse.fromFinish(focusSession);
@@ -185,8 +186,6 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         PomodoroPhaseType nextPhase = nextPhase(currentPhase);
         int nextRound = nextPhase == PomodoroPhaseType.FOCUS ? currentRound + 1 : currentRound;
 
-        if (focusSession.getStatus() != TimerStatus.PAUSED) latestInterval.end(now);
-        focusSession.addDuration(accumulatedSeconds);
         FocusInterval nextPhaseInterval = startPhaseInterval(focusSession, nextPhase, now, nextRound);
 
         return TimerResponse.fromPomodoroPhaseChange(focusSession, nextPhaseInterval);
