@@ -85,6 +85,7 @@ public class TimerController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
+    @Operation(summary = "개인 뽀모도로 다음 단계로 전환", description = "개인 뽀모도로를 다음 단계(FOCUS or BREAK)로 전환합니다. 마지막 라운드였던 경우, 뽀모도로 타이머가 종료됩니다.")
     @PostMapping("/next/pomodoro/{sessionId}")
     public ApiResponse<TimerResponse> nextPomodoroPhase(
             @Parameter(hidden = true) @CurrentUser User user,
