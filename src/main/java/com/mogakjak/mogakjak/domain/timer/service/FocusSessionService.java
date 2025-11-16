@@ -11,11 +11,11 @@ public interface FocusSessionService {
 
     TimerResponse startTimer(User user, TimerStartRequest request);
 
-    TimerResponse pauseTimer(User user, UUID sessionId);
+    TimerResponse pauseSession(User user, UUID sessionId);
 
-    TimerResponse resumeTimer(User user, UUID sessionId);
+    TimerResponse resumeSession(User user, UUID sessionId);
 
-    TimerResponse finishTimer(User user, UUID sessionId);
+    TimerResponse finishSession(User user, UUID sessionId);
 
     TimerResponse startStopWatch(User user, StopwatchStartRequest request);
 //

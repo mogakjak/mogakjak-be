@@ -24,7 +24,6 @@ public class TimerController {
 
     private final FocusSessionService focusSessionService;
 
-    // 타이머
     @Operation(summary = "개인 타이머 시작", description = "개인 타이머를 시작합니다.")
     @PostMapping("/start/timer")
     public ApiResponse<TimerResponse> startTimer(
@@ -35,37 +34,6 @@ public class TimerController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @Operation(summary = "개인 타이머 정지", description = "개인 타이머를 정지합니다.")
-    @PostMapping("/pause/timer/{sessionId}")
-    public ApiResponse<TimerResponse> pauseTimer(
-            @Parameter(hidden = true) @CurrentUser User user,
-            @PathVariable UUID sessionId
-    ) {
-        TimerResponse response = focusSessionService.pauseTimer(user, sessionId);
-        return ApiResponse.success(SuccessCode.OK, response);
-    }
-
-    @Operation(summary = "개인 타이머 재개", description = "개인 타이머를 재개합니다.")
-    @PostMapping("/resume/timer/{sessionId}")
-    public ApiResponse<TimerResponse> resumeTimer(
-            @Parameter(hidden = true) @CurrentUser User user,
-            @PathVariable UUID sessionId
-    ) {
-        TimerResponse response = focusSessionService.resumeTimer(user, sessionId);
-        return ApiResponse.success(SuccessCode.OK, response);
-    }
-
-    @Operation(summary = "개인 타이머 종료", description = "개인 타이머를 종료합니다.")
-    @PostMapping("/finish/timer/{sessionId}")
-    public ApiResponse<TimerResponse> finishTimer(
-            @Parameter(hidden = true) @CurrentUser User user,
-            @PathVariable UUID sessionId
-    ) {
-        TimerResponse response = focusSessionService.finishTimer(user, sessionId);
-        return ApiResponse.success(SuccessCode.OK, response);
-    }
-
-    // 스톱워치
     @Operation(summary = "개인 스톱워치 시작", description = "개인 스톱워치를 시작합니다.")
     @PostMapping("/start/stopwatch")
     public ApiResponse<TimerResponse> startStopwatch(
@@ -73,6 +41,36 @@ public class TimerController {
             @RequestBody StopwatchStartRequest request
     ) {
         TimerResponse response = focusSessionService.startStopWatch(user, request);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "개인 타이머/스톱워치 정지", description = "개인 타이머/스톱워치를 정지합니다.")
+    @PostMapping("/pause/{sessionId}")
+    public ApiResponse<TimerResponse> pauseSession(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID sessionId
+    ) {
+        TimerResponse response = focusSessionService.pauseSession(user, sessionId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "개인 타이머/스톱워치 재개", description = "개인 타이머/스톱워치를 재개합니다.")
+    @PostMapping("/resume/{sessionId}")
+    public ApiResponse<TimerResponse> resumeSession(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID sessionId
+    ) {
+        TimerResponse response = focusSessionService.resumeSession(user, sessionId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "개인 타이머/스톱워치 종료", description = "개인 타이머/스톱워치를 종료합니다.")
+    @PostMapping("/finish/{sessionId}")
+    public ApiResponse<TimerResponse> finishSession(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID sessionId
+    ) {
+        TimerResponse response = focusSessionService.finishSession(user, sessionId);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 

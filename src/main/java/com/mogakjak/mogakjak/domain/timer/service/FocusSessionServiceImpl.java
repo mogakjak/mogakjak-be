@@ -62,7 +62,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
     @Override
     @Transactional
-    public TimerResponse pauseTimer(User user, UUID sessionId) {
+    public TimerResponse pauseSession(User user, UUID sessionId) {
         LocalDateTime now = getCurrentTime();
 
         getValidatedActiveFocusSession(user.getId(), sessionId);
@@ -81,7 +81,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
     @Override
     @Transactional
-    public TimerResponse resumeTimer(User user, UUID sessionId) {
+    public TimerResponse resumeSession(User user, UUID sessionId) {
         LocalDateTime now = getCurrentTime();
 
         getValidatedActiveFocusSession(user.getId(), sessionId);
@@ -102,7 +102,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
     @Override
     @Transactional
-    public TimerResponse finishTimer(User user, UUID sessionId) {
+    public TimerResponse finishSession(User user, UUID sessionId) {
         LocalDateTime now = getCurrentTime();
 
         ActiveFocusSession currentActiveSession = getValidatedActiveFocusSession(user.getId(), sessionId);
