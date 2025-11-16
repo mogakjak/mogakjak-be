@@ -1,14 +1,17 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
+import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
+import com.mogakjak.mogakjak.domain.timer.enumerate.TimerMode;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
+import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.exception.CustomException;
@@ -36,147 +39,181 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     public TimerResponse startTimer(User user, TimerStartRequest request) {
         LocalDateTime now = getCurrentTime();
 
-        activeFocusSessionRepository.findByUserId(user.getId())
-                .ifPresent(active -> {
-                    throw new CustomException(ErrorCode.ACTIVE_SESSION_EXISTS);
-                });
+        ensureNoActiveSession(user.getId());
+        Todo todo = getValidatedTodo(user.getId(), request.todoId());
 
-        todoRepository.findById(request.todoId())
-                .orElseThrow(() -> new CustomException(ErrorCode.TODO_NOT_FOUND));
+        FocusSession focusSession = createFocusSession(TimerMode.TIMER, user, request.todoId(), now, request.targetSeconds());
 
-        // 통합 관리용 세션 생성 및 저장
-        FocusSession focusSession = FocusSession.createTimerSession(
-                user.getId(),
-                request.todoId(),
-                now,
-                request.targetSeconds()
-        );
-        FocusSession savedFocusSession = focusSessionRepository.save(focusSession);
-
-        // 활성 세션 생성
-        ActiveFocusSession activeSession = ActiveFocusSession.create(
-                savedFocusSession.getId(),
-                user.getId(),
-                now
-        );
-        activeFocusSessionRepository.save(activeSession);
-
-        // 인터벌 생성
-        FocusInterval focusInterval = FocusInterval.create(
-                savedFocusSession.getId(),
-                now
-        );
-        focusIntervalRepository.save(focusInterval);
-
-        return TimerResponse.fromStartAndResume(savedFocusSession);
+        return startCommon(user.getId(), now, focusSession, todo);
     }
 
     @Override
     @Transactional
-    public TimerResponse pauseTimer(User user, UUID sessionId) {
+    public TimerResponse startStopwatch(User user, StopwatchStartRequest request) {
         LocalDateTime now = getCurrentTime();
 
-        // TODO: 유효성 검사 메서드 뽑아서 한 곳에서 관리
-        // 활성 세션 있는지 확인
-        ActiveFocusSession currentActiveSession = activeFocusSessionRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
-        if (!currentActiveSession.getSessionId().equals(sessionId)) {
-            throw new CustomException(ErrorCode.FORBIDDEN_ACTIVE_SESSION);
-        }
+        ensureNoActiveSession(user.getId());
+        Todo todo = getValidatedTodo(user.getId(), request.todoId());
 
-        // 집중 세션 있는지 확인
-        FocusSession currentFocusSession = focusSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        FocusSession focusSession = createFocusSession(TimerMode.STOPWATCH, user, request.todoId(), now, null);
 
-        // 인터벌 존재하는지 확인
-        FocusInterval currentInterval = focusIntervalRepository.findTopBySessionIdOrderByStartedAtDesc(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.INTERVAL_NOT_FOUND));
+        return startCommon(user.getId(), now, focusSession, todo);
+    }
 
-        // 정지 가능한 상태에 있는지 확인
+    @Override
+    @Transactional
+    public TimerResponse pauseSession(User user, UUID sessionId) {
+        LocalDateTime now = getCurrentTime();
+
+        getValidatedActiveFocusSession(user.getId(), sessionId);
+        FocusSession currentFocusSession = getValidatedFocusSession(user.getId(), sessionId);
+        FocusInterval currentInterval = getLatestInterval(sessionId);
+
+        Todo todo = getValidatedTodo(user.getId(), currentFocusSession.getTodoId());
+
         validatePauseableState(currentFocusSession);
 
-        // 인터벌 종료
         currentInterval.end(now);
         long intervalDurationSeconds = calculateIntervalDurationSeconds(currentInterval);
 
-        // 활성 세션은 그대로 유지
-
-        // 집중 세션 상태 PAUSED로 변경 + 누적 몰입 시간 추가
-        currentFocusSession.pause(intervalDurationSeconds);
+        currentFocusSession.addDuration(intervalDurationSeconds);
+        Integer progressRate = calculateProgressRate(todo.getTargetTimeInSeconds(), currentFocusSession.getTotalDuration());
+        currentFocusSession.pause(progressRate);
 
         return TimerResponse.fromPause(currentFocusSession, now);
     }
 
     @Override
     @Transactional
-    public TimerResponse resumeTimer(User user, UUID sessionId) {
+    public TimerResponse resumeSession(User user, UUID sessionId) {
         LocalDateTime now = getCurrentTime();
 
-        // 활성 세션 있는지 확인
-        ActiveFocusSession currentActiveSession = activeFocusSessionRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
-        if (!currentActiveSession.getSessionId().equals(sessionId)) {
-            throw new CustomException(ErrorCode.FORBIDDEN_ACTIVE_SESSION);
-        }
-
-        // 집중 세션 있는지 확인
-        FocusSession currentFocusSession = focusSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        getValidatedActiveFocusSession(user.getId(), sessionId);
+        FocusSession currentFocusSession = getValidatedFocusSession(user.getId(), sessionId);
 
         validateResumableState(currentFocusSession);
 
-        // 인터벌 생성
         FocusInterval focusInterval = FocusInterval.create(
                 currentFocusSession.getId(),
                 now
         );
         focusIntervalRepository.save(focusInterval);
 
-        // 집중 세션 상태 변경
         currentFocusSession.resume();
 
-        // 활성 세션은 그대로 유지
-
-        return TimerResponse.fromStartAndResume(currentFocusSession);
+        return TimerResponse.fromResume(currentFocusSession);
     }
 
     @Override
     @Transactional
-    public TimerResponse finishTimer(User user, UUID sessionId) {
+    public TimerResponse finishSession(User user, UUID sessionId) {
         LocalDateTime now = getCurrentTime();
 
-        // 활성 세션 있는지 확인
-        ActiveFocusSession currentActiveSession = activeFocusSessionRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
-        if (!currentActiveSession.getSessionId().equals(sessionId)) {
-            throw new CustomException(ErrorCode.FORBIDDEN_ACTIVE_SESSION);
-        }
+        ActiveFocusSession currentActiveSession = getValidatedActiveFocusSession(user.getId(), sessionId);
+        FocusSession currentFocusSession = getValidatedFocusSession(user.getId(), sessionId);
+        FocusInterval currentInterval = getLatestInterval(sessionId);
 
-        // 집중 세션 있는지 확인
-        FocusSession currentFocusSession = focusSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+        Todo todo = getValidatedTodo(user.getId(), currentFocusSession.getTodoId());
 
-        // 인터벌 존재하는지 확인
-        FocusInterval currentInterval = focusIntervalRepository.findTopBySessionIdOrderByStartedAtDesc(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.INTERVAL_NOT_FOUND));
-
-        // 중지 가능한 상태에 있는지 확인
         validateFinishableState(currentFocusSession);
 
-        // 인터벌 종료
         long intervalDurationSeconds = 0L;
         if (currentFocusSession.getStatus() != TimerStatus.PAUSED) {
             currentInterval.end(now);
             intervalDurationSeconds = calculateIntervalDurationSeconds(currentInterval);
         }
 
-        // 활성 세션 종료 (세션 삭제)
         activeFocusSessionRepository.deleteById(currentActiveSession.getId());
 
-        // 집중 세션 상태 변경 및 종료 시간 기입
-        currentFocusSession.end(now, intervalDurationSeconds);
+        currentFocusSession.addDuration(intervalDurationSeconds);
+        Integer progressRate = calculateProgressRate(todo.getTargetTimeInSeconds(), currentFocusSession.getTotalDuration());
+        currentFocusSession.end(now, progressRate);
 
         return TimerResponse.fromFinish(currentFocusSession);
+    }
+
+    private Integer calculateProgressRate(Integer todoTargetDuration, Long totalDuration) {
+        if (todoTargetDuration == null || todoTargetDuration <= 0) {
+            throw new CustomException(ErrorCode.INVALID_TARGET_TIME);
+        }
+        if (totalDuration == null || totalDuration <= 0) {
+            return 0;
+        }
+
+        double rate = (double) totalDuration / todoTargetDuration * 100;
+        return (int) Math.min(100, Math.floor(rate));
+    }
+
+    private FocusSession createFocusSession(TimerMode mode, User user, UUID todoId, LocalDateTime now, Long targetSeconds) {
+        return switch (mode) {
+            case TIMER -> FocusSession.createTimerSession(user.getId(), todoId, now, targetSeconds);
+            case STOPWATCH -> FocusSession.createStopwatchSession(user.getId(), todoId, now);
+            case POMODORO -> FocusSession.createStopwatchSession(user.getId(), todoId, now); // 아직 포모도로 구현 전이라 가안으로!
+        };
+    }
+
+    private void ensureNoActiveSession(UUID userId) {
+        activeFocusSessionRepository.findByUserId(userId)
+                .ifPresent(active -> {
+                    throw new CustomException(ErrorCode.ACTIVE_SESSION_EXISTS);
+                });
+    }
+
+    private TimerResponse startCommon(UUID userId, LocalDateTime now, FocusSession focusSession, Todo todo) {
+        FocusSession savedFocusSession = focusSessionRepository.save(focusSession);
+
+        ActiveFocusSession activeSession = ActiveFocusSession.create(
+                focusSession.getId(),
+                userId,
+                now
+        );
+        activeFocusSessionRepository.save(activeSession);
+
+        FocusInterval focusInterval = FocusInterval.create(
+                focusSession.getId(),
+                now
+        );
+        focusIntervalRepository.save(focusInterval);
+
+        return TimerResponse.fromStart(savedFocusSession, todo);
+    }
+
+    private Todo getValidatedTodo(UUID userId, UUID todoId) {
+        Todo todo = todoRepository.findById(todoId)
+                .orElseThrow(() -> new CustomException(ErrorCode.TODO_NOT_FOUND));
+
+        if (!todo.getCategory().getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_TODO_ACCESS);
+        }
+
+        return todo;
+    }
+
+    private ActiveFocusSession getValidatedActiveFocusSession(UUID userId, UUID sessionId) {
+        ActiveFocusSession activeSession = activeFocusSessionRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
+
+        if (!activeSession.getSessionId().equals(sessionId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ACTIVE_SESSION);
+        }
+
+        return activeSession;
+    }
+
+    private FocusSession getValidatedFocusSession(UUID userId, UUID sessionId) {
+        FocusSession focusSession = focusSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+
+        if (!focusSession.getUserId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_SESSION);
+        }
+
+        return focusSession;
+    }
+
+    private FocusInterval getLatestInterval(UUID sessionId) {
+        return focusIntervalRepository.findTopBySessionIdOrderByStartedAtDesc(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INTERVAL_NOT_FOUND));
     }
 
 

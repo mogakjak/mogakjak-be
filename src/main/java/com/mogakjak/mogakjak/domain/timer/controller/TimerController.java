@@ -1,5 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.controller;
 
+import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.timer.service.FocusSessionService;
@@ -7,6 +8,7 @@ import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class TimerController {
 
     private final FocusSessionService focusSessionService;
 
+    @Operation(summary = "개인 타이머 시작", description = "개인 타이머를 시작합니다.")
     @PostMapping("/start/timer")
     public ApiResponse<TimerResponse> startTimer(
             @Parameter(hidden = true) @CurrentUser User user,
@@ -31,33 +34,46 @@ public class TimerController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @PostMapping("/pause/timer/{sessionId}")
-    public ApiResponse<TimerResponse> pauseTimer(
+    @Operation(summary = "개인 스톱워치 시작", description = "개인 스톱워치를 시작합니다.")
+    @PostMapping("/start/stopwatch")
+    public ApiResponse<TimerResponse> startStopwatch(
             @Parameter(hidden = true) @CurrentUser User user,
-            @PathVariable UUID sessionId
+            @RequestBody StopwatchStartRequest request
     ) {
-        TimerResponse response = focusSessionService.pauseTimer(user, sessionId);
+        TimerResponse response = focusSessionService.startStopwatch(user, request);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @PostMapping("/resume/timer/{sessionId}")
-    public ApiResponse<TimerResponse> resumeTimer(
+    @Operation(summary = "개인 타이머/스톱워치 정지", description = "개인 타이머/스톱워치를 정지합니다.")
+    @PostMapping("/pause/{sessionId}")
+    public ApiResponse<TimerResponse> pauseSession(
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID sessionId
     ) {
-        TimerResponse response = focusSessionService.resumeTimer(user, sessionId);
+        TimerResponse response = focusSessionService.pauseSession(user, sessionId);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @PostMapping("/finish/timer/{sessionId}")
-    public ApiResponse<TimerResponse> finishTimer(
+    @Operation(summary = "개인 타이머/스톱워치 재개", description = "개인 타이머/스톱워치를 재개합니다.")
+    @PostMapping("/resume/{sessionId}")
+    public ApiResponse<TimerResponse> resumeSession(
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID sessionId
     ) {
-        TimerResponse response = focusSessionService.finishTimer(user, sessionId);
+        TimerResponse response = focusSessionService.resumeSession(user, sessionId);
         return ApiResponse.success(SuccessCode.OK, response);
     }
-//
+
+    @Operation(summary = "개인 타이머/스톱워치 종료", description = "개인 타이머/스톱워치를 종료합니다.")
+    @PostMapping("/finish/{sessionId}")
+    public ApiResponse<TimerResponse> finishSession(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID sessionId
+    ) {
+        TimerResponse response = focusSessionService.finishSession(user, sessionId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
 //    @PostMapping("/{sessionId}/next-phase")
 //    public ApiResponse<Void> nextPomodoroPhase(
 //            @Parameter(hidden = true) @CurrentUser User user,

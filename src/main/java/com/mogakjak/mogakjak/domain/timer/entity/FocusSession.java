@@ -66,40 +66,43 @@ public class FocusSession extends BaseSchema {
         );
     }
 
-    private Integer calculateProgressRate(Long targetDuration, Long totalDuration) {
-        if (targetDuration == null || targetDuration <= 0) {
-            return null;
-        }
-        if (totalDuration == null || totalDuration <= 0) {
-            return 0;
-        }
-
-        double rate = (double) totalDuration / targetDuration * 100;
-        return (int) Math.min(100, Math.floor(rate));
-    }
-
-    private void addDuration(Long seconds) {
-        if (this.totalDuration == null) {
-            this.totalDuration = 0L;
-        }
-        this.totalDuration += seconds;
+    public static FocusSession createStopwatchSession(UUID userId, UUID todoId, LocalDateTime startedAt) {
+        return new FocusSession(
+                userId,
+                todoId,
+                TimerMode.STOPWATCH,
+                startedAt,
+                null,
+                null,
+                0L,
+                0,
+                null,
+                null,
+                null,
+                TimerStatus.RUNNING
+        );
     }
 
     // TODO: progressRate 유효성 검사 고민
-    public void pause(long intervalDurationSeconds) {
+    public void pause(Integer progressRate) {
         this.status = TimerStatus.PAUSED;
-        addDuration(intervalDurationSeconds);
-        this.progressRate = calculateProgressRate(this.targetDuration, this.totalDuration);
+        this.progressRate = progressRate;
     }
 
     public void resume() {
         this.status = TimerStatus.RUNNING;
     }
 
-    public void end(LocalDateTime endedAt, long intervalDurationSeconds) {
+    public void end(LocalDateTime endedAt, Integer progressRate) {
         this.status = TimerStatus.FINISHED;
         this.endedAt = endedAt;
-        addDuration(intervalDurationSeconds);
-        this.progressRate = calculateProgressRate(this.targetDuration, this.totalDuration);
+        this.progressRate = progressRate;
+    }
+
+    public void addDuration(Long seconds) {
+        if (this.totalDuration == null) {
+            this.totalDuration = 0L;
+        }
+        this.totalDuration += seconds;
     }
 }
