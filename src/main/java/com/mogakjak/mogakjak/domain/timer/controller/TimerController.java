@@ -96,7 +96,7 @@ public class TimerController {
     }
 
     @Operation(summary = "현재 실행 중인 세션 종료", description = "현재 실행 중인 세션을 종료합니다.")
-    @PostMapping("/finish")
+    @PostMapping("/finish/active")
     public ApiResponse<TimerResponse> finishActiveSession(
             @Parameter(hidden = true) @CurrentUser User user
     ) {
