@@ -50,7 +50,7 @@ public class TimerController {
     }
 
     @PostMapping("/finish/timer/{sessionId}")
-    public ApiResponse<TimerResponse> stopTimer(
+    public ApiResponse<TimerResponse> finishTimer(
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID sessionId
     ) {
