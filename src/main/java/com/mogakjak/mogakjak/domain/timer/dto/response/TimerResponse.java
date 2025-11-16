@@ -3,6 +3,8 @@ package com.mogakjak.mogakjak.domain.timer.dto.response;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerMode;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.SimpleTodoResponse;
+import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
@@ -35,10 +37,13 @@ public record TimerResponse(
         Long totalDuration,
 
         @Schema(description = "달성률(0~100)", example = "0")
-        Integer progressRate
+        Integer progressRate,
+
+        @Schema(description = "할 일(todo) 관련 dto")
+        SimpleTodoResponse todo
 
 ) {
-    public static TimerResponse fromStartAndResume(FocusSession focusSession) {
+    public static TimerResponse fromStart(FocusSession focusSession, Todo todo) {
         return new TimerResponse(
                 focusSession.getId(),
                 focusSession.getMode(),
@@ -48,7 +53,8 @@ public record TimerResponse(
                 null,
                 focusSession.getTargetDuration(),
                 focusSession.getTotalDuration(),
-                focusSession.getProgressRate()
+                focusSession.getProgressRate(),
+                SimpleTodoResponse.from(todo)
         );
     }
 
@@ -62,7 +68,23 @@ public record TimerResponse(
                 null,
                 focusSession.getTargetDuration(),
                 focusSession.getTotalDuration(),
-                focusSession.getProgressRate()
+                focusSession.getProgressRate(),
+                null
+        );
+    }
+
+    public static TimerResponse fromResume(FocusSession focusSession) {
+        return new TimerResponse(
+                focusSession.getId(),
+                focusSession.getMode(),
+                focusSession.getStatus(),
+                focusSession.getStartedAt(),
+                null,
+                null,
+                focusSession.getTargetDuration(),
+                focusSession.getTotalDuration(),
+                focusSession.getProgressRate(),
+                null
         );
     }
 
@@ -76,7 +98,8 @@ public record TimerResponse(
                 focusSession.getEndedAt(),
                 focusSession.getTargetDuration(),
                 focusSession.getTotalDuration(),
-                focusSession.getProgressRate()
+                focusSession.getProgressRate(),
+                null
         );
     }
 }
