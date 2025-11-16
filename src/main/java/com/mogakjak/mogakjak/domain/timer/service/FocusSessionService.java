@@ -23,7 +23,9 @@ public interface FocusSessionService {
     TimerResponse finishSession(User user, UUID sessionId);
 
     TimerResponse nextPomodoroPhase(User user, UUID sessionId);
-//
+
+    TimerResponse finishActiveSession(User user);
+
 //    /**
 //     * 일일 몰입량 통계
 //     */

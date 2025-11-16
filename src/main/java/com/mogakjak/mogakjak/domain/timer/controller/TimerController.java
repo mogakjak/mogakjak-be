@@ -95,6 +95,15 @@ public class TimerController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
+    @Operation(summary = "현재 실행 중인 세션 종료", description = "현재 실행 중인 세션을 종료합니다.")
+    @PostMapping("/finish")
+    public ApiResponse<TimerResponse> finishActiveSession(
+            @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        TimerResponse response = focusSessionService.finishActiveSession(user);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
 //
 //    @GetMapping("/statistics/daily")
 //    public ApiResponse<List<DailyFocusStatsResponse>> getDailyStatistics(@Parameter(hidden = true) @CurrentUser User user) {

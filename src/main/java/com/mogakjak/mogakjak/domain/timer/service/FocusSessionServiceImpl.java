@@ -192,6 +192,15 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         return TimerResponse.fromPomodoroPhaseChange(focusSession, nextPhaseInterval);
     }
 
+    @Override
+    @Transactional
+    public TimerResponse finishActiveSession(User user) {
+        ActiveFocusSession activeSession = activeFocusSessionRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
+
+        return finishSession(user, activeSession.getSessionId());
+    }
+
     private Integer calculateProgressRate(Integer todoTargetDuration, Long totalDuration) {
         if (todoTargetDuration == null || todoTargetDuration <= 0) {
             throw new CustomException(ErrorCode.INVALID_TARGET_TIME);
