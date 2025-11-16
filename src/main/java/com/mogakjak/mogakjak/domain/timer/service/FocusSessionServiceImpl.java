@@ -1,11 +1,13 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
+import com.mogakjak.mogakjak.domain.timer.dto.request.PomodoroStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
+import com.mogakjak.mogakjak.domain.timer.enumerate.PomodoroPhaseType;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerMode;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -42,9 +45,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         ensureNoActiveSession(user.getId());
         Todo todo = getValidatedTodo(user.getId(), request.todoId());
 
-        FocusSession focusSession = createFocusSession(TimerMode.TIMER, user, request.todoId(), now, request.targetSeconds());
+        FocusSession focusSession = createFocusSession(TimerMode.TIMER, user, request.todoId(), now, request.targetSeconds(), null, null, null);
 
-        return startCommon(user.getId(), now, focusSession, todo);
+        return startCommon(user.getId(), now, focusSession, todo, PomodoroPhaseType.NORMAL, 0);
     }
 
     @Override
@@ -55,9 +58,22 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         ensureNoActiveSession(user.getId());
         Todo todo = getValidatedTodo(user.getId(), request.todoId());
 
-        FocusSession focusSession = createFocusSession(TimerMode.STOPWATCH, user, request.todoId(), now, null);
+        FocusSession focusSession = createFocusSession(TimerMode.STOPWATCH, user, request.todoId(), now, null, null, null, null);
 
-        return startCommon(user.getId(), now, focusSession, todo);
+        return startCommon(user.getId(), now, focusSession, todo, PomodoroPhaseType.NORMAL, 0);
+    }
+
+    @Override
+    @Transactional
+    public TimerResponse startPomodoro(User user, PomodoroStartRequest request) {
+        LocalDateTime now = getCurrentTime();
+
+        ensureNoActiveSession(user.getId());
+        Todo todo = getValidatedTodo(user.getId(), request.todoId());
+
+        FocusSession focusSession = createFocusSession(TimerMode.POMODORO, user, request.todoId(), now, null, request.focusSeconds(), request.breakSeconds(), request.repeatCount());
+
+        return startCommon(user.getId(), now, focusSession, todo, PomodoroPhaseType.FOCUS, 1);
     }
 
     @Override
@@ -90,12 +106,15 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         getValidatedActiveFocusSession(user.getId(), sessionId);
         FocusSession currentFocusSession = getValidatedFocusSession(user.getId(), sessionId);
+        FocusInterval latestInterval = getLatestInterval(sessionId);
 
         validateResumableState(currentFocusSession);
 
         FocusInterval focusInterval = FocusInterval.create(
                 currentFocusSession.getId(),
-                now
+                now,
+                latestInterval.getPhaseType(),
+                latestInterval.getRound()
         );
         focusIntervalRepository.save(focusInterval);
 
@@ -132,6 +151,47 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         return TimerResponse.fromFinish(currentFocusSession);
     }
 
+    @Override
+    @Transactional
+    public TimerResponse nextPomodoroPhase(User user, UUID sessionId) {
+        LocalDateTime now = getCurrentTime();
+
+        // 유효성 검사
+        ActiveFocusSession currentActiveSession = getValidatedActiveFocusSession(user.getId(), sessionId);
+        FocusSession focusSession = getValidatedFocusSession(user.getId(), sessionId);
+        if (focusSession.getMode() != TimerMode.POMODORO) {
+            throw new CustomException(ErrorCode.INVALID_POMODORO_SESSION);
+        }
+
+        FocusInterval latestInterval = getLatestInterval(sessionId);
+        PomodoroPhaseType currentPhase = latestInterval.getPhaseType();
+        Integer currentRound = latestInterval.getRound();
+
+        List<FocusInterval> intervals = focusIntervalRepository.findAllBySessionId(sessionId);
+        long accumulatedSeconds = calculateAccumulatedPhaseSeconds(intervals, currentPhase, currentRound, now);
+        if (!isPhaseFinished(focusSession, currentPhase, accumulatedSeconds)) {
+            throw new CustomException(ErrorCode.PHASE_NOT_FINISHED);
+        }
+
+        // 다음 단계로 전환
+        if (currentPhase == PomodoroPhaseType.FOCUS && isPomodoroFinished(focusSession, intervals)) {
+            if (focusSession.getStatus() != TimerStatus.PAUSED) latestInterval.end(now);
+            focusSession.addDuration(accumulatedSeconds);
+            focusSession.end(now, 100);
+            activeFocusSessionRepository.deleteById(currentActiveSession.getId());
+            return TimerResponse.fromFinish(focusSession);
+        }
+
+        PomodoroPhaseType nextPhase = nextPhase(currentPhase);
+        int nextRound = nextPhase == PomodoroPhaseType.FOCUS ? currentRound + 1 : currentRound;
+
+        if (focusSession.getStatus() != TimerStatus.PAUSED) latestInterval.end(now);
+        focusSession.addDuration(accumulatedSeconds);
+        FocusInterval nextPhaseInterval = startPhaseInterval(focusSession, nextPhase, now, nextRound);
+
+        return TimerResponse.fromPomodoroPhaseChange(focusSession, nextPhaseInterval);
+    }
+
     private Integer calculateProgressRate(Integer todoTargetDuration, Long totalDuration) {
         if (todoTargetDuration == null || todoTargetDuration <= 0) {
             throw new CustomException(ErrorCode.INVALID_TARGET_TIME);
@@ -144,11 +204,11 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         return (int) Math.min(100, Math.floor(rate));
     }
 
-    private FocusSession createFocusSession(TimerMode mode, User user, UUID todoId, LocalDateTime now, Long targetSeconds) {
+    private FocusSession createFocusSession(TimerMode mode, User user, UUID todoId, LocalDateTime now, Long targetSeconds, Long focusDuration, Long breakDuration, Integer repeatCount) {
         return switch (mode) {
             case TIMER -> FocusSession.createTimerSession(user.getId(), todoId, now, targetSeconds);
             case STOPWATCH -> FocusSession.createStopwatchSession(user.getId(), todoId, now);
-            case POMODORO -> FocusSession.createStopwatchSession(user.getId(), todoId, now); // 아직 포모도로 구현 전이라 가안으로!
+            case POMODORO -> FocusSession.createPomodoroSession(user.getId(), todoId, now, focusDuration, breakDuration, repeatCount); // 아직 포모도로 구현 전이라 가안으로!
         };
     }
 
@@ -159,7 +219,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 });
     }
 
-    private TimerResponse startCommon(UUID userId, LocalDateTime now, FocusSession focusSession, Todo todo) {
+    private TimerResponse startCommon(UUID userId, LocalDateTime now, FocusSession focusSession, Todo todo, PomodoroPhaseType phaseType, Integer round) {
         FocusSession savedFocusSession = focusSessionRepository.save(focusSession);
 
         ActiveFocusSession activeSession = ActiveFocusSession.create(
@@ -171,7 +231,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         FocusInterval focusInterval = FocusInterval.create(
                 focusSession.getId(),
-                now
+                now,
+                phaseType,
+                round
         );
         focusIntervalRepository.save(focusInterval);
 
@@ -263,50 +325,56 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         }
     }
 
-//
-//    @Override
-//    @Transactional
-//    public void nextPomodoroPhase(User user, UUID sessionId) {
-//        TimerSession session = sessionRepository.findById(sessionId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.TIMER_NOT_FOUND));
-//
-//        if (!session.getUserId().equals(user.getId())) {
-//            throw new CustomException(ErrorCode.FORBIDDEN_TIMER_ACCESS);
-//        }
-//        if (session.getMode() != TimerMode.POMODORO) {
-//            throw new CustomException(ErrorCode.INVALID_POMODORO_SESSION);
-//        }
-//
-//        List<TimerInterval> intervals = intervalRepository.findAllBySessionId(session.getId());
-//        if (intervals.isEmpty()) {
-//            createPomodoroFocus(session, LocalDateTime.now(), 1);
-//            return;
-//        }
-//
-//        TimerInterval last = intervals.getLast();
-//
-//        // 지금까지 완료된 집중 구간 개수
-//        long doneFocusCount = intervals.stream()
-//                .filter(it -> it.getType() == IntervalType.FOCUS)
-//                .count();
-//
-//        // 반복 다 끝났으면 종료
-//        if (session.getRepeatCount() != null && doneFocusCount >= session.getRepeatCount()) {
-//            finishPomodoro(session);
-//            return;
-//        }
-//
-//        LocalDateTime now = LocalDateTime.now();
-//
-//        if (last.getType() == IntervalType.FOCUS) {
-//            // 집중 끝났으니 휴식으로
-//            createPomodoroBreak(session, now, (int) doneFocusCount);
-//        } else {
-//            // 휴식 끝났으니 다음 집중으로
-//            createPomodoroFocus(session, now, (int) doneFocusCount + 1);
-//        }
-//    }
-//
+    //========= 뽀모도로 관련 메서드 ============
+
+    private long calculateAccumulatedPhaseSeconds(List<FocusInterval> intervals, PomodoroPhaseType phaseType, Integer round, LocalDateTime now) {
+        return intervals.stream()
+                .filter(i -> i.getPhaseType() == phaseType)
+                .filter(i -> i.getRound().equals(round))
+                .mapToLong(i -> {
+                    LocalDateTime end = (i.getEndedAt() != null) ? i.getEndedAt() : now;
+                    return Duration.between(i.getStartedAt(), end).getSeconds();
+                })
+                .sum();
+    }
+
+    private boolean isPhaseFinished(FocusSession session, PomodoroPhaseType phase, long accumulatedSeconds) {
+        if (phase == PomodoroPhaseType.FOCUS) {
+            return accumulatedSeconds >= session.getFocusDuration();
+        } else {
+            return accumulatedSeconds >= session.getBreakDuration();
+        }
+    }
+
+    private int calculateCompletedFocusRounds(List<FocusInterval> intervals) {
+        return (int) intervals.stream()
+                .filter(i -> i.getPhaseType() == PomodoroPhaseType.FOCUS)
+                .map(FocusInterval::getRound)
+                .distinct()
+                .count();
+    }
+
+    private boolean isPomodoroFinished(FocusSession session, List<FocusInterval> intervals) {
+        int completedRounds = calculateCompletedFocusRounds(intervals);
+        return completedRounds >= session.getRepeatCount();
+    }
+
+    private PomodoroPhaseType nextPhase(PomodoroPhaseType current) {
+        return current == PomodoroPhaseType.FOCUS
+                ? PomodoroPhaseType.BREAK
+                : PomodoroPhaseType.FOCUS;
+    }
+
+    private FocusInterval startPhaseInterval(FocusSession session, PomodoroPhaseType phase, LocalDateTime now, Integer round) {
+        FocusInterval interval = FocusInterval.create(
+                session.getId(),
+                now,
+                phase,
+                round
+        );
+        return focusIntervalRepository.save(interval);
+    }
+
 //    @Override
 //    public List<DailyFocusStatsResponse> getDailyFocusDurations(User user) {
 //        List<Object[]> rows = intervalRepository.findDailyFocusDurationsByUser(user.getId());

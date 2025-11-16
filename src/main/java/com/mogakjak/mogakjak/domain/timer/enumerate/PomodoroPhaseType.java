@@ -1,6 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.enumerate;
 
-public enum IntervalType {
+public enum PomodoroPhaseType {
     FOCUS,
     BREAK,
     NORMAL

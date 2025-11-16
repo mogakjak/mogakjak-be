@@ -1,8 +1,11 @@
 package com.mogakjak.mogakjak.domain.timer.entity;
 
+import com.mogakjak.mogakjak.domain.timer.enumerate.PomodoroPhaseType;
 import com.mogakjak.mogakjak.global.common.BaseSchema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -25,11 +28,20 @@ public class FocusInterval extends BaseSchema {
 
     private LocalDateTime endedAt;
 
-    public static FocusInterval create(UUID sessionId, LocalDateTime startedAt) {
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private PomodoroPhaseType phaseType;
+
+    @Column(nullable = false)
+    private Integer round;
+
+    public static FocusInterval create(UUID sessionId, LocalDateTime startedAt, PomodoroPhaseType phaseType, Integer round) {
         return new FocusInterval(
                 sessionId,
                 startedAt,
-                null
+                null,
+                phaseType,
+                round
         );
     }
 

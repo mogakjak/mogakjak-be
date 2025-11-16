@@ -1,5 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.controller;
 
+import com.mogakjak.mogakjak.domain.timer.dto.request.PomodoroStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
@@ -44,6 +45,16 @@ public class TimerController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
+    @Operation(summary = "개인 뽀모도로 시작", description = "개인 뽀모도로를 시작합니다.")
+    @PostMapping("/start/pomodoro")
+    public ApiResponse<TimerResponse> startPomodoro(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @RequestBody PomodoroStartRequest request
+    ) {
+        TimerResponse response = focusSessionService.startPomodoro(user, request);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
     @Operation(summary = "개인 타이머/스톱워치 정지", description = "개인 타이머/스톱워치를 정지합니다.")
     @PostMapping("/pause/{sessionId}")
     public ApiResponse<TimerResponse> pauseSession(
@@ -74,14 +85,15 @@ public class TimerController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-//    @PostMapping("/{sessionId}/next-phase")
-//    public ApiResponse<Void> nextPomodoroPhase(
-//            @Parameter(hidden = true) @CurrentUser User user,
-//            @PathVariable UUID sessionId
-//    ) {
-//        timerService.nextPomodoroPhase(user, sessionId);
-//        return ApiResponse.success(SuccessCode.OK);
-//    }
+    @PostMapping("/next/pomodoro/{sessionId}")
+    public ApiResponse<TimerResponse> nextPomodoroPhase(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID sessionId
+    ) {
+        TimerResponse response = focusSessionService.nextPomodoroPhase(user, sessionId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
 //
 //    @GetMapping("/statistics/daily")
 //    public ApiResponse<List<DailyFocusStatsResponse>> getDailyStatistics(@Parameter(hidden = true) @CurrentUser User user) {

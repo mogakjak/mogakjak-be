@@ -72,6 +72,8 @@ public enum ErrorCode implements StatusCode {
 
     // Focus Interval Errors
     INTERVAL_NOT_FOUND(HttpStatus.NOT_FOUND, "집중 구간(Interval)을 찾을 수 없습니다."),
+    INVALID_POMODORO_PHASE_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 뽀모도로 Interval Type입니다. FOCUS / BREAK 만 허용됩니다."),
+    PHASE_NOT_FINISHED(HttpStatus.BAD_REQUEST, "현재의 뽀모도로 단계가 아직 종료되지 않았습니다.")
     ;
 
     private final HttpStatus httpStatus;

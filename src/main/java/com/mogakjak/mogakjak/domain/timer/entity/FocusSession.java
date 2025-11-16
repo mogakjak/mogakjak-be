@@ -83,6 +83,23 @@ public class FocusSession extends BaseSchema {
         );
     }
 
+    public static FocusSession createPomodoroSession(UUID userId, UUID todoId, LocalDateTime startedAt, Long focusDuration, Long breakDuration, Integer repeatCount) {
+        return new FocusSession(
+                userId,
+                todoId,
+                TimerMode.POMODORO,
+                startedAt,
+                null,
+                null,
+                0L,
+                0,
+                focusDuration,
+                breakDuration,
+                repeatCount,
+                TimerStatus.RUNNING
+        );
+    }
+
     // TODO: progressRate 유효성 검사 고민
     public void pause(Integer progressRate) {
         this.status = TimerStatus.PAUSED;
