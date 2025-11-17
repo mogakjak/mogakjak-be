@@ -9,11 +9,13 @@ import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @Tag(name = "Feedback", description = "피드백 관련 API")
+@Validated
 @RestController
 @RequestMapping("/api/feedback/tags")
 @RequiredArgsConstructor

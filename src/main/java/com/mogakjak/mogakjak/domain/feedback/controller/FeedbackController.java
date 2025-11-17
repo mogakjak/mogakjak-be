@@ -10,10 +10,13 @@ import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Feedback", description = "피드백 관련 API")
+@Validated
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/feedback")
@@ -25,7 +28,7 @@ public class FeedbackController {
     @PostMapping
     public ApiResponse<FeedbackResponse> createFeedback(
             @Parameter(hidden = true) @CurrentUser User user,
-            @RequestBody FeedbackCreateRequest request
+            @RequestBody @Valid FeedbackCreateRequest request
     ) {
         return ApiResponse.success(SuccessCode.OK, feedbackService.createFeedback(user, request));
     }
