@@ -1,10 +1,12 @@
 package com.mogakjak.mogakjak.domain.todo.repository;
 
+import com.mogakjak.mogakjak.domain.todo.controller.dto.TodoResponse;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -50,4 +52,6 @@ public interface TodoRepository extends JpaRepository<Todo, UUID> {
             @Param("start") LocalDate start,
             @Param("end") LocalDate end
     );
+
+    List<Todo> findAllByUserAndIsDeletedFalseOrderByCreatedAtDesc(User user);
 }
