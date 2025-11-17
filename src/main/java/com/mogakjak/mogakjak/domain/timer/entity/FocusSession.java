@@ -1,5 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.entity;
 
+import com.mogakjak.mogakjak.domain.timer.enumerate.ParticipationType;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerMode;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
@@ -34,6 +35,9 @@ public class FocusSession extends BaseSchema {
     @Enumerated(EnumType.STRING)
     private TimerMode mode;
 
+    @Enumerated(EnumType.STRING)
+    private ParticipationType participationType;
+
     @Column(nullable = false)
     private LocalDateTime startedAt;
 
@@ -59,6 +63,7 @@ public class FocusSession extends BaseSchema {
                 todo.getId(),
                 todo.getCategory().getId(),
                 TimerMode.TIMER,
+                ParticipationType.INDIVIDUAL,
                 startedAt,
                 null,
                 targetDuration,
@@ -77,6 +82,7 @@ public class FocusSession extends BaseSchema {
                 todo.getId(),
                 todo.getCategory().getId(),
                 TimerMode.STOPWATCH,
+                ParticipationType.INDIVIDUAL,
                 startedAt,
                 null,
                 null,
@@ -95,6 +101,7 @@ public class FocusSession extends BaseSchema {
                 todo.getId(),
                 todo.getCategory().getId(),
                 TimerMode.POMODORO,
+                ParticipationType.INDIVIDUAL,
                 startedAt,
                 null,
                 null,

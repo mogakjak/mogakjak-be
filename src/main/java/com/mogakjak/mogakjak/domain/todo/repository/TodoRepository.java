@@ -36,4 +36,18 @@ public interface TodoRepository extends JpaRepository<Todo, UUID> {
         AND t.isDeleted = false
     """)
     Optional<Long> sumActualTimeByUser(@Param("user") User user);
+
+    @Query("""
+        SELECT COUNT(t)
+        FROM Todo t
+        WHERE t.user.id = :userId
+          AND t.isDeleted = false
+          AND t.isCompleted = true
+          AND t.date BETWEEN :start AND :end
+        """)
+    Integer countCompletedByUserBetween(
+            @Param("userId") UUID userId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end
+    );
 }
