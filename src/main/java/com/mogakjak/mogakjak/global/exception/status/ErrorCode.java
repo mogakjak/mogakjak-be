@@ -22,6 +22,7 @@ public enum ErrorCode implements StatusCode {
     NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
     CHARACTER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 캐릭터를 찾을 수 없습니다."),
     CHARACTER_NOT_OWNED(HttpStatus.FORBIDDEN, "보유하지 않은 캐릭터입니다."),
+    TODO_DELETED(HttpStatus.BAD_REQUEST, "해당 Todo는 논리적으로 삭제된 상태입니다."),
 
     // Timer Errors
     TIMER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 타이머 세션을 찾을 수 없습니다."),

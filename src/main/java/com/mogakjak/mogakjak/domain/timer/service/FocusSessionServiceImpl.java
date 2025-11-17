@@ -45,7 +45,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         ensureNoActiveSession(user.getId());
         Todo todo = getValidatedTodo(user.getId(), request.todoId());
 
-        FocusSession focusSession = createFocusSession(TimerMode.TIMER, user, request.todoId(), now, request.targetSeconds(), null, null, null);
+        FocusSession focusSession = createFocusSession(TimerMode.TIMER, user, todo, now, request.targetSeconds(), null, null, null);
 
         return startCommon(user.getId(), now, focusSession, todo, PomodoroPhaseType.NORMAL, 0);
     }
@@ -58,7 +58,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         ensureNoActiveSession(user.getId());
         Todo todo = getValidatedTodo(user.getId(), request.todoId());
 
-        FocusSession focusSession = createFocusSession(TimerMode.STOPWATCH, user, request.todoId(), now, null, null, null, null);
+        FocusSession focusSession = createFocusSession(TimerMode.STOPWATCH, user, todo, now, null, null, null, null);
 
         return startCommon(user.getId(), now, focusSession, todo, PomodoroPhaseType.NORMAL, 0);
     }
@@ -71,7 +71,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         ensureNoActiveSession(user.getId());
         Todo todo = getValidatedTodo(user.getId(), request.todoId());
 
-        FocusSession focusSession = createFocusSession(TimerMode.POMODORO, user, request.todoId(), now, null, request.focusSeconds(), request.breakSeconds(), request.repeatCount());
+        FocusSession focusSession = createFocusSession(TimerMode.POMODORO, user, todo, now, null, request.focusSeconds(), request.breakSeconds(), request.repeatCount());
 
         return startCommon(user.getId(), now, focusSession, todo, PomodoroPhaseType.FOCUS, 1);
     }
@@ -212,11 +212,11 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         return (int) Math.min(100, Math.floor(rate));
     }
 
-    private FocusSession createFocusSession(TimerMode mode, User user, UUID todoId, LocalDateTime now, Long targetSeconds, Long focusDuration, Long breakDuration, Integer repeatCount) {
+    private FocusSession createFocusSession(TimerMode mode, User user, Todo todo, LocalDateTime now, Long targetSeconds, Long focusDuration, Long breakDuration, Integer repeatCount) {
         return switch (mode) {
-            case TIMER -> FocusSession.createTimerSession(user.getId(), todoId, now, targetSeconds);
-            case STOPWATCH -> FocusSession.createStopwatchSession(user.getId(), todoId, now);
-            case POMODORO -> FocusSession.createPomodoroSession(user.getId(), todoId, now, focusDuration, breakDuration, repeatCount); // 아직 포모도로 구현 전이라 가안으로!
+            case TIMER -> FocusSession.createTimerSession(user.getId(), todo, now, targetSeconds);
+            case STOPWATCH -> FocusSession.createStopwatchSession(user.getId(), todo, now);
+            case POMODORO -> FocusSession.createPomodoroSession(user.getId(), todo, now, focusDuration, breakDuration, repeatCount);
         };
     }
 
@@ -251,6 +251,10 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     private Todo getValidatedTodo(UUID userId, UUID todoId) {
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new CustomException(ErrorCode.TODO_NOT_FOUND));
+
+        if (todo.getIsDeleted()) {
+            throw new CustomException(ErrorCode.TODO_DELETED);
+        }
 
         if (!todo.getCategory().getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.FORBIDDEN_TODO_ACCESS);

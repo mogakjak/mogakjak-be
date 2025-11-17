@@ -43,7 +43,7 @@ public class MyPageServiceImpl implements MyPageService {
         User user = findUserById(userId);
         UserProfile userProfile = findOrCreateUserProfile(user);
 
-        Long totalTaskCount = todoRepository.countByUserAndIsCompleted(user, true);
+        Long totalTaskCount = todoRepository.countByUserAndIsCompletedAndIsDeletedFalse(user, true);
 
         Long totalSeconds = todoRepository.sumActualTimeByUser(user).orElse(0L);
         String formattedTotalTime = formatSecondsToHoursMinutes(totalSeconds);

@@ -14,14 +14,22 @@ public interface CategoryRepository extends JpaRepository<Category, UUID> {
 
     // 유저의 모든 카테고리를 순서(displayOrder)대로 조회
     List<Category> findAllByUserOrderByDisplayOrderAsc(User user);
+    List<Category> findAllByUserAndIsDeletedFalseOrderByDisplayOrderAsc(User user);
 
     // 유저가 소유한 모든 카테고리 조회
     List<Category> findAllByUser(User user);
+    List<Category> findAllByUserAndIsDeletedFalse(User user);
 
     // 특정 카테고리 ID와 유저로 조회 (소유권 검증)
     Optional<Category> findByIdAndUser(UUID id, User user);
+    Optional<Category> findByIdAndUserAndIsDeletedFalse(UUID id, User user);
 
     // 유저의 카테고리 중 가장 큰 displayOrder 값을 조회
-    @Query("SELECT MAX(c.displayOrder) FROM Category c WHERE c.user = :user")
+    @Query("""
+        SELECT MAX(c.displayOrder)
+        FROM Category c
+        WHERE c.user = :user
+        AND c.isDeleted = false
+    """)
     Optional<Integer> findMaxDisplayOrderByUser(@Param("user") User user);
 }

@@ -15,13 +15,25 @@ public interface TodoRepository extends JpaRepository<Todo, UUID> {
 
     // 유저와 특정 날짜로 모든 To-do 조회 (생성순)
     List<Todo> findAllByUserAndDateOrderByCreatedAtAsc(User user, LocalDate date);
+    List<Todo> findAllByUserAndDateAndIsDeletedFalseOrderByCreatedAtAsc(
+            User user,
+            LocalDate date
+    );
 
     // 특정 To-do ID와 유저로 조회 (소유권 검증)
     Optional<Todo> findByIdAndUser(UUID id, User user);
+    Optional<Todo> findByIdAndUserAndIsDeletedFalse(UUID todoId, User user);
 
     // 내 채소 바구니 조회 (완료한 작업 수)
     Long countByUserAndIsCompleted(User user, boolean isCompleted);
+    Long countByUserAndIsCompletedAndIsDeletedFalse(User user, boolean isCompleted);
 
-    @Query("SELECT SUM(t.actualTimeInSeconds) FROM Todo t WHERE t.user = :user AND t.isCompleted = true")
+    @Query("""
+        SELECT SUM(t.actualTimeInSeconds)
+        FROM Todo t
+        WHERE t.user = :user
+        AND t.isCompleted = true
+        AND t.isDeleted = false
+    """)
     Optional<Long> sumActualTimeByUser(@Param("user") User user);
 }
