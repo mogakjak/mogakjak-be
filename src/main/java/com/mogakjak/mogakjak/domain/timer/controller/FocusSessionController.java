@@ -21,7 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/timers")
 @RequiredArgsConstructor
-public class TimerController {
+public class FocusSessionController {
 
     private final FocusSessionService focusSessionService;
 
@@ -103,11 +103,4 @@ public class TimerController {
         TimerResponse response = focusSessionService.finishActiveSession(user);
         return ApiResponse.success(SuccessCode.OK, response);
     }
-
-//
-//    @GetMapping("/statistics/daily")
-//    public ApiResponse<List<DailyFocusStatsResponse>> getDailyStatistics(@Parameter(hidden = true) @CurrentUser User user) {
-//        List<DailyFocusStatsResponse> stats = timerService.getDailyFocusDurations(user);
-//        return ApiResponse.success(SuccessCode.OK, stats);
-//    }
 }

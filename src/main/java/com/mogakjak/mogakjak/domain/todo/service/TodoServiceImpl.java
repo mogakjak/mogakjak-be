@@ -64,7 +64,7 @@ public class TodoServiceImpl implements TodoService {
     public void updateCategoryOrder(UUID userId, UpdateCategoryOrderRequest req) {
         User user = findUserById(userId);
 
-        Map<UUID, Category> categoryMap = categoryRepository.findAllByUser(user).stream()
+        Map<UUID, Category> categoryMap = categoryRepository.findAllByUserAndIsDeletedFalse(user).stream()
                 .collect(Collectors.toMap(Category::getId, c -> c));
 
         List<UUID> categoryIds = req.getCategoryIds();
@@ -97,7 +97,7 @@ public class TodoServiceImpl implements TodoService {
         User user = findUserById(userId);
 
         // 유저의 모든 카테고리를 순서(displayOrder)대로 조회
-        List<Category> categories = categoryRepository.findAllByUserOrderByDisplayOrderAsc(user);
+        List<Category> categories = categoryRepository.findAllByUserAndIsDeletedFalseOrderByDisplayOrderAsc(user);
 
         return categories.stream()
                 .map(CategoryResponse::from)
@@ -107,10 +107,10 @@ public class TodoServiceImpl implements TodoService {
     @Override
     public void deleteCategory(UUID userId, UUID categoryId) {
         User user = findUserById(userId);
-
         Category category = findCategoryByIdAndUser(categoryId, user);
 
-        categoryRepository.delete(category);
+        category.softDelete();
+        category.getTodos().forEach(Todo::softDelete);
     }
 
     /*
@@ -126,10 +126,10 @@ public class TodoServiceImpl implements TodoService {
         User user = findUserById(userId);
 
         // 1. 유저의 모든 카테고리를 순서대로 조회
-        List<Category> categories = categoryRepository.findAllByUserOrderByDisplayOrderAsc(user);
+        List<Category> categories = categoryRepository.findAllByUserAndIsDeletedFalseOrderByDisplayOrderAsc(user);
 
         // 2. 유저의 해당 날짜 To-do 목록을 조회
-        List<Todo> todos = todoRepository.findAllByUserAndDateOrderByCreatedAtAsc(user, date);
+        List<Todo> todos = todoRepository.findAllByUserAndDateAndIsDeletedFalseOrderByCreatedAtAsc(user, date);
 
         // 3. To-do들을 카테고리 ID별로 그룹화
         Map<UUID, List<TodoResponse>> todosByCategoryId = todos.stream()
@@ -212,7 +212,7 @@ public class TodoServiceImpl implements TodoService {
         User user = findUserById(userId);
         Todo todo = findTodoByIdAndUser(todoId, user);
 
-        todoRepository.delete(todo);
+        todo.softDelete();
     }
 
     private User findUserById(UUID userId) {
@@ -221,12 +221,12 @@ public class TodoServiceImpl implements TodoService {
     }
 
     private Category findCategoryByIdAndUser(UUID categoryId, User user) {
-        return categoryRepository.findByIdAndUser(categoryId, user)
+        return categoryRepository.findByIdAndUserAndIsDeletedFalse(categoryId, user)
                 .orElseThrow(() -> new CustomException(ErrorCode.FORBIDDEN_CATEGORY_ACCESS));
     }
 
     private Todo findTodoByIdAndUser(UUID todoId, User user) {
-        return todoRepository.findByIdAndUser(todoId, user)
+        return todoRepository.findByIdAndUserAndIsDeletedFalse(todoId, user)
                 .orElseThrow(() -> new CustomException(ErrorCode.FORBIDDEN_TODO_ACCESS));
     }
 }

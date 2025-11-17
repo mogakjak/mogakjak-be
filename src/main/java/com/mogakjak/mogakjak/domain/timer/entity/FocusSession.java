@@ -1,7 +1,9 @@
 package com.mogakjak.mogakjak.domain.timer.entity;
 
+import com.mogakjak.mogakjak.domain.timer.enumerate.ParticipationType;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerMode;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
+import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.global.common.BaseSchema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,8 +29,14 @@ public class FocusSession extends BaseSchema {
     @Column(nullable = false)
     private UUID todoId;
 
+    @Column(nullable = false)
+    private UUID categoryId;
+
     @Enumerated(EnumType.STRING)
     private TimerMode mode;
+
+    @Enumerated(EnumType.STRING)
+    private ParticipationType participationType;
 
     @Column(nullable = false)
     private LocalDateTime startedAt;
@@ -49,11 +57,13 @@ public class FocusSession extends BaseSchema {
     @Enumerated(EnumType.STRING)
     private TimerStatus status;
 
-    public static FocusSession createTimerSession(UUID userId, UUID todoId, LocalDateTime startedAt, Long targetDuration) {
+    public static FocusSession createTimerSession(UUID userId, Todo todo, LocalDateTime startedAt, Long targetDuration) {
         return new FocusSession(
                 userId,
-                todoId,
+                todo.getId(),
+                todo.getCategory().getId(),
                 TimerMode.TIMER,
+                ParticipationType.INDIVIDUAL,
                 startedAt,
                 null,
                 targetDuration,
@@ -66,11 +76,13 @@ public class FocusSession extends BaseSchema {
         );
     }
 
-    public static FocusSession createStopwatchSession(UUID userId, UUID todoId, LocalDateTime startedAt) {
+    public static FocusSession createStopwatchSession(UUID userId, Todo todo, LocalDateTime startedAt) {
         return new FocusSession(
                 userId,
-                todoId,
+                todo.getId(),
+                todo.getCategory().getId(),
                 TimerMode.STOPWATCH,
+                ParticipationType.INDIVIDUAL,
                 startedAt,
                 null,
                 null,
@@ -83,11 +95,13 @@ public class FocusSession extends BaseSchema {
         );
     }
 
-    public static FocusSession createPomodoroSession(UUID userId, UUID todoId, LocalDateTime startedAt, Long focusDuration, Long breakDuration, Integer repeatCount) {
+    public static FocusSession createPomodoroSession(UUID userId, Todo todo, LocalDateTime startedAt, Long focusDuration, Long breakDuration, Integer repeatCount) {
         return new FocusSession(
                 userId,
-                todoId,
+                todo.getId(),
+                todo.getCategory().getId(),
                 TimerMode.POMODORO,
+                ParticipationType.INDIVIDUAL,
                 startedAt,
                 null,
                 null,

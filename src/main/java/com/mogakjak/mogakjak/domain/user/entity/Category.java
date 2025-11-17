@@ -34,6 +34,10 @@ public class Category extends BaseSchema {
     @Builder.Default
     private Boolean isExpanded = true;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
+
     @Builder.Default
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Todo> todos = new ArrayList<>();
@@ -41,4 +45,9 @@ public class Category extends BaseSchema {
     public void updateDisplayOrder(Integer displayOrder) {
         this.displayOrder = displayOrder;
     }
+
+    public void softDelete() {
+        this.isDeleted = true;
+    }
+
 }

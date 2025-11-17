@@ -42,6 +42,10 @@ public class Todo extends BaseSchema {
     @Builder.Default
     private Boolean isCompleted = false;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
+
     public void updateInfo(Category category, String task, LocalDate date, Integer targetTimeInSeconds) {
         this.category = category;
         this.task = task;
@@ -52,4 +56,6 @@ public class Todo extends BaseSchema {
     public void toggleComplete() {
         this.isCompleted = !this.isCompleted;
     }
+
+    public void softDelete() { this.isDeleted = true; }
 }
