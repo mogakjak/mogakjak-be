@@ -2,6 +2,8 @@ package com.mogakjak.mogakjak.domain.timer.repository;
 
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -11,4 +13,18 @@ public interface FocusIntervalRepository extends JpaRepository<FocusInterval, UU
     Optional<FocusInterval> findTopBySessionIdOrderByStartedAtDesc(UUID sessionId);
 
     List<FocusInterval> findAllBySessionId(UUID sessionId);
+
+    @Query(value = """
+    SELECT 
+        DATE(i.started_at) AS date,
+        SUM(TIMESTAMPDIFF(SECOND, i.started_at, i.ended_at)) AS total_seconds
+    FROM focus_interval i
+    JOIN focus_session s ON i.session_id = s.id
+    WHERE s.user_id = :userId
+      AND i.phase_type IN ('FOCUS', 'NORMAL')
+    GROUP BY DATE(i.started_at)
+    ORDER BY DATE(i.started_at)
+    """, nativeQuery = true)
+    List<Object[]> findDailyFocusDurationsByUser(@Param("userId") UUID userId);
+
 }

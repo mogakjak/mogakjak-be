@@ -382,16 +382,4 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         );
         return focusIntervalRepository.save(interval);
     }
-
-//    @Override
-//    public List<DailyFocusStatsResponse> getDailyFocusDurations(User user) {
-//        List<Object[]> rows = intervalRepository.findDailyFocusDurationsByUser(user.getId());
-//
-//        return rows.stream()
-//                .map(row -> new DailyFocusStatsResponse(
-//                        ((java.sql.Date) row[0]).toLocalDate(),
-//                        ((Number) row[1]).longValue()
-//                ))
-//                .toList();
-//    }
 }
