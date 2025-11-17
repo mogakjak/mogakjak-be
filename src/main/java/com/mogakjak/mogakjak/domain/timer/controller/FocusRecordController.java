@@ -24,7 +24,7 @@ public class FocusRecordController {
 
     private final FocusRecordService focusRecordService;
 
-    @Operation(summary = "해당 연도의 일일 기록 조회", description = "해당 연도의 1월 1일 - 12월 31일까지의 일일 기록을 일자 별로 초 단위로 계산하여 반환합니다.")
+    @Operation(summary = "해당 연도의 일일 기록 조회", description = "해당 연도의 1월 1일 - 12월 31일까지의 일일 기록을 일자 별로 초 단위로 계산하여 반환합니다. dayOfWeek은 요일로, 1(월)-7(일)을 의미합니다.")
     @GetMapping("/statistics/daily")
     public ApiResponse<List<DailyFocusStatsResponse>> getDailyStatistics(
             @Parameter(hidden = true) @CurrentUser User user
