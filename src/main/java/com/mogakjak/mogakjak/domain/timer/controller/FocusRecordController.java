@@ -6,6 +6,7 @@ import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class FocusRecordController {
 
     private final FocusRecordService focusRecordService;
 
+    @Operation(summary = "일일 기록 조회", description = "해당 연도의 1월 1일 - 12월 31일까지의 일일 기록을 일자 별로 초 단위로 계산하여 반환합니다.")
     @GetMapping("/statistics/daily")
     public ApiResponse<List<DailyFocusStatsResponse>> getDailyStatistics(
             @Parameter(hidden = true) @CurrentUser User user
