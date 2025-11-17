@@ -15,7 +15,7 @@ public record DailyFocusStatsResponse(
         Long totalSeconds,
 
         @Min(1) @Max(7)
-        @Schema(description = "요일 (1(월) ~ 7(일))", example = "197")
+        @Schema(description = "요일 (1(월) ~ 7(일))", example = "3")
         Integer dayOfWeek
 
 ) {
