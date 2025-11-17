@@ -118,6 +118,17 @@ public class TodoServiceImpl implements TodoService {
      */
 
     /**
+     * 로그인 한 유저의 전체 할 일 목록 조회
+     */
+    @Override
+    public List<TodoResponse> getUserTodos(User user) {
+        return todoRepository.findAllByUserAndIsDeletedFalseOrderByCreatedAtDesc(user)
+                .stream()
+                .map(TodoResponse::from)
+                .toList();
+    }
+
+    /**
      * 특정 날짜의 To-do 목록 조회 (카테고리 그룹화)
      */
     @Override

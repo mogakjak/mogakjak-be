@@ -1,6 +1,8 @@
 package com.mogakjak.mogakjak.domain.todo.controller;
 
+import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
+import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import com.mogakjak.mogakjak.domain.todo.controller.dto.CategoryResponse;
@@ -76,6 +78,15 @@ public class TodoController {
     /*
      * == Todo (할 일) API ==
      */
+
+    @Operation(summary = "유저의 To-do 전체 조회", description = "로그인한 유저의 할 일 목록을 조회합니다. 최근 만들어진 순으로 정렬됩니다.")
+    @GetMapping("/my")
+    public ApiResponse<List<TodoResponse>> getUserTodos(
+            @CurrentUser User user
+    ) {
+        List<TodoResponse> todos = todoService.getUserTodos(user);
+        return ApiResponse.success(SuccessCode.OK, todos);
+    }
 
     @Operation(summary = "'오늘'의 To-do 목록 조회", description = "오늘 날짜의 모든 카테고리와 할 일 목록을 조회합니다.")
     @GetMapping("/today")
