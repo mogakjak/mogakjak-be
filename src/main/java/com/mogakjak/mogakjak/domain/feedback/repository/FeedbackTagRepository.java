@@ -10,7 +10,7 @@ import java.util.*;
 public interface FeedbackTagRepository extends JpaRepository<FeedbackTag, UUID> {
     boolean existsByCode(String code);
     Optional<FeedbackTag> findByCode(String code);
-    List<FeedbackTag> findAllByType(FeedbackTagType type);
+    List<FeedbackTag> findAllByCodeIn(List<String> codes);
     List<FeedbackTagResponse> findAllByActiveTrue();
     List<FeedbackTagResponse> findAllByTypeAndActiveTrue(FeedbackTagType type);
 }

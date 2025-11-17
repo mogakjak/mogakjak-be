@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -45,14 +47,14 @@ public class FeedbackServiceImpl implements FeedbackService {
         );
 
         if (request.tagCodes() != null && !request.tagCodes().isEmpty()) {
-            for (String code : request.tagCodes()) {
-                FeedbackTag tag = tagRepository.findByCode(code)
-                        .orElseThrow(() -> new CustomException(ErrorCode.FEEDBACK_TAG_NOT_FOUND));
-
+            List<FeedbackTag> tags = tagRepository.findAllByCodeIn(request.tagCodes());
+            if (tags.size() != request.tagCodes().size()) {
+                throw new CustomException(ErrorCode.FEEDBACK_TAG_NOT_FOUND);
+            }
+            for (FeedbackTag tag : tags) {
                 if (tag.getType() != allowedType) {
                     throw new CustomException(ErrorCode.INVALID_FEEDBACK_TAG_TYPE);
                 }
-
                 feedback.addTag(tag);
             }
         }
