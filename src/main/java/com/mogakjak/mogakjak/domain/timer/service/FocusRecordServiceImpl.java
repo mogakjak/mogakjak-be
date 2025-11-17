@@ -41,9 +41,10 @@ public class FocusRecordServiceImpl implements FocusRecordService {
         LocalDate end = now.atMonth(12).atEndOfMonth();
 
         for (LocalDate day = start; !day.isAfter(end); day = day.plusDays(1)) {
-            result.add(new DailyFocusStatsResponse(
+            result.add(DailyFocusStatsResponse.from(
                     day,
-                    map.getOrDefault(day, 0L)
+                    map.getOrDefault(day, 0L),
+                    day.getDayOfWeek().getValue()
             ));
         }
 
