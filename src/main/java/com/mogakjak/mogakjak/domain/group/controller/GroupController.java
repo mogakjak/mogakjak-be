@@ -86,7 +86,7 @@ public class GroupController {
             @PathVariable UUID groupId
     ) {
         FocusNotificationResponse response = groupService.modifyFocusNotification(user, groupId, request);
-        return ApiResponse.success(SuccessCode.CREATED, response);
+        return ApiResponse.success(SuccessCode.OK, response);
     }
 
     // --- Member API ---
