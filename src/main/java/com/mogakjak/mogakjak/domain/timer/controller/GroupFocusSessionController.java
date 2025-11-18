@@ -45,7 +45,7 @@ public class GroupFocusSessionController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @Operation(summary = "그룹 타이머 정지", description = "그룹 타이머를 재개합니다.")
+    @Operation(summary = "그룹 타이머 재개", description = "그룹 타이머를 재개합니다.")
     @PostMapping("/resume/{sessionId}/{groupId}")
     public ApiResponse<TimerResponse> resumeSession(
             @Parameter(hidden = true) @CurrentUser User user,
