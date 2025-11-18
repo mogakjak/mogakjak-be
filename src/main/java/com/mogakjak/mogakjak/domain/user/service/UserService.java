@@ -62,6 +62,7 @@ public class UserService {
             MemberListResDto memberListResDto = new MemberListResDto();
             memberListResDto.setId(m.getId());
             memberListResDto.setEmail(m.getEmail());
+            memberListResDto.setImageUrl(m.getImageUrl());
             memberListResDto.setName(m.getName());
             memberListResDtos.add(memberListResDto);
         }

@@ -13,7 +13,7 @@ public class ImageCharacterResponse {
     private UUID id;
     private Integer level;
     private String name;
-    private String imageUrl;
+    private String mainCharacterImage;
     private Boolean isActive;
     private Integer unlockTimeInSeconds;
 
@@ -22,7 +22,7 @@ public class ImageCharacterResponse {
                 .id(character.getId())
                 .level(character.getLevel())
                 .name(character.getName())
-                .imageUrl(character.getImageUrl())
+                .mainCharacterImage(character.getImageUrl())
                 .isActive(character.getIsActive())
                 .unlockTimeInSeconds(character.getUnlockTimeInSeconds())
                 .build();

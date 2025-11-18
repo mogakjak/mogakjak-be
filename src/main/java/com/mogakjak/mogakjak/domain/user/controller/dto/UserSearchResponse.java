@@ -18,10 +18,14 @@ public class UserSearchResponse {
     @Schema(description = "닉네임")
     private String nickname;
 
+    @Schema(description = "프로필 이미지 URL")
+    private String profileUrl;
+
     public static UserSearchResponse from(User user) {
         return UserSearchResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getName())
+                .profileUrl(user.getImageUrl())
                 .build();
     }
 }
