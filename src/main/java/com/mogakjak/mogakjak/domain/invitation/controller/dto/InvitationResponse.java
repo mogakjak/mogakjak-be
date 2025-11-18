@@ -1,5 +1,6 @@
-package com.mogakjak.mogakjak.domain.invitation;
+package com.mogakjak.mogakjak.domain.invitation.controller.dto;
 
+import com.mogakjak.mogakjak.domain.invitation.entity.Invitation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
