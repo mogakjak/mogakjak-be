@@ -28,6 +28,10 @@ public class Group extends BaseSchema {
 
     @Column(nullable = false)
     @Builder.Default
+    private Integer goalSeconds = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
     private Boolean isNotificationAgreed = true;
 
     @Column(nullable = false)
@@ -62,5 +66,9 @@ public class Group extends BaseSchema {
         this.isNotificationAgreed = isNotificationAgreed;
         this.notificationCycle = notificationCycle;
         this.notificationMessage = notificationMessage;
+    }
+
+    public void updateGoalSeconds(Integer goalSeconds) {
+        this.goalSeconds = goalSeconds;
     }
 }

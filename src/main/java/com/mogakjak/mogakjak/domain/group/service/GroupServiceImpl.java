@@ -260,6 +260,19 @@ public class GroupServiceImpl implements GroupService {
         return FocusNotificationResponse.from(group);
     }
 
+    @Override
+    @Transactional
+    public GroupGoalResponse setGroupGoal(User user, UUID groupId, GroupGoalRequest request) {
+        Group group = findGroupById(groupId);
+        findUserGroup(user, group);
+
+        int totalSeconds = (request.hour() * 3600) + (request.minute() * 60);
+
+        group.updateGoalSeconds(totalSeconds);
+
+        return GroupGoalResponse.from(group);
+    }
+
     private User findUserById(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
