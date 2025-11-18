@@ -252,9 +252,9 @@ public class GroupServiceImpl implements GroupService {
         findUserGroup(user, group);
 
         group.updateFocusNotificationInfo(
-                request.isAgreed(),
-                request.cycle(),
-                request.message()
+                request.isNotificationAgreed(),
+                request.notificationCycle(),
+                request.notificationMessage()
         );
 
         return FocusNotificationResponse.from(group);
