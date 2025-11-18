@@ -1,13 +1,11 @@
 package com.mogakjak.mogakjak.domain.group.controller;
 
-import com.mogakjak.mogakjak.domain.group.controller.dto.CreateGroupRequest;
-import com.mogakjak.mogakjak.domain.group.controller.dto.GroupDetailResponse;
-import com.mogakjak.mogakjak.domain.group.controller.dto.MateResponse;
-import com.mogakjak.mogakjak.domain.group.controller.dto.MyGroupResponse;
-import com.mogakjak.mogakjak.domain.group.controller.dto.UpdateGroupRequest;
+import com.mogakjak.mogakjak.domain.group.controller.dto.*;
 import com.mogakjak.mogakjak.domain.group.service.GroupService;
 import com.mogakjak.mogakjak.domain.invitation.InviteMateRequest;
+import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
+import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
@@ -77,6 +75,17 @@ public class GroupController {
     ) {
         UUID userId = getUserId(userDetails);
         GroupDetailResponse response = groupService.updateGroup(groupId, request, userId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "그룹 집중 체크 알림 설정", description = "그룹의 집중 체크 알림 동의 여부 / 알림 주기 / 알림 메시지를 설정합니다.")
+    @PutMapping("/{groupId}/notifications")
+    public ApiResponse<FocusNotificationResponse> modifyFocusNotification(
+            @Valid @RequestBody FocusNotificationRequest request,
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID groupId
+    ) {
+        FocusNotificationResponse response = groupService.modifyFocusNotification(user, groupId, request);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
