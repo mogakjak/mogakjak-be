@@ -283,6 +283,35 @@ public class GroupServiceImpl implements GroupService {
     }
 
     // === 편의 메서드 ===
+    @Override
+    @Transactional
+    public FocusNotificationResponse modifyFocusNotification(User user, UUID groupId, FocusNotificationRequest request) {
+        Group group = findGroupById(groupId);
+
+        // 유저가 그룹에 접근 권한이 있는지 확인
+        findUserGroup(user, group);
+
+        group.updateFocusNotificationInfo(
+                request.isNotificationAgreed(),
+                request.notificationCycle(),
+                request.notificationMessage()
+        );
+
+        return FocusNotificationResponse.from(group);
+    }
+
+    @Override
+    @Transactional
+    public GroupGoalResponse setGroupGoal(User user, UUID groupId, GroupGoalRequest request) {
+        Group group = findGroupById(groupId);
+        findUserGroup(user, group);
+
+        int totalSeconds = (request.hour() * 3600) + (request.minute() * 60);
+
+        group.updateGoalSeconds(totalSeconds);
+
+        return GroupGoalResponse.from(group);
+    }
 
     private User findUserById(UUID userId) {
         return userRepository.findById(userId)

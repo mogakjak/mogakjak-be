@@ -7,6 +7,8 @@ import com.mogakjak.mogakjak.domain.todo.controller.dto.CreateTodoRequest;
 import com.mogakjak.mogakjak.domain.todo.controller.dto.TodoResponse;
 import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateCategoryOrderRequest;
 import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateTodoRequest;
+import com.mogakjak.mogakjak.domain.user.entity.User;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -57,4 +59,9 @@ public interface TodoService {
      * 할 일(Todo) 삭제
      */
     void deleteTodo(UUID userId, UUID todoId);
+
+    /**
+     * 로그인 한 유저의 전체 할 일 목록 조회
+     */
+    List<TodoResponse> getUserTodos(User user);
 }
