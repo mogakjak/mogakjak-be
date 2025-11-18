@@ -6,7 +6,7 @@ import com.mogakjak.mogakjak.domain.group.controller.dto.MateResponse;
 import com.mogakjak.mogakjak.domain.group.controller.dto.MyGroupResponse;
 import com.mogakjak.mogakjak.domain.group.controller.dto.UpdateGroupRequest;
 import com.mogakjak.mogakjak.domain.group.service.GroupService;
-import com.mogakjak.mogakjak.domain.invitation.InviteMateRequest;
+import com.mogakjak.mogakjak.domain.invitation.controller.dto.InviteMateRequest;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.CustomException;

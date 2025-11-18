@@ -1,17 +1,12 @@
 package com.mogakjak.mogakjak.domain.group.service;
 
-import com.mogakjak.mogakjak.domain.group.controller.dto.CreateGroupRequest;
-import com.mogakjak.mogakjak.domain.group.controller.dto.GroupDetailResponse;
-import com.mogakjak.mogakjak.domain.group.controller.dto.MateResponse;
-import com.mogakjak.mogakjak.domain.group.controller.dto.MyGroupResponse;
-import com.mogakjak.mogakjak.domain.group.controller.dto.UpdateGroupRequest;
+import com.mogakjak.mogakjak.domain.group.controller.dto.*;
 import com.mogakjak.mogakjak.domain.group.entity.Group;
 import com.mogakjak.mogakjak.domain.group.repository.GroupRepository;
-import com.mogakjak.mogakjak.domain.invitation.Invitation;
-import com.mogakjak.mogakjak.domain.invitation.InvitationRepository;
-import com.mogakjak.mogakjak.domain.invitation.InvitationResponse;
-import com.mogakjak.mogakjak.domain.invitation.InvitationStatus;
-import com.mogakjak.mogakjak.domain.invitation.InviteMateRequest;
+import com.mogakjak.mogakjak.domain.invitation.entity.Invitation;
+import com.mogakjak.mogakjak.domain.invitation.entity.InvitationStatus;
+import com.mogakjak.mogakjak.domain.invitation.repository.InvitationRepository;
+import com.mogakjak.mogakjak.domain.invitation.controller.dto.*;
 import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserGroup;
@@ -45,9 +40,33 @@ public class GroupServiceImpl implements GroupService {
     public List<MyGroupResponse> getMyGroups(UUID userId) {
         User user = findUserById(userId);
 
-        return userGroupRepository.findAllByUserWithGroup(user).stream()
-                .map(userGroup -> toMyGroupDto(userGroup.getGroup()))
-                .collect(Collectors.toList());
+        // 내가 가입한 그룹 목록 조회
+        List<UserGroup> myUserGroups = userGroupRepository.findAllByUserWithGroup(user);
+
+        return myUserGroups.stream().map(myUg -> {
+            Group group = myUg.getGroup();
+
+            // 해당 그룹의 멤버들을 프로필 정보(레벨, 이미지)와 함께 조회
+            // (UserGroupRepository에 findByGroupIdWithUserAndProfile 메서드 추가 필요)
+            List<MyGroupResponse.GroupMemberDto> members =
+                    userGroupRepository.findByGroupIdWithUserAndProfile(group.getId()).stream()
+                            .map(ug -> {
+                                User member = ug.getUser();
+                                return MyGroupResponse.GroupMemberDto.builder()
+                                        .userId(member.getId())
+                                        .nickname(member.getName())
+                                        .profileUrl(getProfileUrlFromUser(member))
+                                        .level(getLevelFromUser(member))
+                                        .build();
+                            }).collect(Collectors.toList());
+
+            return MyGroupResponse.builder()
+                    .groupId(group.getId())
+                    .groupName(group.getName())
+                    .imageUrl(group.getImageUrl()) // 그룹 이미지 URL 포함
+                    .members(members)              // 그룹 멤버 리스트 포함
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     @Override
@@ -57,7 +76,8 @@ public class GroupServiceImpl implements GroupService {
 
         Group group = Group.builder()
                 .name(request.getName())
-                .description(request.getDescription())
+                .imageUrl(request.getImageUrl())
+                .description("")
                 .password(null)
                 .build();
 
@@ -67,12 +87,14 @@ public class GroupServiceImpl implements GroupService {
         UserGroup userGroup = UserGroup.create(user, group, GroupRole.HOST);
         userGroupRepository.save(userGroup);
 
+        // 생성된 그룹 정보 반환 시, 방장의 레벨 정보 등 포함
         GroupDetailResponse.MemberInfo hostInfo = GroupDetailResponse.MemberInfo.builder()
                 .userId(user.getId())
                 .nickname(user.getName())
+                .profileUrl(getProfileUrlFromUser(user))
+                .level(getLevelFromUser(user))
                 .build();
 
-        // 생성된 그룹의 상세 정보 반환
         return GroupDetailResponse.from(group, List.of(hostInfo));
     }
 
@@ -82,14 +104,20 @@ public class GroupServiceImpl implements GroupService {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
 
-//        checkUserInGroup(user, group);
+        checkUserInGroup(user, group);
 
-        List<GroupDetailResponse.MemberInfo> members = userGroupRepository.findAllByGroupWithUser(group).stream()
-                .map(ug -> GroupDetailResponse.MemberInfo.builder()
-                        .userId(ug.getUser().getId())
-                        .nickname(ug.getUser().getName())
-                        .build())
-                .collect(Collectors.toList());
+        // 그룹 멤버 조회 시 레벨과 프로필 이미지 포함
+        List<GroupDetailResponse.MemberInfo> members =
+                userGroupRepository.findByGroupIdWithUserAndProfile(groupId).stream()
+                        .map(ug -> {
+                            User member = ug.getUser();
+                            return GroupDetailResponse.MemberInfo.builder()
+                                    .userId(member.getId())
+                                    .nickname(member.getName())
+                                    .profileUrl(getProfileUrlFromUser(member))
+                                    .level(getLevelFromUser(member)) // 레벨 정보 포함
+                                    .build();
+                        }).collect(Collectors.toList());
 
         return GroupDetailResponse.from(group, members);
     }
@@ -100,22 +128,23 @@ public class GroupServiceImpl implements GroupService {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
 
-        // 방장(HOST)만 수정 가능
-//        checkUserRole(user, group);
+        String newName = StringUtils.hasText(request.getName()) ? request.getName() : group.getName();
+        String newImageUrl = StringUtils.hasText(request.getImageUrl()) ? request.getImageUrl() : group.getImageUrl();
 
-        if (StringUtils.hasText(request.getName())) {
-             group.updateName(request.getName());
-        }
-        if (StringUtils.hasText(request.getDescription())) {
-             group.updateDescription(request.getDescription());
-        }
+        group.updateInfo(newName, newImageUrl);
 
-        List<GroupDetailResponse.MemberInfo> members = userGroupRepository.findAllByGroupWithUser(group).stream()
-                .map(ug -> GroupDetailResponse.MemberInfo.builder()
-                        .userId(ug.getUser().getId())
-                        .nickname(ug.getUser().getName())
-                        .build())
-                .collect(Collectors.toList());
+        // 업데이트된 정보 반환을 위해 멤버 정보 다시 조회
+        List<GroupDetailResponse.MemberInfo> members =
+                userGroupRepository.findByGroupIdWithUserAndProfile(groupId).stream()
+                        .map(ug -> {
+                            User member = ug.getUser();
+                            return GroupDetailResponse.MemberInfo.builder()
+                                    .userId(member.getId())
+                                    .nickname(member.getName())
+                                    .profileUrl(getProfileUrlFromUser(member))
+                                    .level(getLevelFromUser(member))
+                                    .build();
+                        }).collect(Collectors.toList());
 
         return GroupDetailResponse.from(group, members);
     }
@@ -124,18 +153,32 @@ public class GroupServiceImpl implements GroupService {
     @Transactional(readOnly = true)
     public Page<MateResponse> getMates(UUID userId, UUID groupId, String search, Pageable pageable) {
         User user = findUserById(userId);
-        Page<User> userPage;
 
         if (groupId == null) {
-            userPage = userGroupRepository.findTotalMatesByUser(user, search, pageable);
+            // 내 전체 메이트 조회: UserGroup 엔티티를 조회하여 그룹 정보까지 포함
+            // (UserGroupRepository에 findTotalMatesWithGroupByUser 메서드 추가 필요)
+            Page<UserGroup> userGroupPage = userGroupRepository.findTotalMatesWithGroupByUser(user, search, pageable);
+
+            return userGroupPage.map(ug -> MateResponse.builder()
+                    .userId(ug.getUser().getId())
+                    .nickname(ug.getUser().getName())
+                    .profileUrl(ug.getUser().getImageUrl())
+                    .groupName(ug.getGroup().getName())
+                    .build());
         } else {
+            // 특정 그룹의 메이트 조회
             Group group = findGroupById(groupId);
             checkUserInGroup(user, group);
 
-            userPage = userGroupRepository.findMatesByGroup(group, user, search, pageable);
+            // 기존 메서드 활용 후 그룹 이름 매핑
+            Page<User> users = userGroupRepository.findMatesByGroup(group, user, search, pageable);
+            return users.map(u -> MateResponse.builder()
+                    .userId(u.getId())
+                    .nickname(u.getName())
+                    .profileUrl(u.getImageUrl())
+                    .groupName(group.getName()) // 해당 그룹 이름
+                    .build());
         }
-
-        return userPage.map(MateResponse::from);
     }
 
     @Override
@@ -146,17 +189,13 @@ public class GroupServiceImpl implements GroupService {
         UserGroup userGroup = findUserGroup(user, group);
 
         if (userGroup.getRole() == GroupRole.HOST) {
-            // 방장인 경우
             long memberCount = userGroupRepository.countByGroup(group);
             if (memberCount > 1) {
-                // 다른 멤버가 있으면 탈퇴 불가
                 throw new CustomException(ErrorCode.CANNOT_LEAVE_AS_HOST);
             }
-            // 혼자 있으면 그룹 삭제
             userGroupRepository.delete(userGroup);
             groupRepository.delete(group);
         } else {
-            // 일반 멤버인 경우
             userGroupRepository.delete(userGroup);
         }
     }
@@ -167,8 +206,6 @@ public class GroupServiceImpl implements GroupService {
         User inviter = findUserById(inviterId);
         User invitee = findUserById(request.getInviteeId());
         Group group = findGroupById(groupId);
-
-//        checkUserRole(inviter, group);
 
         if (inviter.getId().equals(invitee.getId())) {
             throw new CustomException(ErrorCode.CANNOT_INVITE_SELF);
@@ -217,9 +254,7 @@ public class GroupServiceImpl implements GroupService {
             throw new CustomException(ErrorCode.INVALID_INVITATION);
         }
 
-        // 이미 그룹 멤버인 경우
         if (userGroupRepository.findByUserAndGroup(user, invitation.getGroup()).isPresent()) {
-            // 초대는 수락 처리하되, 멤버로 추가하지 않음
             invitation.accept();
             throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
         }
@@ -247,6 +282,8 @@ public class GroupServiceImpl implements GroupService {
         invitation.decline();
     }
 
+    // === 편의 메서드 ===
+
     private User findUserById(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -273,16 +310,30 @@ public class GroupServiceImpl implements GroupService {
         }
     }
 
-//    private void checkUserRole(User user, Group group) {
-//        if (!userGroupRepository.existsByUserAndGroupAndRole(user, group, GroupRole.HOST)) {
-//            throw new CustomException(ErrorCode.FORBIDDEN);
-//        }
-//    }
+    private Integer getLevelFromUser(User user) {
+        if (user.getUserProfile() != null && user.getUserProfile().getMainImageCharacter() != null) {
+            return user.getUserProfile().getMainImageCharacter().getLevel();
+        }
+        return 1;
+    }
+
+    private String getProfileUrlFromUser(User user) {
+        // 사용자가 설정한 프로필 사진이 있으면 반환
+        if (user.getImageUrl() != null) {
+            return user.getImageUrl();
+        }
+        // 없으면 기존 로직대로 캐릭터 이미지 반환
+        if (user.getUserProfile() != null && user.getUserProfile().getMainImageCharacter() != null) {
+            return user.getUserProfile().getMainImageCharacter().getImageUrl();
+        }
+        return null;
+    }
 
     private MyGroupResponse toMyGroupDto(Group group) {
         return MyGroupResponse.builder()
                 .groupId(group.getId())
                 .groupName(group.getName())
+                .imageUrl(group.getImageUrl())
                 .build();
     }
 }

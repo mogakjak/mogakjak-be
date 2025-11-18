@@ -22,13 +22,36 @@ public class Group extends BaseSchema {
     @Column(nullable = false, length = 30)
     private String name;
 
+    private String imageUrl;
+
     private String description;
 
     private String password;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer goalSeconds = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isNotificationAgreed = true;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer notificationCycle = 1;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private String notificationMessage = "집중 좀 해보시는 거 어때염?";
+
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserGroup> userGroups = new ArrayList<>();
+
+    public void updateInfo(String name, String imageUrl) {
+        this.name = name;
+        this.imageUrl = imageUrl;
+    }
 
     public void addUserGroup(UserGroup userGroup) {
         userGroups.add(userGroup);
@@ -44,5 +67,15 @@ public class Group extends BaseSchema {
 
     public void updatePassword(String password) {
         this.password = password;
+    }
+
+    public void updateFocusNotificationInfo(Boolean isNotificationAgreed, Integer notificationCycle, String notificationMessage) {
+        this.isNotificationAgreed = isNotificationAgreed;
+        this.notificationCycle = notificationCycle;
+        this.notificationMessage = notificationMessage;
+    }
+
+    public void updateGoalSeconds(Integer goalSeconds) {
+        this.goalSeconds = goalSeconds;
     }
 }
