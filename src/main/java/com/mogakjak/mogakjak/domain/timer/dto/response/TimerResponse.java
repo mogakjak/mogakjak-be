@@ -2,6 +2,7 @@ package com.mogakjak.mogakjak.domain.timer.dto.response;
 
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
+import com.mogakjak.mogakjak.domain.timer.entity.GroupFocusSession;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerMode;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.todo.controller.dto.SimpleTodoResponse;
@@ -63,7 +64,39 @@ public record TimerResponse(
         );
     }
 
+    public static TimerResponse fromGroupStart(GroupFocusSession focusSession) {
+        return new TimerResponse(
+                focusSession.getId(),
+                focusSession.getMode(),
+                focusSession.getStatus(),
+                focusSession.getStartedAt(),
+                null,
+                null,
+                focusSession.getTargetDuration(),
+                focusSession.getTotalDuration(),
+                focusSession.getProgressRate(),
+                null,
+                null
+        );
+    }
+
     public static TimerResponse fromPause(FocusSession focusSession, LocalDateTime pausedAt) {
+        return new TimerResponse(
+                focusSession.getId(),
+                focusSession.getMode(),
+                focusSession.getStatus(),
+                focusSession.getStartedAt(),
+                pausedAt,
+                null,
+                focusSession.getTargetDuration(),
+                focusSession.getTotalDuration(),
+                focusSession.getProgressRate(),
+                null,
+                null
+        );
+    }
+
+    public static TimerResponse fromGroupPause(GroupFocusSession focusSession, LocalDateTime pausedAt) {
         return new TimerResponse(
                 focusSession.getId(),
                 focusSession.getMode(),
@@ -95,7 +128,39 @@ public record TimerResponse(
         );
     }
 
+    public static TimerResponse fromGroupResume(GroupFocusSession focusSession) {
+        return new TimerResponse(
+                focusSession.getId(),
+                focusSession.getMode(),
+                focusSession.getStatus(),
+                focusSession.getStartedAt(),
+                null,
+                null,
+                focusSession.getTargetDuration(),
+                focusSession.getTotalDuration(),
+                focusSession.getProgressRate(),
+                null,
+                null
+        );
+    }
+
     public static TimerResponse fromFinish(FocusSession focusSession) {
+        return new TimerResponse(
+                focusSession.getId(),
+                focusSession.getMode(),
+                focusSession.getStatus(),
+                focusSession.getStartedAt(),
+                null,
+                focusSession.getEndedAt(),
+                focusSession.getTargetDuration(),
+                focusSession.getTotalDuration(),
+                focusSession.getProgressRate(),
+                null,
+                null
+        );
+    }
+
+    public static TimerResponse fromGroupFinish(GroupFocusSession focusSession) {
         return new TimerResponse(
                 focusSession.getId(),
                 focusSession.getMode(),
