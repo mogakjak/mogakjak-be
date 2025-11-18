@@ -103,7 +103,6 @@ public class MyPageServiceImpl implements MyPageService {
     public void updateProfile(UUID userId, UpdateProfileRequest request) {
         User user = findUserById(userId);
 
-        // 1. 닉네임 변경 확인 및 중복 검사
         String newName = user.getName();
         if (StringUtils.hasText(request.getNickname()) && !user.getName().equals(request.getNickname())) {
             if (userRepository.findByName(request.getNickname()).isPresent()) {
@@ -112,7 +111,6 @@ public class MyPageServiceImpl implements MyPageService {
             newName = request.getNickname();
         }
 
-        // 2. 이메일 변경 확인 및 중복 검사
         String newEmail = user.getEmail();
         if (StringUtils.hasText(request.getEmail()) && !user.getEmail().equals(request.getEmail())) {
             if (userRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -121,16 +119,12 @@ public class MyPageServiceImpl implements MyPageService {
             newEmail = request.getEmail();
         }
 
-        // 3. 프로필 이미지 변경 (null이 아닌 경우 업데이트)
-        // imageUrl이 request에 있으면 해당 값 사용, 없으면 기존 값 유지
-        // 만약 사진을 삭제하는 기능이 필요하다면 별도 로직(예: 빈 문자열 체크)이 필요할 수 있음
+        // 프로필 이미지 변경 (null이 아닌 경우 업데이트)
         String newImageUrl = request.getImageUrl() != null ? request.getImageUrl() : user.getImageUrl();
 
-        // 정보 업데이트
         user.updateInfo(newName, newEmail, newImageUrl);
     }
 
-    // 대표 캐릭터 변경
     @Override
     @Transactional
     public void updateMainCharacter(UUID userId, UUID characterId) {
