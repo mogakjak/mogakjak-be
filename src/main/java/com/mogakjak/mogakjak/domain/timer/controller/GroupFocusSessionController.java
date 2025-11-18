@@ -17,14 +17,14 @@ import java.util.UUID;
 
 @Tag(name = "GroupTimer", description = "그룹 타이머 관련 API")
 @RestController
-@RequestMapping("/api/timers")
+@RequestMapping("/api/timers/groups")
 @RequiredArgsConstructor
 public class GroupFocusSessionController {
 
     private final GroupFocusSessionService groupFocusSessionService;
 
     @Operation(summary = "그룹 타이머 시작", description = "그룹 타이머를 시작합니다.")
-    @PostMapping("/start/timer/{groupId}")
+    @PostMapping("/{groupId}/start/timer")
     public ApiResponse<TimerResponse> startGroupTimer(
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID groupId,
@@ -35,7 +35,7 @@ public class GroupFocusSessionController {
     }
 
     @Operation(summary = "그룹 타이머 정지", description = "그룹 타이머를 정지합니다.")
-    @PostMapping("/pause/{sessionId}/{groupId}")
+    @PostMapping("/{groupId}/pause/{sessionId}")
     public ApiResponse<TimerResponse> pauseSession(
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID groupId,
@@ -46,7 +46,7 @@ public class GroupFocusSessionController {
     }
 
     @Operation(summary = "그룹 타이머 재개", description = "그룹 타이머를 재개합니다.")
-    @PostMapping("/resume/{sessionId}/{groupId}")
+    @PostMapping("/{groupId}/resume/{sessionId}")
     public ApiResponse<TimerResponse> resumeSession(
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID groupId,
@@ -57,7 +57,7 @@ public class GroupFocusSessionController {
     }
 
     @Operation(summary = "그룹 타이머 종료", description = "그룹 타이머를 종료합니다.")
-    @PostMapping("/finish/{sessionId}/{groupId}")
+    @PostMapping("/{groupId}/finish/{sessionId}")
     public ApiResponse<TimerResponse> finishSession(
             @Parameter(hidden = true) @CurrentUser User user,
             @PathVariable UUID groupId,
