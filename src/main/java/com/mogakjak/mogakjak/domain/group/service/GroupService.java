@@ -10,14 +10,9 @@ import com.mogakjak.mogakjak.domain.invitation.controller.dto.InviteMateRequest;
 import java.util.List;
 import java.util.UUID;
 import com.mogakjak.mogakjak.domain.group.controller.dto.*;
-import com.mogakjak.mogakjak.domain.invitation.InvitationResponse;
-import com.mogakjak.mogakjak.domain.invitation.InviteMateRequest;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-
-import java.util.List;
-import java.util.UUID;
 
 public interface GroupService {
 
@@ -56,4 +51,10 @@ public interface GroupService {
 
     // 그룹 공동 목표 설정
     GroupGoalResponse setGroupGoal(User user, UUID groupId, GroupGoalRequest request);
+
+    // 초대 링크 생성
+    String createInvitationUrl(UUID groupId, UUID userId, String frontendBaseUrl);
+
+    // 초대 링크를 통한 그룹 가입
+    void joinGroupViaLink(UUID groupId, UUID userId);
 }
