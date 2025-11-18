@@ -21,14 +21,10 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
-public class FocusSession extends BaseSchema {
+public class GroupFocusSession extends BaseSchema {
 
     @Column(nullable = false)
-    private UUID userId;
-
-    // 개인 타이머에서만 기록됨
-    private UUID todoId;
-    private UUID categoryId;
+    private UUID groupId;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
@@ -57,13 +53,11 @@ public class FocusSession extends BaseSchema {
     @Enumerated(EnumType.STRING)
     private TimerStatus status;
 
-    public static FocusSession createTimerSession(UUID userId, Todo todo, LocalDateTime startedAt, Long targetDuration) {
-        return new FocusSession(
-                userId,
-                todo.getId(),
-                todo.getCategory().getId(),
+    public static GroupFocusSession createTimerSession(UUID groupId, LocalDateTime startedAt, Long targetDuration) {
+        return new GroupFocusSession(
+                groupId,
                 TimerMode.TIMER,
-                ParticipationType.INDIVIDUAL,
+                ParticipationType.GROUP,
                 startedAt,
                 null,
                 targetDuration,
@@ -72,44 +66,6 @@ public class FocusSession extends BaseSchema {
                 null,
                 null,
                 null,
-                TimerStatus.RUNNING
-        );
-    }
-
-    public static FocusSession createStopwatchSession(UUID userId, Todo todo, LocalDateTime startedAt) {
-        return new FocusSession(
-                userId,
-                todo.getId(),
-                todo.getCategory().getId(),
-                TimerMode.STOPWATCH,
-                ParticipationType.INDIVIDUAL,
-                startedAt,
-                null,
-                null,
-                0L,
-                0,
-                null,
-                null,
-                null,
-                TimerStatus.RUNNING
-        );
-    }
-
-    public static FocusSession createPomodoroSession(UUID userId, Todo todo, LocalDateTime startedAt, Long focusDuration, Long breakDuration, Integer repeatCount) {
-        return new FocusSession(
-                userId,
-                todo.getId(),
-                todo.getCategory().getId(),
-                TimerMode.POMODORO,
-                ParticipationType.INDIVIDUAL,
-                startedAt,
-                null,
-                null,
-                0L,
-                0,
-                focusDuration,
-                breakDuration,
-                repeatCount,
                 TimerStatus.RUNNING
         );
     }

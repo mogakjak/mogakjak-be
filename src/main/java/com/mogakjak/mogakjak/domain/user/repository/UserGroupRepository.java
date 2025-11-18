@@ -21,6 +21,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
 
     // 특정 유저와 그룹으로 UserGroup 엔티티 조회
     Optional<UserGroup> findByUserAndGroup(User user, Group group);
+    Optional<UserGroup> findByUser_IdAndGroup_Id(UUID userId, UUID groupId);
 
     // 특정 그룹에 속한 모든 UserGroup 조회 (멤버 조회용)
     @Query("SELECT ug FROM UserGroup ug JOIN FETCH ug.user WHERE ug.group = :group")
