@@ -10,14 +10,9 @@ import com.mogakjak.mogakjak.domain.invitation.controller.dto.InviteMateRequest;
 import java.util.List;
 import java.util.UUID;
 import com.mogakjak.mogakjak.domain.group.controller.dto.*;
-import com.mogakjak.mogakjak.domain.invitation.InvitationResponse;
-import com.mogakjak.mogakjak.domain.invitation.InviteMateRequest;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-
-import java.util.List;
-import java.util.UUID;
 
 public interface GroupService {
 
