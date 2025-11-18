@@ -9,13 +9,13 @@ public record FocusNotificationRequest (
 
         @NotNull
         @Schema(description = "알림 기능 사용 여부", example = "true")
-        Boolean isAgreed,
+        Boolean isNotificationAgreed,
 
         @NotNull @Min(1) @Max(23)
         @Schema(description = "알림 주기(시간 단위)", example = "2")
-        Integer cycle,
+        Integer notificationCycle,
 
         @Schema(description = "알림 메시지", example = "집중!!!!!!!! 집중!!!!!!!!!!!!!")
-        String message
+        String notificationMessage
 
 ) {}
