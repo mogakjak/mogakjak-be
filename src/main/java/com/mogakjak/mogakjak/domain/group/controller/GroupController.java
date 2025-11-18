@@ -89,6 +89,17 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
+    @Operation(summary = "그룹 공동 목표 설정", description = "그룹원들이 다같이 달성할 일일 목표 시간을 설정합니다.")
+    @PutMapping("/{groupId}/goals")
+    public ApiResponse<GroupGoalResponse> modifyGroupGoal(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID groupId,
+            @Valid @RequestBody GroupGoalRequest request
+    ) {
+        GroupGoalResponse response = groupService.setGroupGoal(user, groupId, request);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
     // --- Member API ---
 
     @Operation(summary = "메이트 조회 (전체/그룹별)",
