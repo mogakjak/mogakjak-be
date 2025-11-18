@@ -79,7 +79,7 @@ public class GroupController {
     }
 
     @Operation(summary = "그룹 집중 체크 알림 설정", description = "그룹의 집중 체크 알림 동의 여부 / 알림 주기 / 알림 메시지를 설정합니다.")
-    @PostMapping("/{groupId}/notifications")
+    @PutMapping("/{groupId}/notifications")
     public ApiResponse<FocusNotificationResponse> modifyFocusNotification(
             @Valid @RequestBody FocusNotificationRequest request,
             @Parameter(hidden = true) @CurrentUser User user,
