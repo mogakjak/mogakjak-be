@@ -9,10 +9,10 @@ public record GroupGoalResponse(
         @Schema(description = "그룹 아이디", example = "7f000001-9a96-1b00-819a-96eb4d570000")
         UUID groupId,
 
-        @Schema(description = "그룹 공동 목표 - 시간", example = "3600")
+        @Schema(description = "그룹 공동 목표 - 시간", example = "3")
         Integer goalHours,
 
-        @Schema(description = "그룹 공동 목표 - 분", example = "3600")
+        @Schema(description = "그룹 공동 목표 - 분", example = "30")
         Integer goalMinutes
 ) {
         public static GroupGoalResponse from(Group group) {
