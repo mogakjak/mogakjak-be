@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -102,15 +103,28 @@ public class MyPageServiceImpl implements MyPageService {
     public void updateProfile(UUID userId, UpdateProfileRequest request) {
         User user = findUserById(userId);
 
-        if (!user.getName().equals(request.getNickname())) {
-            userRepository.findByName(request.getNickname()).ifPresent(u -> {
+        String newName = user.getName();
+        if (StringUtils.hasText(request.getNickname()) && !user.getName().equals(request.getNickname())) {
+            if (userRepository.findByName(request.getNickname()).isPresent()) {
                 throw new CustomException(ErrorCode.NICKNAME_ALREADY_EXISTS);
-            });
-            user.updateProfile(request.getNickname());
+            }
+            newName = request.getNickname();
         }
+
+        String newEmail = user.getEmail();
+        if (StringUtils.hasText(request.getEmail()) && !user.getEmail().equals(request.getEmail())) {
+            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+                throw new CustomException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            }
+            newEmail = request.getEmail();
+        }
+
+        // 프로필 이미지 변경 (null이 아닌 경우 업데이트)
+        String newImageUrl = request.getImageUrl() != null ? request.getImageUrl() : user.getImageUrl();
+
+        user.updateInfo(newName, newEmail, newImageUrl);
     }
 
-    // 대표 캐릭터 변경
     @Override
     @Transactional
     public void updateMainCharacter(UUID userId, UUID characterId) {
@@ -148,6 +162,7 @@ public class MyPageServiceImpl implements MyPageService {
 
         return MyProfileResponse.builder()
                 .nickname(user.getName())
+                .imageUrl(user.getImageUrl())
                 .character(ImageCharacterResponse.from(mainCharacter))
                 .quote(QuoteResponse.from(getRandomQuote()))
                 .build();

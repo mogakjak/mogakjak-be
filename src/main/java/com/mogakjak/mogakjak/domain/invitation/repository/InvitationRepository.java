@@ -1,6 +1,8 @@
-package com.mogakjak.mogakjak.domain.invitation;
+package com.mogakjak.mogakjak.domain.invitation.repository;
 
 import com.mogakjak.mogakjak.domain.group.entity.Group;
+import com.mogakjak.mogakjak.domain.invitation.entity.Invitation;
+import com.mogakjak.mogakjak.domain.invitation.entity.InvitationStatus;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 

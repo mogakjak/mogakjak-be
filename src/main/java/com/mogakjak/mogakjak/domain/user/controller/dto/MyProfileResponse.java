@@ -10,6 +10,7 @@ import lombok.Getter;
 public class MyProfileResponse {
 
     private String nickname;
+    private String imageUrl;
     private ImageCharacterResponse character;
     private QuoteResponse quote;
 }

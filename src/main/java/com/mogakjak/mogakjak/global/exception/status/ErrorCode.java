@@ -56,6 +56,9 @@ public enum ErrorCode implements StatusCode {
     // Quote Errors
     QUOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "명언을 찾을 수 없습니다."),
 
+    // User Errors
+    EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
+  
     // Active Focus Session Errors
     ACTIVE_SESSION_EXISTS(HttpStatus.CONFLICT, "해당 계정에 이미 실행 중인 타이머가 있습니다."),
     ACTIVE_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 계정에 활성화된 세션이 존재하지 않습니다."),

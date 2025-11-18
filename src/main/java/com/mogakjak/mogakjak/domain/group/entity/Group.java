@@ -22,6 +22,8 @@ public class Group extends BaseSchema {
     @Column(nullable = false, length = 30)
     private String name;
 
+    private String imageUrl;
+
     private String description;
 
     private String password;
@@ -45,6 +47,11 @@ public class Group extends BaseSchema {
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserGroup> userGroups = new ArrayList<>();
+
+    public void updateInfo(String name, String imageUrl) {
+        this.name = name;
+        this.imageUrl = imageUrl;
+    }
 
     public void addUserGroup(UserGroup userGroup) {
         userGroups.add(userGroup);

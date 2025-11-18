@@ -1,4 +1,4 @@
-package com.mogakjak.mogakjak.domain.invitation;
+package com.mogakjak.mogakjak.domain.invitation.controller.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;

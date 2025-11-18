@@ -1,5 +1,14 @@
 package com.mogakjak.mogakjak.domain.group.service;
 
+import com.mogakjak.mogakjak.domain.group.controller.dto.CreateGroupRequest;
+import com.mogakjak.mogakjak.domain.group.controller.dto.GroupDetailResponse;
+import com.mogakjak.mogakjak.domain.group.controller.dto.MateResponse;
+import com.mogakjak.mogakjak.domain.group.controller.dto.MyGroupResponse;
+import com.mogakjak.mogakjak.domain.group.controller.dto.UpdateGroupRequest;
+import com.mogakjak.mogakjak.domain.invitation.controller.dto.InvitationResponse;
+import com.mogakjak.mogakjak.domain.invitation.controller.dto.InviteMateRequest;
+import java.util.List;
+import java.util.UUID;
 import com.mogakjak.mogakjak.domain.group.controller.dto.*;
 import com.mogakjak.mogakjak.domain.invitation.InvitationResponse;
 import com.mogakjak.mogakjak.domain.invitation.InviteMateRequest;

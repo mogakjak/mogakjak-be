@@ -1,4 +1,4 @@
-package com.mogakjak.mogakjak.domain.invitation;
+package com.mogakjak.mogakjak.domain.invitation.entity;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

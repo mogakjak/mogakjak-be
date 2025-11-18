@@ -19,6 +19,9 @@ public class GroupDetailResponse {
     @Schema(description = "그룹 이름")
     private String name;
 
+    @Schema(description = "그룹 이미지 URL")
+    private String imageUrl;
+
     @Schema(description = "그룹 설명")
     private String description;
 
@@ -35,12 +38,14 @@ public class GroupDetailResponse {
         private String nickname;
         @Schema(description = "유저 프로필 이미지 URL")
         private String profileUrl;
+        private Integer level;
     }
 
     public static GroupDetailResponse from(Group group, List<MemberInfo> members) {
         return GroupDetailResponse.builder()
                 .groupId(group.getId())
                 .name(group.getName())
+                .imageUrl(group.getImageUrl())
                 .description(group.getDescription())
                 .members(members)
                 .build();

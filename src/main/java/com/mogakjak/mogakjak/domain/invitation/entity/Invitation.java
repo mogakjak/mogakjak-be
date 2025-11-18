@@ -1,4 +1,4 @@
-package com.mogakjak.mogakjak.domain.invitation;
+package com.mogakjak.mogakjak.domain.invitation.entity;
 
 import com.mogakjak.mogakjak.domain.group.entity.Group;
 import com.mogakjak.mogakjak.domain.user.entity.User;

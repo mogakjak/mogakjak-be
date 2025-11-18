@@ -18,10 +18,18 @@ public class MateResponse {
     @Schema(description = "닉네임")
     private String nickname;
 
-    public static MateResponse from(User user) {
+    @Schema(description = "프로필 이미지 URL")
+    private String profileUrl;
+
+    @Schema(description = "속한 그룹 이름")
+    private String groupName;
+
+    public static MateResponse from(User user, String groupName) {
         return MateResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getName())
+                .profileUrl(user.getImageUrl())
+                .groupName(groupName)
                 .build();
     }
 }

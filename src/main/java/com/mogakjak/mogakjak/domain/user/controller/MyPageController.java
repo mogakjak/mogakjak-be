@@ -45,7 +45,7 @@ public class MyPageController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @Operation(summary = "프로필 수정", description = "사용자의 닉네임을 수정합니다.")
+    @Operation(summary = "프로필 수정", description = "입력된 닉네임, 이메일, 프로필 이미지 URL로 사용자의 프로필 정보를 수정합니다. 입력된 필드만 수정되며, 입력하지 않은 필드(null)는 기존 값을 유지합니다.")
     @PatchMapping("/profile")
     public ApiResponse<Void> updateProfile(
             @AuthenticationPrincipal CustomUserDetails userDetails,
