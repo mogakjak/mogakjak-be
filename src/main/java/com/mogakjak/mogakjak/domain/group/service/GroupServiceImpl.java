@@ -1,10 +1,6 @@
 package com.mogakjak.mogakjak.domain.group.service;
 
-import com.mogakjak.mogakjak.domain.group.controller.dto.CreateGroupRequest;
-import com.mogakjak.mogakjak.domain.group.controller.dto.GroupDetailResponse;
-import com.mogakjak.mogakjak.domain.group.controller.dto.MateResponse;
-import com.mogakjak.mogakjak.domain.group.controller.dto.MyGroupResponse;
-import com.mogakjak.mogakjak.domain.group.controller.dto.UpdateGroupRequest;
+import com.mogakjak.mogakjak.domain.group.controller.dto.*;
 import com.mogakjak.mogakjak.domain.group.entity.Group;
 import com.mogakjak.mogakjak.domain.group.repository.GroupRepository;
 import com.mogakjak.mogakjak.domain.invitation.Invitation;
@@ -245,6 +241,23 @@ public class GroupServiceImpl implements GroupService {
         }
 
         invitation.decline();
+    }
+
+    @Override
+    @Transactional
+    public FocusNotificationResponse modifyFocusNotification(User user, UUID groupId, FocusNotificationRequest request) {
+        Group group = findGroupById(groupId);
+
+        // 유저가 그룹에 접근 권한이 있는지 확인
+        findUserGroup(user, group);
+
+        group.updateFocusNotificationInfo(
+                request.isAgreed(),
+                request.cycle(),
+                request.message()
+        );
+
+        return FocusNotificationResponse.from(group);
     }
 
     private User findUserById(UUID userId) {

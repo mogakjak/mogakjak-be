@@ -26,6 +26,18 @@ public class Group extends BaseSchema {
 
     private String password;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isNotificationAgreed = true;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer notificationCycle = 1;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private String notificationMessage = "집중 좀 해보시는 거 어때염?";
+
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserGroup> userGroups = new ArrayList<>();
@@ -44,5 +56,11 @@ public class Group extends BaseSchema {
 
     public void updatePassword(String password) {
         this.password = password;
+    }
+
+    public void updateFocusNotificationInfo(Boolean isNotificationAgreed, Integer notificationCycle, String notificationMessage) {
+        this.isNotificationAgreed = isNotificationAgreed;
+        this.notificationCycle = notificationCycle;
+        this.notificationMessage = notificationMessage;
     }
 }
