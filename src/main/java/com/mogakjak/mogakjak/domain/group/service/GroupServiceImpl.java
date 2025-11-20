@@ -7,6 +7,7 @@ import com.mogakjak.mogakjak.domain.invitation.entity.Invitation;
 import com.mogakjak.mogakjak.domain.invitation.entity.InvitationStatus;
 import com.mogakjak.mogakjak.domain.invitation.repository.InvitationRepository;
 import com.mogakjak.mogakjak.domain.invitation.controller.dto.*;
+import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
 import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserGroup;
@@ -108,8 +109,9 @@ public class GroupServiceImpl implements GroupService {
 
         UserGroup userGroup = checkUserInGroup(user, group);
 
-        // 그룹 입장 처리: 입장 일시 기록 및 참여 상태를 휴식 중으로 설정
-        if (userGroup.getEnteredAt() == null) {
+        // 그룹 입장 처리: NOT_PARTICIPATING 상태이거나 null인 경우 입장 일시 기록 및 참여 상태를 휴식 중으로 설정
+        if (userGroup.getParticipationStatus() == null || 
+            userGroup.getParticipationStatus() == GroupParticipationStatus.NOT_PARTICIPATING) {
             userGroup.enterGroup(java.time.LocalDateTime.now());
             userGroupRepository.save(userGroup);
         }
@@ -206,6 +208,18 @@ public class GroupServiceImpl implements GroupService {
         } else {
             userGroupRepository.delete(userGroup);
         }
+    }
+
+    @Override
+    @Transactional
+    public void leaveGroupSession(UUID groupId, UUID userId) {
+        User user = findUserById(userId);
+        Group group = findGroupById(groupId);
+        UserGroup userGroup = findUserGroup(user, group);
+
+        // 그룹 세션에서 나가기: 참여 상태를 NOT_PARTICIPATING으로 변경 (멤버는 유지, enteredAt은 유지)
+        userGroup.leaveGroupSession();
+        userGroupRepository.save(userGroup);
     }
 
     @Override

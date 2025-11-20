@@ -34,6 +34,9 @@ public interface GroupService {
     // 그룹 탈퇴
     void leaveGroup(UUID groupId, UUID userId);
 
+    // 그룹 세션에서 나가기 (멤버는 유지, 참여 상태만 NOT_PARTICIPATING으로 변경)
+    void leaveGroupSession(UUID groupId, UUID userId);
+
     // 그룹으로 메이트 초대
     void inviteMate(UUID groupId, InviteMateRequest request, UUID inviterId);
 

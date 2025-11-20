@@ -147,6 +147,18 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK);
     }
 
+    @Operation(summary = "그룹 세션에서 나가기", description = "현재 로그인한 사용자가 그룹 세션에서 나갑니다. <br> - 그룹 멤버는 유지되지만, 그룹 세션 참여 상태가 NOT_PARTICIPATING으로 변경됩니다. <br> - enteredAt이 유지되고, participationStatus가 NOT_PARTICIPATING으로 변경됩니다.")
+    @DeleteMapping("/{groupId}/session/me")
+    public ApiResponse<Void> leaveGroupSession(
+            @Parameter(description = "세션에서 나갈 그룹의 ID (UUID)", required = true)
+            @PathVariable UUID groupId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.leaveGroupSession(groupId, userId);
+        return ApiResponse.success(SuccessCode.OK);
+    }
+
 
     // --- Invitation API ---
 
