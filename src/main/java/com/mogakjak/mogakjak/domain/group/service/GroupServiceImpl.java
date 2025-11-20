@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class GroupServiceImpl implements GroupService {
 
     private final UserRepository userRepository;
@@ -329,6 +329,30 @@ public class GroupServiceImpl implements GroupService {
         
         // 테스트용: 알림 동의 여부와 활동 중인 사용자 여부를 무시하고 강제 전송
         focusNotificationService.sendTestNotification(groupId);
+    }
+
+    @Override
+    public String createInvitationUrl(UUID groupId, UUID userId, String frontendBaseUrl) {
+        User user = findUserById(userId);
+        Group group = findGroupById(groupId);
+
+        checkUserInGroup(user, group);
+
+        return String.format("%s/invite/%s", frontendBaseUrl, groupId);
+    }
+
+    @Override
+    public void joinGroupViaLink(UUID groupId, UUID userId) {
+        User user = findUserById(userId);
+        Group group = findGroupById(groupId);
+
+        if (userGroupRepository.findByUserAndGroup(user, group).isPresent()) {
+            throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
+        }
+
+        // 바로 멤버로 추가 (초대 수락 과정 없이 가입)
+        UserGroup userGroup = UserGroup.create(user, group, GroupRole.MEMBER);
+        userGroupRepository.save(userGroup);
     }
 
     private User findUserById(UUID userId) {

@@ -13,6 +13,7 @@ public class CharacterBasketResponse {
     private String email;
     private Long totalTaskCount;
     private String totalFocusTime;
+    private String imageUrl;
 
     private CharacterDto mainCharacter;
 

@@ -2,7 +2,6 @@ package com.mogakjak.mogakjak.domain.invitation.controller;
 
 import com.mogakjak.mogakjak.domain.group.service.GroupService;
 import com.mogakjak.mogakjak.domain.invitation.controller.dto.InvitationResponse;
-import com.mogakjak.mogakjak.domain.invitation.controller.dto.InvitationUrlResponse;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.CustomException;
@@ -58,16 +57,6 @@ public class InvitationController {
         UUID userId = getUserId(userDetails);
         groupService.declineInvitation(invitationId, userId);
         return ApiResponse.success(SuccessCode.OK);
-    }
-
-    @Operation(summary = "초대 링크 생성", description = "채팅방에 대한 초대 링크를 생성합니다.")
-    @PostMapping("/invitation/{groupId}/url")
-    public ApiResponse<InvitationUrlResponse> createInvitationUrl(
-            @Parameter(description = "초대 링크 생성할 그룹 ID (UUID")
-            @PathVariable UUID groupId
-    ) {
-        InvitationUrlResponse url = null;
-        return ApiResponse.success(SuccessCode.OK, url);
     }
 
     private UUID getUserId(CustomUserDetails userDetails) {

@@ -88,6 +88,7 @@ public class MyPageServiceImpl implements MyPageService {
         return CharacterBasketResponse.builder()
                 .nickname(user.getName())
                 .email(user.getEmail())
+                .imageUrl(user.getImageUrl())
                 .mainCharacter(mainCharacterDto)
                 .totalTaskCount(totalTaskCount)
                 .totalFocusTime(formattedTotalTime)
