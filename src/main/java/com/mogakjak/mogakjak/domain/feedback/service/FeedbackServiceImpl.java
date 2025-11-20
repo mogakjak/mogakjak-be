@@ -29,9 +29,6 @@ public class FeedbackServiceImpl implements FeedbackService {
     @Override
     @Transactional
     public FeedbackResponse createFeedback(User user, FeedbackCreateRequest request) {
-        focusSessionRepository.findById(request.sessionId())
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-
         int score = request.score();
         if (score < 1 || score > 5) {
             throw new CustomException(ErrorCode.INVALID_FEEDBACK_SCORE);
@@ -41,7 +38,6 @@ public class FeedbackServiceImpl implements FeedbackService {
 
         Feedback feedback = Feedback.create(
                 user.getId(),
-                request.sessionId(),
                 score,
                 request.content()
         );
