@@ -165,8 +165,20 @@ public class GroupController {
 
     private UUID getUserId(CustomUserDetails userDetails) {
         if (userDetails == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED); // 인증되지 않은 사용자
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
         return UUID.fromString(userDetails.getUsername());
+    }
+
+    @Operation(summary = "초대 링크로 그룹 가입", description = "공유받은 초대 링크를 통해 그룹에 바로 가입합니다.")
+    @PostMapping("/{groupId}/join")
+    public ApiResponse<Void> joinGroup(
+            @Parameter(description = "가입할 그룹 ID", required = true)
+            @PathVariable UUID groupId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.joinGroupViaLink(groupId, userId);
+        return ApiResponse.success(SuccessCode.OK);
     }
 }

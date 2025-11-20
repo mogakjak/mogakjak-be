@@ -331,6 +331,30 @@ public class GroupServiceImpl implements GroupService {
         focusNotificationService.sendTestNotification(groupId);
     }
 
+    @Override
+    public String createInvitationUrl(UUID groupId, UUID userId, String frontendBaseUrl) {
+        User user = findUserById(userId);
+        Group group = findGroupById(groupId);
+
+        checkUserInGroup(user, group);
+
+        return String.format("%s/invite/%s", frontendBaseUrl, groupId);
+    }
+
+    @Override
+    public void joinGroupViaLink(UUID groupId, UUID userId) {
+        User user = findUserById(userId);
+        Group group = findGroupById(groupId);
+
+        if (userGroupRepository.findByUserAndGroup(user, group).isPresent()) {
+            throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
+        }
+
+        // 바로 멤버로 추가 (초대 수락 과정 없이 가입)
+        UserGroup userGroup = UserGroup.create(user, group, GroupRole.MEMBER);
+        userGroupRepository.save(userGroup);
+    }
+
     private User findUserById(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
