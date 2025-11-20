@@ -2,6 +2,7 @@ package com.mogakjak.mogakjak.global.config;
 
 import com.mogakjak.mogakjak.global.websocket.util.StompHandler;
 import com.mogakjak.mogakjak.global.websocket.util.WebSocketHandshakeInterceptor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -9,11 +10,20 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Configuration
 @EnableWebSocketMessageBroker
 public class StompWebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final StompHandler stompHandler;
     private final WebSocketHandshakeInterceptor handshakeInterceptor;
+
+    @Value("${frontend.base-url:https://mogakjak.site}")
+    private String frontendBaseUrl;
+
+    @Value("#{'${app.oauth2.authorized-redirect-uris}'.split(',')}")
+    private List<String> authorizedRedirectUris;
 
     public StompWebSocketConfig(StompHandler stompHandler, WebSocketHandshakeInterceptor handshakeInterceptor) {
         this.stompHandler = stompHandler;
@@ -22,8 +32,34 @@ public class StompWebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // 허용할 Origin 목록 구성
+        List<String> allowedOrigins = new ArrayList<>();
+        allowedOrigins.add("http://localhost:3000");
+        allowedOrigins.add("http://localhost:3002");
+        allowedOrigins.add("https://mogakjak.site");
+        allowedOrigins.add("http://mogakjak.site");
+        
+        // authorized-redirect-uris에서도 추가
+        for (String uri : authorizedRedirectUris) {
+            String trimmed = uri.trim();
+            if (!trimmed.isEmpty()) {
+                // http:// 또는 https:// 제거하고 도메인만 추출
+                String domain = trimmed.replaceAll("^https?://", "");
+                if (!domain.isEmpty()) {
+                    String httpsUrl = "https://" + domain;
+                    String httpUrl = "http://" + domain;
+                    if (!allowedOrigins.contains(httpsUrl)) {
+                        allowedOrigins.add(httpsUrl);
+                    }
+                    if (!allowedOrigins.contains(httpUrl)) {
+                        allowedOrigins.add(httpUrl);
+                    }
+                }
+            }
+        }
+
         registry.addEndpoint("/connect")
-                .setAllowedOrigins("http://localhost:3000")
+                .setAllowedOrigins(allowedOrigins.toArray(new String[0]))
 //                ws://가 아닌 http:// 엔드포인트를 사용할수 있게 해주는 sockJs라이브러리를 통한 요청을 허용하는 설정.
                 .addInterceptors(handshakeInterceptor)
                 .withSockJS();
