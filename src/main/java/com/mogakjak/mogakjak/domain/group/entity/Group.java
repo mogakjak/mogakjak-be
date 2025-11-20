@@ -7,6 +7,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.*;
@@ -44,6 +45,8 @@ public class Group extends BaseSchema {
     @Builder.Default
     private String notificationMessage = "집중 좀 해보시는 거 어때염?";
 
+    private LocalDateTime lastNotificationSentAt;
+
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserGroup> userGroups = new ArrayList<>();
@@ -77,5 +80,9 @@ public class Group extends BaseSchema {
 
     public void updateGoalSeconds(Integer goalSeconds) {
         this.goalSeconds = goalSeconds;
+    }
+
+    public void updateLastNotificationSentAt(LocalDateTime lastNotificationSentAt) {
+        this.lastNotificationSentAt = lastNotificationSentAt;
     }
 }

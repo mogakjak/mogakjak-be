@@ -51,4 +51,7 @@ public interface GroupService {
 
     // 그룹 공동 목표 설정
     GroupGoalResponse setGroupGoal(User user, UUID groupId, GroupGoalRequest request);
+
+    // [테스트용] 집중 체크 알림 수동 전송
+    void testSendFocusNotification(User user, UUID groupId);
 }
