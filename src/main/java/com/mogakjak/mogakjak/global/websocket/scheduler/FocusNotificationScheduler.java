@@ -21,7 +21,7 @@ public class FocusNotificationScheduler {
     private final FocusNotificationService focusNotificationService;
 
     /**
-     * 1분마다 실행하여 각 그룹의 notificationCycle에 맞춰 집중 체크 알림 전송
+     * 1분마다 실행하여 각 그룹의 notificationCycle(시간 단위)에 맞춰 집중 체크 알림 전송
      */
     @Scheduled(fixedRate = 60000) // 1분 = 60000ms
     @Transactional
