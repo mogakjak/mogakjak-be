@@ -40,9 +40,9 @@ public class FocusNotificationScheduler {
             // 마지막 알림 시간 확인
             LocalDateTime lastSentAt = group.getLastNotificationSentAt();
             if (lastSentAt != null) {
-                // 마지막 알림 시간으로부터 notificationCycle(분)이 지났는지 확인
-                long minutesSinceLastNotification = java.time.Duration.between(lastSentAt, now).toMinutes();
-                if (minutesSinceLastNotification < group.getNotificationCycle()) {
+                // 마지막 알림 시간으로부터 notificationCycle(시간)이 지났는지 확인
+                long hoursSinceLastNotification = java.time.Duration.between(lastSentAt, now).toHours();
+                if (hoursSinceLastNotification < group.getNotificationCycle()) {
                     continue; // 아직 주기가 지나지 않음
                 }
             }
