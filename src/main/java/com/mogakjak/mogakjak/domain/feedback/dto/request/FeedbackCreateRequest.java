@@ -10,10 +10,6 @@ import java.util.UUID;
 
 public record FeedbackCreateRequest(
 
-        @NotNull
-        @Schema(description = "타이머 세션 ID")
-        UUID sessionId,
-
         @Min(1) @Max(5)
         @Schema(description = "점수 (1~5)")
         int score,

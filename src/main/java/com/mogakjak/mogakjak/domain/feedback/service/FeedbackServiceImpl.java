@@ -7,7 +7,6 @@ import com.mogakjak.mogakjak.domain.feedback.entity.FeedbackTag;
 import com.mogakjak.mogakjak.domain.feedback.enumerate.FeedbackTagType;
 import com.mogakjak.mogakjak.domain.feedback.repository.FeedbackRepository;
 import com.mogakjak.mogakjak.domain.feedback.repository.FeedbackTagRepository;
-import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
@@ -24,14 +23,10 @@ public class FeedbackServiceImpl implements FeedbackService {
 
     private final FeedbackRepository feedbackRepository;
     private final FeedbackTagRepository tagRepository;
-    private final FocusSessionRepository focusSessionRepository;
 
     @Override
     @Transactional
     public FeedbackResponse createFeedback(User user, FeedbackCreateRequest request) {
-        focusSessionRepository.findById(request.sessionId())
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
-
         int score = request.score();
         if (score < 1 || score > 5) {
             throw new CustomException(ErrorCode.INVALID_FEEDBACK_SCORE);
@@ -41,7 +36,6 @@ public class FeedbackServiceImpl implements FeedbackService {
 
         Feedback feedback = Feedback.create(
                 user.getId(),
-                request.sessionId(),
                 score,
                 request.content()
         );

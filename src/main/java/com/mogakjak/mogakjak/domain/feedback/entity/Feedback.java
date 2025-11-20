@@ -16,9 +16,6 @@ public class Feedback extends BaseSchema {
     private UUID userId;
 
     @Column(nullable = false)
-    private UUID sessionId;
-
-    @Column(nullable = false)
     private int score;
 
     private String content;
@@ -26,10 +23,9 @@ public class Feedback extends BaseSchema {
     @OneToMany(mappedBy = "feedback", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FeedbackTagRelation> tagRelations = new ArrayList<>();
 
-    public static Feedback create(UUID userId, UUID sessionId, int score, String content) {
+    public static Feedback create(UUID userId, int score, String content) {
         return new Feedback(
                 userId,
-                sessionId,
                 score,
                 content,
                 new ArrayList<>()
