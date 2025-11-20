@@ -25,9 +25,17 @@ public class User extends BaseSchema {
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
     private UserProfile userProfile;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isActive = false;
+
     public void updateInfo(String newName, String newEmail, String newImageUrl) {
         this.name = newName;
         this.email = newEmail;
         this.imageUrl = newImageUrl;
+    }
+
+    public void setActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

@@ -89,6 +89,17 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
+    @Operation(summary = "[테스트용] 집중 체크 알림 수동 전송", description = "특정 그룹에 집중 체크 알림을 즉시 전송합니다. (테스트/디버깅용)")
+    @PostMapping("/{groupId}/notifications/test")
+    public ApiResponse<String> testSendNotification(
+            @Parameter(description = "알림을 전송할 그룹의 ID (UUID)", required = true)
+            @PathVariable UUID groupId,
+            @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        groupService.testSendFocusNotification(user, groupId);
+        return ApiResponse.success(SuccessCode.OK, "알림이 전송되었습니다.");
+    }
+
     @Operation(summary = "그룹 공동 목표 설정", description = "그룹원들이 다같이 달성할 일일 목표 시간을 설정합니다.")
     @PutMapping("/{groupId}/goals")
     public ApiResponse<GroupGoalResponse> modifyGroupGoal(

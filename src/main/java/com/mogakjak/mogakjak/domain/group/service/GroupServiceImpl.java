@@ -14,6 +14,7 @@ import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
+import com.mogakjak.mogakjak.global.websocket.service.FocusNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +35,7 @@ public class GroupServiceImpl implements GroupService {
     private final UserGroupRepository userGroupRepository;
     private final GroupRepository groupRepository;
     private final InvitationRepository invitationRepository;
+    private final FocusNotificationService focusNotificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -99,12 +101,18 @@ public class GroupServiceImpl implements GroupService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public GroupDetailResponse getGroupDetail(UUID groupId, UUID userId) {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
 
-        checkUserInGroup(user, group);
+        UserGroup userGroup = checkUserInGroup(user, group);
+
+        // 그룹 입장 처리: 입장 일시 기록 및 참여 상태를 휴식 중으로 설정
+        if (userGroup.getEnteredAt() == null) {
+            userGroup.enterGroup(java.time.LocalDateTime.now());
+            userGroupRepository.save(userGroup);
+        }
 
         // 그룹 멤버 조회 시 레벨과 프로필 이미지 포함
         List<GroupDetailResponse.MemberInfo> members =
@@ -313,6 +321,16 @@ public class GroupServiceImpl implements GroupService {
         return GroupGoalResponse.from(group);
     }
 
+    @Override
+    @Transactional
+    public void testSendFocusNotification(User user, UUID groupId) {
+        Group group = findGroupById(groupId);
+        findUserGroup(user, group); // 그룹 멤버인지 확인
+        
+        // 테스트용: 알림 동의 여부와 활동 중인 사용자 여부를 무시하고 강제 전송
+        focusNotificationService.sendTestNotification(groupId);
+    }
+
     private User findUserById(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -333,10 +351,9 @@ public class GroupServiceImpl implements GroupService {
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
     }
 
-    private void checkUserInGroup(User user, Group group) {
-        if (userGroupRepository.findByUserAndGroup(user, group).isEmpty()) {
-            throw new CustomException(ErrorCode.NOT_GROUP_MEMBER);
-        }
+    private UserGroup checkUserInGroup(User user, Group group) {
+        return userGroupRepository.findByUserAndGroup(user, group)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
     }
 
     private Integer getLevelFromUser(User user) {

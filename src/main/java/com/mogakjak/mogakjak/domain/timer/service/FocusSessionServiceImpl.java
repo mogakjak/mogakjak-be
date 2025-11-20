@@ -16,6 +16,7 @@ import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.entity.User;
+import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     private final FocusIntervalRepository focusIntervalRepository;
     private final ActiveFocusSessionRepository activeFocusSessionRepository;
     private final TodoRepository todoRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
@@ -144,6 +146,14 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         activeFocusSessionRepository.deleteById(currentActiveSession.getId());
 
+        // 개인 타이머 종료 시 isActive 업데이트
+        // 다른 활성 세션이 있는지 확인 (예: 다른 타이머가 실행 중일 수 있음)
+        boolean hasOtherActiveSession = activeFocusSessionRepository.findByUserId(user.getId()).isPresent();
+        if (!hasOtherActiveSession) {
+            user.setActive(false);
+            userRepository.save(user);
+        }
+
         currentFocusSession.addDuration(intervalDurationSeconds);
         Integer progressRate = calculateProgressRate(todo.getTargetTimeInSeconds(), currentFocusSession.getTotalDuration());
         currentFocusSession.end(now, progressRate);
@@ -180,6 +190,14 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         if (currentPhase == PomodoroPhaseType.FOCUS && isPomodoroFinished(focusSession, intervals)) {
             focusSession.end(now, 100);
             activeFocusSessionRepository.deleteById(currentActiveSession.getId());
+            
+            // 개인 타이머 종료 시 isActive 업데이트
+            boolean hasOtherActiveSession = activeFocusSessionRepository.findByUserId(user.getId()).isPresent();
+            if (!hasOtherActiveSession) {
+                user.setActive(false);
+                userRepository.save(user);
+            }
+            
             return TimerResponse.fromFinish(focusSession);
         }
 
@@ -236,6 +254,12 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 now
         );
         activeFocusSessionRepository.save(activeSession);
+
+        // 개인 타이머 활성화 시 isActive 업데이트
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        user.setActive(true);
+        userRepository.save(user);
 
         FocusInterval focusInterval = FocusInterval.create(
                 focusSession.getId(),

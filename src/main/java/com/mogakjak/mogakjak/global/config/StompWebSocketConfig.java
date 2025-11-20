@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.global.config;
 
 import com.mogakjak.mogakjak.global.websocket.util.StompHandler;
+import com.mogakjak.mogakjak.global.websocket.util.WebSocketHandshakeInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -12,9 +13,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class StompWebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final StompHandler stompHandler;
+    private final WebSocketHandshakeInterceptor handshakeInterceptor;
 
-    public StompWebSocketConfig(StompHandler stompHandler) {
+    public StompWebSocketConfig(StompHandler stompHandler, WebSocketHandshakeInterceptor handshakeInterceptor) {
         this.stompHandler = stompHandler;
+        this.handshakeInterceptor = handshakeInterceptor;
     }
 
     @Override
@@ -22,6 +25,7 @@ public class StompWebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/connect")
                 .setAllowedOrigins("http://localhost:3000")
 //                ws://가 아닌 http:// 엔드포인트를 사용할수 있게 해주는 sockJs라이브러리를 통한 요청을 허용하는 설정.
+                .addInterceptors(handshakeInterceptor)
                 .withSockJS();
     }
 
