@@ -25,6 +25,9 @@ public class GroupDetailResponse {
     @Schema(description = "그룹 설명")
     private String description;
 
+    @Schema(description = "그룹 타이머 누적 시간 (초 단위)")
+    private Long accumulatedDuration;
+
     @Schema(description = "그룹 멤버 목록")
     private List<MemberInfo> members;
 
@@ -47,6 +50,7 @@ public class GroupDetailResponse {
                 .name(group.getName())
                 .imageUrl(group.getImageUrl())
                 .description(group.getDescription())
+                .accumulatedDuration(group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L)
                 .members(members)
                 .build();
     }
