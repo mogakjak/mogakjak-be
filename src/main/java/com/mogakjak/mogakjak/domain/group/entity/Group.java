@@ -47,6 +47,10 @@ public class Group extends BaseSchema {
 
     private LocalDateTime lastNotificationSentAt;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Long accumulatedDuration = 0L; // 그룹 타이머 누적 시간 (초 단위)
+
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserGroup> userGroups = new ArrayList<>();
@@ -84,5 +88,16 @@ public class Group extends BaseSchema {
 
     public void updateLastNotificationSentAt(LocalDateTime lastNotificationSentAt) {
         this.lastNotificationSentAt = lastNotificationSentAt;
+    }
+
+    public void addAccumulatedDuration(Long seconds) {
+        if (this.accumulatedDuration == null) {
+            this.accumulatedDuration = 0L;
+        }
+        this.accumulatedDuration += seconds;
+    }
+
+    public void resetAccumulatedDuration() {
+        this.accumulatedDuration = 0L;
     }
 }

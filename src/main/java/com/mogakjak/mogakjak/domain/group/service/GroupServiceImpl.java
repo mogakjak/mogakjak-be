@@ -226,8 +226,9 @@ public class GroupServiceImpl implements GroupService {
         // 그룹 멤버 상태 변경 브로드캐스트
         groupMemberStatusService.broadcastMemberStatusUpdate(groupId, userId);
         
-        // 모든 멤버가 NOT_PARTICIPATING이 되면 응원 수 초기화
+        // 모든 멤버가 NOT_PARTICIPATING이 되면 응원 수 및 누적 시간 초기화
         resetAllCheerCounts(groupId);
+        resetAccumulatedDuration(groupId);
     }
 
     @Override
@@ -283,9 +284,37 @@ public class GroupServiceImpl implements GroupService {
             // 모든 멤버의 응원 수 초기화
             userGroups.forEach(UserGroup::resetCheerCount);
             userGroupRepository.saveAll(userGroups);
+            
+            // 그룹 타이머 누적 시간 초기화
+            group.resetAccumulatedDuration();
+            groupRepository.save(group);
 
             // 그룹 멤버 상태 브로드캐스트
             groupMemberStatusService.broadcastAllMemberStatuses(groupId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void addGroupAccumulatedDuration(UUID groupId, Long seconds) {
+        Group group = findGroupById(groupId);
+        group.addAccumulatedDuration(seconds);
+        groupRepository.save(group);
+    }
+
+    @Override
+    @Transactional
+    public void resetAccumulatedDuration(UUID groupId) {
+        Group group = findGroupById(groupId);
+        List<UserGroup> userGroups = userGroupRepository.findAllByGroupWithUser(group);
+
+        // 모든 멤버가 NOT_PARTICIPATING인지 확인
+        boolean allNotParticipating = userGroups.stream()
+                .allMatch(ug -> ug.getParticipationStatus() == GroupParticipationStatus.NOT_PARTICIPATING);
+
+        if (allNotParticipating) {
+            group.resetAccumulatedDuration();
+            groupRepository.save(group);
         }
     }
 

@@ -75,4 +75,10 @@ public interface GroupService {
     
     // 그룹의 모든 멤버 응원 수 초기화
     void resetAllCheerCounts(UUID groupId);
+    
+    // 그룹 타이머 누적 시간 추가
+    void addGroupAccumulatedDuration(UUID groupId, Long seconds);
+    
+    // 그룹 타이머 누적 시간 초기화 (모든 멤버가 NOT_PARTICIPATING일 때)
+    void resetAccumulatedDuration(UUID groupId);
 }

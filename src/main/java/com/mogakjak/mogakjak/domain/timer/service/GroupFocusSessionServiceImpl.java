@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
 import com.mogakjak.mogakjak.domain.group.repository.GroupRepository;
+import com.mogakjak.mogakjak.domain.group.service.GroupService;
 import com.mogakjak.mogakjak.domain.timer.dto.request.GroupTimerStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.*;
@@ -15,6 +16,8 @@ import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
+import com.mogakjak.mogakjak.global.websocket.dto.GroupTimerEventDto;
+import com.mogakjak.mogakjak.global.websocket.service.GroupTimerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +36,8 @@ public class GroupFocusSessionServiceImpl implements GroupFocusSessionService {
     private final GroupFocusIntervalRepository groupFocusIntervalRepository;
     private final UserGroupRepository userGroupRepository;
     private final GroupRepository groupRepository;
+    private final GroupTimerService groupTimerService;
+    private final GroupService groupService;
 
     @Override
     @Transactional
@@ -44,7 +49,12 @@ public class GroupFocusSessionServiceImpl implements GroupFocusSessionService {
 
         GroupFocusSession focusSession = createFocusSession(TimerMode.TIMER, groupId, now, request.targetSeconds(), null, null, null);
 
-        return startCommon(groupId, now, focusSession, PomodoroPhaseType.NORMAL, 0);
+        TimerResponse response = startCommon(groupId, now, focusSession, PomodoroPhaseType.NORMAL, 0);
+        
+        // 그룹 타이머 시작 이벤트 브로드캐스트
+        groupTimerService.broadcastTimerEvent(groupId, response, GroupTimerEventDto.TimerEventType.START);
+        
+        return response;
     }
 
     @Override
@@ -67,7 +77,12 @@ public class GroupFocusSessionServiceImpl implements GroupFocusSessionService {
         Integer progressRate = calculateProgressRate(currentFocusSession.getTargetDuration(), currentFocusSession.getTotalDuration());
         currentFocusSession.pause(progressRate);
 
-        return TimerResponse.fromGroupPause(currentFocusSession, now);
+        TimerResponse response = TimerResponse.fromGroupPause(currentFocusSession, now);
+        
+        // 그룹 타이머 중지 이벤트 브로드캐스트
+        groupTimerService.broadcastTimerEvent(groupId, response, GroupTimerEventDto.TimerEventType.PAUSE);
+        
+        return response;
     }
 
     @Override
@@ -93,7 +108,12 @@ public class GroupFocusSessionServiceImpl implements GroupFocusSessionService {
 
         currentFocusSession.resume();
 
-        return TimerResponse.fromGroupResume(currentFocusSession);
+        TimerResponse response = TimerResponse.fromGroupResume(currentFocusSession);
+        
+        // 그룹 타이머 재개 이벤트 브로드캐스트
+        groupTimerService.broadcastTimerEvent(groupId, response, GroupTimerEventDto.TimerEventType.RESUME);
+        
+        return response;
     }
 
     @Override
@@ -121,7 +141,18 @@ public class GroupFocusSessionServiceImpl implements GroupFocusSessionService {
         Integer progressRate = calculateProgressRate(currentFocusSession.getTargetDuration(), currentFocusSession.getTotalDuration());
         currentFocusSession.end(now, progressRate);
 
-        return TimerResponse.fromGroupFinish(currentFocusSession);
+        // 그룹 누적 시간에 현재 세션의 총 시간 추가
+        Long sessionTotalDuration = currentFocusSession.getTotalDuration();
+        if (sessionTotalDuration != null && sessionTotalDuration > 0) {
+            groupService.addGroupAccumulatedDuration(groupId, sessionTotalDuration);
+        }
+
+        TimerResponse response = TimerResponse.fromGroupFinish(currentFocusSession);
+        
+        // 그룹 타이머 종료 이벤트 브로드캐스트
+        groupTimerService.broadcastTimerEvent(groupId, response, GroupTimerEventDto.TimerEventType.FINISH);
+        
+        return response;
     }
 
     private LocalDateTime getCurrentTime() {

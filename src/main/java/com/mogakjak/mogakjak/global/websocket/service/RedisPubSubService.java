@@ -8,6 +8,7 @@ import com.mogakjak.mogakjak.global.websocket.dto.ChatMessageDto;
 import com.mogakjak.mogakjak.global.websocket.dto.CheerNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.FocusNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusUpdateDto;
+import com.mogakjak.mogakjak.global.websocket.dto.GroupTimerEventDto;
 import com.mogakjak.mogakjak.global.websocket.dto.TimerCompletionNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.PokeNotificationDto;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -70,6 +71,11 @@ public class RedisPubSubService implements MessageListener {
                 CheerNotificationDto cheerDto = objectMapper.readValue(payload, CheerNotificationDto.class);
                 // 개인 알림: /topic/user/{userId}/cheer
                 messageTemplate.convertAndSend("/topic/user/"+cheerDto.getTargetUserId()+"/cheer", cheerDto);
+            } else if ("group-timer-event".equals(channel)) {
+                // 그룹 타이머 이벤트 처리
+                GroupTimerEventDto timerEventDto = objectMapper.readValue(payload, GroupTimerEventDto.class);
+                // 그룹 알림: /topic/group/{groupId}/timer
+                messageTemplate.convertAndSend("/topic/group/"+timerEventDto.getGroupId()+"/timer", timerEventDto);
             }
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize message from channel: " + channel, e);
