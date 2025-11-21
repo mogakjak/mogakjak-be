@@ -34,6 +34,9 @@ public interface GroupService {
     // 그룹 탈퇴
     void leaveGroup(UUID groupId, UUID userId);
 
+    // 그룹 세션에서 나가기 (멤버는 유지, 참여 상태만 NOT_PARTICIPATING으로 변경)
+    void leaveGroupSession(UUID groupId, UUID userId);
+
     // 그룹으로 메이트 초대
     void inviteMate(UUID groupId, InviteMateRequest request, UUID inviterId);
 
@@ -60,4 +63,16 @@ public interface GroupService {
 
     // 초대 링크를 통한 그룹 가입
     void joinGroupViaLink(UUID groupId, UUID userId);
+    
+    // 두 사용자가 함께 있는 그룹 목록 조회
+    List<CommonGroupResponse> getCommonGroups(UUID userId, UUID targetUserId);
+    
+    // 콕 찌르기 알림 전송
+    void sendPokeNotification(UUID userId, UUID targetUserId, UUID groupId);
+    
+    // 응원 보내기
+    void sendCheer(UUID userId, UUID groupId, UUID targetUserId);
+    
+    // 그룹의 모든 멤버 응원 수 초기화
+    void resetAllCheerCounts(UUID groupId);
 }

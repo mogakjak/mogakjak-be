@@ -34,7 +34,7 @@ public class GroupController {
 
     private final GroupService groupService;
 
-    @Value("${frontend.vercel-url}")
+    @Value("${frontend.base-url}")
     private String frontendBaseUrl;
 
     @Operation(summary = "신규 그룹 생성", description = "새로운 스터디 그룹을 생성합니다.")
@@ -152,6 +152,18 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK);
     }
 
+    @Operation(summary = "그룹 세션에서 나가기", description = "현재 로그인한 사용자가 그룹 세션에서 나갑니다. <br> - 그룹 멤버는 유지되지만, 그룹 세션 참여 상태가 NOT_PARTICIPATING으로 변경됩니다. <br> - enteredAt이 유지되고, participationStatus가 NOT_PARTICIPATING으로 변경됩니다.")
+    @DeleteMapping("/{groupId}/session/me")
+    public ApiResponse<Void> leaveGroupSession(
+            @Parameter(description = "세션에서 나갈 그룹의 ID (UUID)", required = true)
+            @PathVariable UUID groupId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.leaveGroupSession(groupId, userId);
+        return ApiResponse.success(SuccessCode.OK);
+    }
+
 
     // --- Invitation API ---
 
@@ -201,5 +213,41 @@ public class GroupController {
                 .groupId(groupId)
                 .invitationUrl(invitationUrl)
                 .build());
+    }
+
+    @Operation(summary = "함께 있는 그룹 목록 조회", description = "현재 사용자와 대상 사용자가 함께 속한 그룹 목록을 조회합니다.")
+    @GetMapping("/common-groups/{targetUserId}")
+    public ApiResponse<List<CommonGroupResponse>> getCommonGroups(
+            @Parameter(description = "대상 사용자 ID (UUID)")
+            @PathVariable UUID targetUserId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        List<CommonGroupResponse> response = groupService.getCommonGroups(userId, targetUserId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "콕 찌르기 알림 전송", description = "특정 사용자에게 그룹에서 함께 모각작하자는 알림을 전송합니다.")
+    @PostMapping("/poke")
+    public ApiResponse<Void> sendPokeNotification(
+            @Valid @RequestBody PokeRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.sendPokeNotification(userId, request.getTargetUserId(), request.getGroupId());
+        return ApiResponse.success(SuccessCode.CREATED);
+    }
+
+    @Operation(summary = "응원 보내기", description = "그룹 내 다른 멤버에게 응원을 보냅니다. 발신자와 수신자 모두 NOT_PARTICIPATING 상태가 아니어야 합니다.")
+    @PostMapping("/{groupId}/cheer")
+    public ApiResponse<Void> sendCheer(
+            @Parameter(description = "그룹 ID (UUID)")
+            @PathVariable UUID groupId,
+            @Valid @RequestBody CheerRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.sendCheer(userId, groupId, request.getTargetUserId());
+        return ApiResponse.success(SuccessCode.CREATED);
     }
 }

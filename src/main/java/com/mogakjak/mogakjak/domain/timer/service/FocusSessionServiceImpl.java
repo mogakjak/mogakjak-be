@@ -1,5 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
+import com.mogakjak.mogakjak.domain.group.service.GroupService;
 import com.mogakjak.mogakjak.domain.timer.dto.request.PomodoroStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
@@ -15,11 +16,19 @@ import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
+import com.mogakjak.mogakjak.domain.group.repository.GroupRepository;
+import com.mogakjak.mogakjak.domain.timer.enumerate.ParticipationType;
+import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
 import com.mogakjak.mogakjak.domain.user.entity.User;
+import com.mogakjak.mogakjak.domain.user.entity.UserGroup;
+import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
+import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
+import com.mogakjak.mogakjak.global.websocket.service.TimerCompletionNotificationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +37,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -38,6 +48,11 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     private final ActiveFocusSessionRepository activeFocusSessionRepository;
     private final TodoRepository todoRepository;
     private final UserRepository userRepository;
+    private final UserGroupRepository userGroupRepository;
+    private final GroupRepository groupRepository;
+    private final GroupMemberStatusService groupMemberStatusService;
+    private final TimerCompletionNotificationService timerCompletionNotificationService;
+    private final GroupService groupService;
 
     @Override
     @Transactional
@@ -47,9 +62,14 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         ensureNoActiveSession(user.getId());
         Todo todo = getValidatedTodo(user.getId(), request.todoId());
 
-        FocusSession focusSession = createFocusSession(TimerMode.TIMER, user, todo, now, request.targetSeconds(), null, null, null);
+        // ParticipationType.GROUP일 때 groupId 검증
+        if (request.participationType() == ParticipationType.GROUP && request.groupId() == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
 
-        return startCommon(user.getId(), now, focusSession, todo, PomodoroPhaseType.NORMAL, 0);
+        FocusSession focusSession = createFocusSession(TimerMode.TIMER, user, todo, now, request.targetSeconds(), null, null, null, request.participationType(), request.groupId());
+
+        return startCommon(user.getId(), request.groupId(), now, focusSession, todo, PomodoroPhaseType.NORMAL, 0, request.participationType());
     }
 
     @Override
@@ -60,9 +80,14 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         ensureNoActiveSession(user.getId());
         Todo todo = getValidatedTodo(user.getId(), request.todoId());
 
-        FocusSession focusSession = createFocusSession(TimerMode.STOPWATCH, user, todo, now, null, null, null, null);
+        // ParticipationType.GROUP일 때 groupId 검증
+        if (request.participationType() == ParticipationType.GROUP && request.groupId() == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
 
-        return startCommon(user.getId(), now, focusSession, todo, PomodoroPhaseType.NORMAL, 0);
+        FocusSession focusSession = createFocusSession(TimerMode.STOPWATCH, user, todo, now, null, null, null, null, request.participationType(), request.groupId());
+
+        return startCommon(user.getId(), request.groupId(), now, focusSession, todo, PomodoroPhaseType.NORMAL, 0, request.participationType());
     }
 
     @Override
@@ -73,9 +98,14 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         ensureNoActiveSession(user.getId());
         Todo todo = getValidatedTodo(user.getId(), request.todoId());
 
-        FocusSession focusSession = createFocusSession(TimerMode.POMODORO, user, todo, now, null, request.focusSeconds(), request.breakSeconds(), request.repeatCount());
+        // ParticipationType.GROUP일 때 groupId 검증
+        if (request.participationType() == ParticipationType.GROUP && request.groupId() == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
 
-        return startCommon(user.getId(), now, focusSession, todo, PomodoroPhaseType.FOCUS, 1);
+        FocusSession focusSession = createFocusSession(TimerMode.POMODORO, user, todo, now, null, request.focusSeconds(), request.breakSeconds(), request.repeatCount(), request.participationType(), request.groupId());
+
+        return startCommon(user.getId(), request.groupId(), now, focusSession, todo, PomodoroPhaseType.FOCUS, 1, request.participationType());
     }
 
     @Override
@@ -97,6 +127,13 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         currentFocusSession.addDuration(intervalDurationSeconds);
         Integer progressRate = calculateProgressRate(todo.getTargetTimeInSeconds(), currentFocusSession.getTotalDuration());
         currentFocusSession.pause(progressRate);
+
+        // pause 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
+        try {
+            timerCompletionNotificationService.rescheduleCompletionNotification(sessionId);
+        } catch (Exception e) {
+            log.warn("타이머 완료 알림 스케줄 재설정 실패 (sessionId: {}): {}", sessionId, e.getMessage());
+        }
 
         return TimerResponse.fromPause(currentFocusSession, now);
     }
@@ -122,6 +159,13 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         currentFocusSession.resume();
 
+        // resume 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
+        try {
+            timerCompletionNotificationService.rescheduleCompletionNotification(sessionId);
+        } catch (Exception e) {
+            log.warn("타이머 완료 알림 스케줄 재설정 실패 (sessionId: {}): {}", sessionId, e.getMessage());
+        }
+
         return TimerResponse.fromResume(currentFocusSession);
     }
 
@@ -146,12 +190,34 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         activeFocusSessionRepository.deleteById(currentActiveSession.getId());
 
+        // 타이머 종료 시 스케줄된 알림 취소 (실패해도 기존 로직에는 영향 없음)
+        try {
+            timerCompletionNotificationService.cancelScheduledNotification(sessionId);
+        } catch (Exception e) {
+            log.warn("타이머 완료 알림 스케줄 취소 실패 (sessionId: {}): {}", sessionId, e.getMessage());
+        }
+
         // 개인 타이머 종료 시 isActive 업데이트
         // 다른 활성 세션이 있는지 확인 (예: 다른 타이머가 실행 중일 수 있음)
         boolean hasOtherActiveSession = activeFocusSessionRepository.findByUserId(user.getId()).isPresent();
         if (!hasOtherActiveSession) {
             user.setActive(false);
             userRepository.save(user);
+
+                // 그룹 내 개인 타이머인 경우 해당 그룹의 참여 상태를 RESTING으로 변경
+                if (currentFocusSession.getParticipationType() == ParticipationType.GROUP && currentFocusSession.getGroupId() != null) {
+                    UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), currentFocusSession.getGroupId())
+                            .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+                    
+                    // 다른 활성 세션이 없고 그룹 세션에 참여 중인 상태면 RESTING으로 변경
+                    if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
+                        userGroup.setParticipationStatus(GroupParticipationStatus.RESTING);
+                        userGroupRepository.save(userGroup);
+                        
+                        // 그룹 멤버 상태 변경 브로드캐스트
+                        groupMemberStatusService.broadcastMemberStatusUpdate(currentFocusSession.getGroupId(), user.getId());
+                    }
+                }
         }
 
         currentFocusSession.addDuration(intervalDurationSeconds);
@@ -190,12 +256,37 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         if (currentPhase == PomodoroPhaseType.FOCUS && isPomodoroFinished(focusSession, intervals)) {
             focusSession.end(now, 100);
             activeFocusSessionRepository.deleteById(currentActiveSession.getId());
-            
+
+            // 타이머 종료 시 스케줄된 알림 취소 (실패해도 기존 로직에는 영향 없음)
+            try {
+                timerCompletionNotificationService.cancelScheduledNotification(sessionId);
+            } catch (Exception e) {
+                log.warn("타이머 완료 알림 스케줄 취소 실패 (sessionId: {}): {}", sessionId, e.getMessage());
+            }
+
             // 개인 타이머 종료 시 isActive 업데이트
             boolean hasOtherActiveSession = activeFocusSessionRepository.findByUserId(user.getId()).isPresent();
             if (!hasOtherActiveSession) {
                 user.setActive(false);
                 userRepository.save(user);
+
+                // 그룹 내 개인 타이머인 경우 해당 그룹의 참여 상태를 RESTING으로 변경
+                if (focusSession.getParticipationType() == ParticipationType.GROUP && focusSession.getGroupId() != null) {
+                    UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), focusSession.getGroupId())
+                            .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+                    
+                    // 다른 활성 세션이 없고 그룹 세션에 참여 중인 상태면 RESTING으로 변경
+                    if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
+                        userGroup.setParticipationStatus(GroupParticipationStatus.RESTING);
+                        userGroupRepository.save(userGroup);
+                        
+                        // 그룹 멤버 상태 변경 브로드캐스트
+                        groupMemberStatusService.broadcastMemberStatusUpdate(focusSession.getGroupId(), user.getId());
+                        
+                        // 모든 멤버가 NOT_PARTICIPATING이 되면 응원 수 초기화
+                        groupService.resetAllCheerCounts(focusSession.getGroupId());
+                    }
+                }
             }
             
             return TimerResponse.fromFinish(focusSession);
@@ -230,11 +321,11 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         return (int) Math.min(100, Math.floor(rate));
     }
 
-    private FocusSession createFocusSession(TimerMode mode, User user, Todo todo, LocalDateTime now, Long targetSeconds, Long focusDuration, Long breakDuration, Integer repeatCount) {
+    private FocusSession createFocusSession(TimerMode mode, User user, Todo todo, LocalDateTime now, Long targetSeconds, Long focusDuration, Long breakDuration, Integer repeatCount, ParticipationType participationType, UUID groupId) {
         return switch (mode) {
-            case TIMER -> FocusSession.createTimerSession(user.getId(), todo, now, targetSeconds);
-            case STOPWATCH -> FocusSession.createStopwatchSession(user.getId(), todo, now);
-            case POMODORO -> FocusSession.createPomodoroSession(user.getId(), todo, now, focusDuration, breakDuration, repeatCount);
+            case TIMER -> FocusSession.createTimerSession(user.getId(), todo, now, targetSeconds, participationType, groupId);
+            case STOPWATCH -> FocusSession.createStopwatchSession(user.getId(), todo, now, participationType, groupId);
+            case POMODORO -> FocusSession.createPomodoroSession(user.getId(), todo, now, focusDuration, breakDuration, repeatCount, participationType, groupId);
         };
     }
 
@@ -245,7 +336,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 });
     }
 
-    private TimerResponse startCommon(UUID userId, LocalDateTime now, FocusSession focusSession, Todo todo, PomodoroPhaseType phaseType, Integer round) {
+    private TimerResponse startCommon(UUID userId, UUID groupId, LocalDateTime now, FocusSession focusSession, Todo todo, PomodoroPhaseType phaseType, Integer round, ParticipationType participationType) {
         FocusSession savedFocusSession = focusSessionRepository.save(focusSession);
 
         ActiveFocusSession activeSession = ActiveFocusSession.create(
@@ -261,6 +352,21 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         user.setActive(true);
         userRepository.save(user);
 
+        // 그룹 내 개인 타이머인 경우 그룹 참여 상태를 PARTICIPATING으로 변경
+        if (participationType == ParticipationType.GROUP && groupId != null) {
+            UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(userId, groupId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+            
+            if (userGroup.getEnteredAt() != null) {
+                // 그룹에 입장한 상태에서 개인 타이머를 시작하면 PARTICIPATING으로 변경
+                userGroup.setParticipationStatus(GroupParticipationStatus.PARTICIPATING);
+                userGroupRepository.save(userGroup);
+                
+                // 그룹 멤버 상태 변경 브로드캐스트
+                groupMemberStatusService.broadcastMemberStatusUpdate(groupId, userId);
+            }
+        }
+
         FocusInterval focusInterval = FocusInterval.create(
                 focusSession.getId(),
                 now,
@@ -268,6 +374,13 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 round
         );
         focusIntervalRepository.save(focusInterval);
+
+        // 타이머 완료 알림 스케줄링 (실패해도 기존 로직에는 영향 없음)
+        try {
+            timerCompletionNotificationService.scheduleCompletionNotification(savedFocusSession.getId());
+        } catch (Exception e) {
+            log.warn("타이머 완료 알림 스케줄링 실패 (sessionId: {}): {}", savedFocusSession.getId(), e.getMessage());
+        }
 
         return TimerResponse.fromStart(savedFocusSession, todo);
     }

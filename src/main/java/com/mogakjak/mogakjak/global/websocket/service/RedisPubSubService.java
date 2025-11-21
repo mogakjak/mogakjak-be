@@ -2,8 +2,13 @@ package com.mogakjak.mogakjak.global.websocket.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.mogakjak.mogakjak.global.websocket.dto.ChatMessageDto;
 import com.mogakjak.mogakjak.global.websocket.dto.FocusNotificationDto;
+import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusUpdateDto;
+import com.mogakjak.mogakjak.global.websocket.dto.TimerCompletionNotificationDto;
+import com.mogakjak.mogakjak.global.websocket.dto.PokeNotificationDto;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
@@ -22,6 +27,8 @@ public class RedisPubSubService implements MessageListener {
         this.stringRedisTemplate = stringRedisTemplate;
         this.messageTemplate = messageTemplate;
         this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
+        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     public void publish(String channel, String message){
@@ -43,6 +50,20 @@ public class RedisPubSubService implements MessageListener {
                 // 집중 체크 알림 처리
                 FocusNotificationDto notificationDto = objectMapper.readValue(payload, FocusNotificationDto.class);
                 messageTemplate.convertAndSend("/topic/group/"+notificationDto.getGroupId()+"/notification", notificationDto);
+            } else if ("group-member-status".equals(channel)) {
+                // 그룹 멤버 상태 업데이트 처리
+                GroupMemberStatusUpdateDto statusUpdateDto = objectMapper.readValue(payload, GroupMemberStatusUpdateDto.class);
+                messageTemplate.convertAndSend("/topic/group/"+statusUpdateDto.getGroupId()+"/member-status", statusUpdateDto);
+            } else if ("timer-completion".equals(channel)) {
+                // 타이머 완료 알림 처리
+                TimerCompletionNotificationDto completionDto = objectMapper.readValue(payload, TimerCompletionNotificationDto.class);
+                // 개인 타이머 알림: /topic/user/{userId}/timer-completion
+                messageTemplate.convertAndSend("/topic/user/"+completionDto.getUserId()+"/timer-completion", completionDto);
+            } else if ("poke-notification".equals(channel)) {
+                // 콕 찌르기 알림 처리
+                PokeNotificationDto pokeDto = objectMapper.readValue(payload, PokeNotificationDto.class);
+                // 개인 알림: /topic/user/{userId}/poke
+                messageTemplate.convertAndSend("/topic/user/"+pokeDto.getTargetUserId()+"/poke", pokeDto);
             }
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize message from channel: " + channel, e);

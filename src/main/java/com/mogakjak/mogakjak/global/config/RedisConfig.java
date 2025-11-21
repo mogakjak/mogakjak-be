@@ -86,8 +86,11 @@ public class RedisConfig {
     ){
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(redisConnectionFactory);
-        container.addMessageListener(messageListenerAdapter, new PatternTopic("chat"));
-        container.addMessageListener(messageListenerAdapter, new PatternTopic("focus-notification"));
+               container.addMessageListener(messageListenerAdapter, new PatternTopic("chat"));
+               container.addMessageListener(messageListenerAdapter, new PatternTopic("focus-notification"));
+               container.addMessageListener(messageListenerAdapter, new PatternTopic("group-member-status"));
+               container.addMessageListener(messageListenerAdapter, new PatternTopic("timer-completion"));
+               container.addMessageListener(messageListenerAdapter, new PatternTopic("poke-notification"));
         return container;
     }
 
