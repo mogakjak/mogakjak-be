@@ -202,7 +202,7 @@ public class GroupServiceImpl implements GroupService {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
         UserGroup userGroup = findUserGroup(user, group);
-
+        
         if (userGroup.getRole() == GroupRole.HOST) {
             long memberCount = userGroupRepository.countByGroup(group);
             if (memberCount > 1) {
@@ -210,8 +210,11 @@ public class GroupServiceImpl implements GroupService {
             }
             userGroupRepository.delete(userGroup);
             groupRepository.delete(group);
+            // 그룹이 삭제되면 브로드캐스트 불필요
         } else {
             userGroupRepository.delete(userGroup);
+            // 멤버 탈퇴 시 전체 멤버 상태 브로드캐스트 (멤버 목록 변경)
+            groupMemberStatusService.broadcastAllMemberStatuses(groupId);
         }
     }
 
@@ -293,6 +296,9 @@ public class GroupServiceImpl implements GroupService {
 
         UserGroup userGroup = UserGroup.create(user, invitation.getGroup(), GroupRole.MEMBER);
         userGroupRepository.save(userGroup);
+        
+        // 새 멤버 추가 시 전체 멤버 상태 브로드캐스트 (멤버 목록 변경)
+        groupMemberStatusService.broadcastAllMemberStatuses(invitation.getGroup().getId());
     }
 
     @Override
