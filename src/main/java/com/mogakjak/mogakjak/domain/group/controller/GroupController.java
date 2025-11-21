@@ -214,4 +214,27 @@ public class GroupController {
                 .invitationUrl(invitationUrl)
                 .build());
     }
+
+    @Operation(summary = "함께 있는 그룹 목록 조회", description = "현재 사용자와 대상 사용자가 함께 속한 그룹 목록을 조회합니다.")
+    @GetMapping("/common-groups/{targetUserId}")
+    public ApiResponse<List<CommonGroupResponse>> getCommonGroups(
+            @Parameter(description = "대상 사용자 ID (UUID)")
+            @PathVariable UUID targetUserId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        List<CommonGroupResponse> response = groupService.getCommonGroups(userId, targetUserId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "콕 찌르기 알림 전송", description = "특정 사용자에게 그룹에서 함께 모각작하자는 알림을 전송합니다.")
+    @PostMapping("/poke")
+    public ApiResponse<Void> sendPokeNotification(
+            @Valid @RequestBody PokeRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.sendPokeNotification(userId, request.getTargetUserId(), request.getGroupId());
+        return ApiResponse.success(SuccessCode.CREATED);
+    }
 }

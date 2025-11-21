@@ -78,4 +78,11 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
     );
 
     long countByGroup(Group group);
+    
+    // 두 사용자가 함께 있는 그룹 목록 조회
+    @Query("SELECT ug1.group FROM UserGroup ug1 " +
+            "WHERE ug1.user.id = :userId1 " +
+            "AND ug1.group IN (SELECT ug2.group FROM UserGroup ug2 WHERE ug2.user.id = :userId2) " +
+            "ORDER BY ug1.group.createdAt DESC")
+    List<Group> findCommonGroups(@Param("userId1") UUID userId1, @Param("userId2") UUID userId2);
 }

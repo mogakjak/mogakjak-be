@@ -63,4 +63,10 @@ public interface GroupService {
 
     // 초대 링크를 통한 그룹 가입
     void joinGroupViaLink(UUID groupId, UUID userId);
+    
+    // 두 사용자가 함께 있는 그룹 목록 조회
+    List<CommonGroupResponse> getCommonGroups(UUID userId, UUID targetUserId);
+    
+    // 콕 찌르기 알림 전송
+    void sendPokeNotification(UUID userId, UUID targetUserId, UUID groupId);
 }

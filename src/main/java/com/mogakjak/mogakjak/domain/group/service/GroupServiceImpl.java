@@ -17,6 +17,7 @@ import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.websocket.service.FocusNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
+import com.mogakjak.mogakjak.global.websocket.service.PokeNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +40,7 @@ public class GroupServiceImpl implements GroupService {
     private final InvitationRepository invitationRepository;
     private final FocusNotificationService focusNotificationService;
     private final GroupMemberStatusService groupMemberStatusService;
+    private final PokeNotificationService pokeNotificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -381,6 +383,71 @@ public class GroupServiceImpl implements GroupService {
         // 바로 멤버로 추가 (초대 수락 과정 없이 가입)
         UserGroup userGroup = UserGroup.create(user, group, GroupRole.MEMBER);
         userGroupRepository.save(userGroup);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CommonGroupResponse> getCommonGroups(UUID userId, UUID targetUserId) {
+        User user = findUserById(userId);
+        User targetUser = findUserById(targetUserId);
+
+        if (userId.equals(targetUserId)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        // 두 사용자가 함께 있는 그룹 목록 조회
+        List<Group> commonGroups = userGroupRepository.findCommonGroups(userId, targetUserId);
+
+        return commonGroups.stream().map(group -> {
+            // 현재 사용자의 그룹 참여 상태
+            UserGroup myUserGroup = userGroupRepository.findByUser_IdAndGroup_Id(userId, group.getId())
+                    .orElse(null);
+            GroupParticipationStatus myStatus = myUserGroup != null 
+                    ? myUserGroup.getParticipationStatus() 
+                    : GroupParticipationStatus.NOT_PARTICIPATING;
+
+            // 상대방의 그룹 참여 상태
+            UserGroup targetUserGroup = userGroupRepository.findByUser_IdAndGroup_Id(targetUserId, group.getId())
+                    .orElse(null);
+            GroupParticipationStatus targetStatus = targetUserGroup != null 
+                    ? targetUserGroup.getParticipationStatus() 
+                    : GroupParticipationStatus.NOT_PARTICIPATING;
+
+            // 그룹 멤버 수
+            long memberCount = userGroupRepository.countByGroup(group);
+
+            return CommonGroupResponse.builder()
+                    .groupId(group.getId())
+                    .groupName(group.getName())
+                    .imageUrl(group.getImageUrl())
+                    .memberCount(memberCount)
+                    .maxMemberCount(8) // 기본값, 필요시 Group 엔티티에 필드 추가
+                    .myParticipationStatus(myStatus)
+                    .targetParticipationStatus(targetStatus)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void sendPokeNotification(UUID userId, UUID targetUserId, UUID groupId) {
+        User user = findUserById(userId);
+        User targetUser = findUserById(targetUserId);
+        Group group = findGroupById(groupId);
+
+        if (userId.equals(targetUserId)) {
+            throw new CustomException(ErrorCode.CANNOT_INVITE_SELF);
+        }
+
+        // 두 사용자가 모두 해당 그룹의 멤버인지 확인
+        UserGroup myUserGroup = userGroupRepository.findByUser_IdAndGroup_Id(userId, groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
+        
+        UserGroup targetUserGroup = userGroupRepository.findByUser_IdAndGroup_Id(targetUserId, groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
+
+        // 콕 찌르기 알림 전송
+        pokeNotificationService.sendPokeNotification(userId, targetUserId, groupId);
     }
 
     private User findUserById(UUID userId) {
