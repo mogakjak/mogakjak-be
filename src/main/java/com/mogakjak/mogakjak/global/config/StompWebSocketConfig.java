@@ -38,8 +38,7 @@ public class StompWebSocketConfig implements WebSocketMessageBrokerConfigurer {
         allowedOrigins.add("http://localhost:3002");
         allowedOrigins.add("https://mogakjak.site");
         allowedOrigins.add("http://mogakjak.site");
-        allowedOrigins.add("https://mogakjak-fe.vercel.app");
-        
+
         // authorized-redirect-uris에서도 추가
         for (String uri : authorizedRedirectUris) {
             String trimmed = uri.trim();
