@@ -2,6 +2,7 @@ package com.mogakjak.mogakjak.domain.group.controller;
 
 import com.mogakjak.mogakjak.domain.group.controller.dto.*;
 import com.mogakjak.mogakjak.domain.group.service.GroupService;
+import com.mogakjak.mogakjak.domain.invitation.controller.dto.InvitationUrlResponse;
 import com.mogakjak.mogakjak.domain.invitation.controller.dto.InviteMateRequest;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -31,6 +33,9 @@ import java.util.UUID;
 public class GroupController {
 
     private final GroupService groupService;
+
+    @Value("${frontend.vercel-url}")
+    private String frontendBaseUrl;
 
     @Operation(summary = "신규 그룹 생성", description = "새로운 스터디 그룹을 생성합니다.")
     @PostMapping
@@ -177,8 +182,36 @@ public class GroupController {
 
     private UUID getUserId(CustomUserDetails userDetails) {
         if (userDetails == null) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED); // 인증되지 않은 사용자
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
         return UUID.fromString(userDetails.getUsername());
+    }
+
+    @Operation(summary = "초대 링크로 그룹 가입", description = "공유받은 초대 링크를 통해 그룹에 바로 가입합니다.")
+    @PostMapping("/{groupId}/join")
+    public ApiResponse<Void> joinGroup(
+            @Parameter(description = "가입할 그룹 ID", required = true)
+            @PathVariable UUID groupId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.joinGroupViaLink(groupId, userId);
+        return ApiResponse.success(SuccessCode.OK);
+    }
+
+    @Operation(summary = "초대 링크 생성", description = "그룹 초대를 위한 링크를 생성하여 반환합니다.")
+    @PostMapping("/{groupId}/url")
+    public ApiResponse<InvitationUrlResponse> createInvitationUrl(
+            @Parameter(description = "초대 링크 생성할 그룹 ID (UUID)")
+            @PathVariable UUID groupId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        String invitationUrl = groupService.createInvitationUrl(groupId, userId, frontendBaseUrl);
+
+        return ApiResponse.success(SuccessCode.OK, InvitationUrlResponse.builder()
+                .groupId(groupId)
+                .invitationUrl(invitationUrl)
+                .build());
     }
 }

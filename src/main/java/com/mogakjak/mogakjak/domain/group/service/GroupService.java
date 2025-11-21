@@ -57,4 +57,10 @@ public interface GroupService {
 
     // [테스트용] 집중 체크 알림 수동 전송
     void testSendFocusNotification(User user, UUID groupId);
+
+    // 초대 링크 생성
+    String createInvitationUrl(UUID groupId, UUID userId, String frontendBaseUrl);
+
+    // 초대 링크를 통한 그룹 가입
+    void joinGroupViaLink(UUID groupId, UUID userId);
 }
