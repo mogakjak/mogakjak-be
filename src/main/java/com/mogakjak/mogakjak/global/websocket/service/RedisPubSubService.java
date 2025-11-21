@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.mogakjak.mogakjak.global.websocket.dto.ChatMessageDto;
+import com.mogakjak.mogakjak.global.websocket.dto.CheerNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.FocusNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusUpdateDto;
 import com.mogakjak.mogakjak.global.websocket.dto.TimerCompletionNotificationDto;
@@ -64,6 +65,11 @@ public class RedisPubSubService implements MessageListener {
                 PokeNotificationDto pokeDto = objectMapper.readValue(payload, PokeNotificationDto.class);
                 // 개인 알림: /topic/user/{userId}/poke
                 messageTemplate.convertAndSend("/topic/user/"+pokeDto.getTargetUserId()+"/poke", pokeDto);
+            } else if ("cheer-notification".equals(channel)) {
+                // 응원 알림 처리
+                CheerNotificationDto cheerDto = objectMapper.readValue(payload, CheerNotificationDto.class);
+                // 개인 알림: /topic/user/{userId}/cheer
+                messageTemplate.convertAndSend("/topic/user/"+cheerDto.getTargetUserId()+"/cheer", cheerDto);
             }
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize message from channel: " + channel, e);
