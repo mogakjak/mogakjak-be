@@ -195,6 +195,7 @@ public class GroupMemberStatusService {
                 .daysSinceLastParticipation(daysSinceLastParticipation)
                 .personalTimerSeconds(personalTimerSeconds)
                 .todoTitle(todoTitle)
+                .cheerCount(userGroup.getCheerCount() != null ? userGroup.getCheerCount() : 0)
                 .build();
     }
 

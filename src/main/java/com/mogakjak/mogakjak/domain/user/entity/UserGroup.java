@@ -36,12 +36,17 @@ public class UserGroup extends BaseSchema {
 
     private LocalDateTime enteredAt;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer cheerCount = 0;
+
     public static UserGroup create(User user, Group group, GroupRole role) {
         return UserGroup.builder()
                 .user(user)
                 .group(group)
                 .role(role)
                 .participationStatus(GroupParticipationStatus.NOT_PARTICIPATING)
+                .cheerCount(0)
                 .build();
     }
 
@@ -65,5 +70,19 @@ public class UserGroup extends BaseSchema {
      */
     public void leaveGroupSession() {
         this.participationStatus = GroupParticipationStatus.NOT_PARTICIPATING;
+    }
+
+    /**
+     * 응원 수 증가
+     */
+    public void incrementCheerCount() {
+        this.cheerCount++;
+    }
+
+    /**
+     * 응원 수 초기화
+     */
+    public void resetCheerCount() {
+        this.cheerCount = 0;
     }
 }

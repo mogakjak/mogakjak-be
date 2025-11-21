@@ -69,4 +69,10 @@ public interface GroupService {
     
     // 콕 찌르기 알림 전송
     void sendPokeNotification(UUID userId, UUID targetUserId, UUID groupId);
+    
+    // 응원 보내기
+    void sendCheer(UUID userId, UUID groupId, UUID targetUserId);
+    
+    // 그룹의 모든 멤버 응원 수 초기화
+    void resetAllCheerCounts(UUID groupId);
 }

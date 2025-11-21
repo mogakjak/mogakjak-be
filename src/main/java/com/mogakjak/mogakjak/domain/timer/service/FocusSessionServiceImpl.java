@@ -1,5 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.service;
 
+import com.mogakjak.mogakjak.domain.group.service.GroupService;
 import com.mogakjak.mogakjak.domain.timer.dto.request.PomodoroStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
@@ -51,6 +52,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     private final GroupRepository groupRepository;
     private final GroupMemberStatusService groupMemberStatusService;
     private final TimerCompletionNotificationService timerCompletionNotificationService;
+    private final GroupService groupService;
 
     @Override
     @Transactional
@@ -280,6 +282,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                         
                         // 그룹 멤버 상태 변경 브로드캐스트
                         groupMemberStatusService.broadcastMemberStatusUpdate(focusSession.getGroupId(), user.getId());
+                        
+                        // 모든 멤버가 NOT_PARTICIPATING이 되면 응원 수 초기화
+                        groupService.resetAllCheerCounts(focusSession.getGroupId());
                     }
                 }
             }

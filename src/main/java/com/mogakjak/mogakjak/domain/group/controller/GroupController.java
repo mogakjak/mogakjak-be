@@ -237,4 +237,17 @@ public class GroupController {
         groupService.sendPokeNotification(userId, request.getTargetUserId(), request.getGroupId());
         return ApiResponse.success(SuccessCode.CREATED);
     }
+
+    @Operation(summary = "응원 보내기", description = "그룹 내 다른 멤버에게 응원을 보냅니다. 발신자와 수신자 모두 NOT_PARTICIPATING 상태가 아니어야 합니다.")
+    @PostMapping("/{groupId}/cheer")
+    public ApiResponse<Void> sendCheer(
+            @Parameter(description = "그룹 ID (UUID)")
+            @PathVariable UUID groupId,
+            @Valid @RequestBody CheerRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.sendCheer(userId, groupId, request.getTargetUserId());
+        return ApiResponse.success(SuccessCode.CREATED);
+    }
 }

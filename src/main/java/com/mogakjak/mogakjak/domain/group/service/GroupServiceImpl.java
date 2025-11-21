@@ -233,6 +233,65 @@ public class GroupServiceImpl implements GroupService {
         
         // 그룹 멤버 상태 변경 브로드캐스트
         groupMemberStatusService.broadcastMemberStatusUpdate(groupId, userId);
+        
+        // 모든 멤버가 NOT_PARTICIPATING이 되면 응원 수 초기화
+        resetAllCheerCounts(groupId);
+    }
+
+    @Override
+    @Transactional
+    public void sendCheer(UUID userId, UUID groupId, UUID targetUserId) {
+        User user = findUserById(userId);
+        User targetUser = findUserById(targetUserId);
+        Group group = findGroupById(groupId);
+
+        if (userId.equals(targetUserId)) {
+            throw new CustomException(ErrorCode.CANNOT_INVITE_SELF);
+        }
+
+        // 두 사용자가 모두 해당 그룹의 멤버인지 확인
+        UserGroup myUserGroup = userGroupRepository.findByUser_IdAndGroup_Id(userId, groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
+        
+        UserGroup targetUserGroup = userGroupRepository.findByUser_IdAndGroup_Id(targetUserId, groupId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
+
+        // 발신자는 NOT_PARTICIPATING이 아니어야 함
+        if (myUserGroup.getParticipationStatus() == GroupParticipationStatus.NOT_PARTICIPATING) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        // 수신자는 NOT_PARTICIPATING이 아니어야 함
+        if (targetUserGroup.getParticipationStatus() == GroupParticipationStatus.NOT_PARTICIPATING) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        // 응원 수 증가
+        targetUserGroup.incrementCheerCount();
+        userGroupRepository.save(targetUserGroup);
+
+        // 그룹 멤버 상태 브로드캐스트 (응원 수 업데이트 반영)
+        groupMemberStatusService.broadcastAllMemberStatuses(groupId);
+    }
+
+    @Override
+    @Transactional
+    public void resetAllCheerCounts(UUID groupId) {
+        Group group = findGroupById(groupId);
+        List<UserGroup> userGroups = userGroupRepository.findAllByGroupWithUser(group);
+
+        // 모든 멤버가 NOT_PARTICIPATING인지 확인
+        boolean allNotParticipating = userGroups.stream()
+                .allMatch(ug -> ug.getParticipationStatus() == GroupParticipationStatus.NOT_PARTICIPATING);
+
+        if (allNotParticipating) {
+            // 모든 멤버의 응원 수 초기화
+            userGroups.forEach(UserGroup::resetCheerCount);
+            userGroupRepository.saveAll(userGroups);
+
+            // 그룹 멤버 상태 브로드캐스트
+            groupMemberStatusService.broadcastAllMemberStatuses(groupId);
+        }
     }
 
     @Override
