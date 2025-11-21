@@ -15,6 +15,7 @@ import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
+import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.FocusNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
 import com.mogakjak.mogakjak.global.websocket.service.PokeNotificationService;
@@ -41,6 +42,7 @@ public class GroupServiceImpl implements GroupService {
     private final FocusNotificationService focusNotificationService;
     private final GroupMemberStatusService groupMemberStatusService;
     private final PokeNotificationService pokeNotificationService;
+    private final CheerNotificationService cheerNotificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -269,6 +271,9 @@ public class GroupServiceImpl implements GroupService {
         // 응원 수 증가
         targetUserGroup.incrementCheerCount();
         userGroupRepository.save(targetUserGroup);
+
+        // 응원 알림 전송
+        cheerNotificationService.sendCheerNotification(userId, targetUserId, groupId);
 
         // 그룹 멤버 상태 브로드캐스트 (응원 수 업데이트 반영)
         groupMemberStatusService.broadcastAllMemberStatuses(groupId);
