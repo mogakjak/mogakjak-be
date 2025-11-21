@@ -24,10 +24,10 @@ public class GroupMemberStatusScheduler {
     private final GroupMemberStatusService groupMemberStatusService;
 
     /**
-     * 5초마다 실행하여 모든 그룹의 멤버 상태를 브로드캐스트
+     * 10초마다 실행하여 모든 그룹의 멤버 상태를 브로드캐스트
      * 개인 타이머 시간이 실시간으로 업데이트되도록 함
      */
-    @Scheduled(fixedRate = 5000) // 5초 = 5000ms
+    @Scheduled(fixedRate = 10000) // 10초 = 10000ms
     @Transactional
     public void broadcastAllGroupMemberStatuses() {
         log.debug("그룹 멤버 상태 브로드캐스트 스케줄러 실행");
