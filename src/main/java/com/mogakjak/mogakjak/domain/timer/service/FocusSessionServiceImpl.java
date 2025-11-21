@@ -24,6 +24,7 @@ import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
+import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +46,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     private final UserRepository userRepository;
     private final UserGroupRepository userGroupRepository;
     private final GroupRepository groupRepository;
+    private final GroupMemberStatusService groupMemberStatusService;
 
     @Override
     @Transactional
@@ -175,17 +177,20 @@ public class FocusSessionServiceImpl implements FocusSessionService {
             user.setActive(false);
             userRepository.save(user);
 
-            // 그룹 내 개인 타이머인 경우 해당 그룹의 참여 상태를 RESTING으로 변경
-            if (currentFocusSession.getParticipationType() == ParticipationType.GROUP && currentFocusSession.getGroupId() != null) {
-                UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), currentFocusSession.getGroupId())
-                        .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
-                
-                // 다른 활성 세션이 없고 그룹 세션에 참여 중인 상태면 RESTING으로 변경
-                if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
-                    userGroup.setParticipationStatus(GroupParticipationStatus.RESTING);
-                    userGroupRepository.save(userGroup);
+                // 그룹 내 개인 타이머인 경우 해당 그룹의 참여 상태를 RESTING으로 변경
+                if (currentFocusSession.getParticipationType() == ParticipationType.GROUP && currentFocusSession.getGroupId() != null) {
+                    UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), currentFocusSession.getGroupId())
+                            .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+                    
+                    // 다른 활성 세션이 없고 그룹 세션에 참여 중인 상태면 RESTING으로 변경
+                    if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
+                        userGroup.setParticipationStatus(GroupParticipationStatus.RESTING);
+                        userGroupRepository.save(userGroup);
+                        
+                        // 그룹 멤버 상태 변경 브로드캐스트
+                        groupMemberStatusService.broadcastMemberStatusUpdate(currentFocusSession.getGroupId(), user.getId());
+                    }
                 }
-            }
         }
 
         currentFocusSession.addDuration(intervalDurationSeconds);
@@ -240,6 +245,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                     if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
                         userGroup.setParticipationStatus(GroupParticipationStatus.RESTING);
                         userGroupRepository.save(userGroup);
+                        
+                        // 그룹 멤버 상태 변경 브로드캐스트
+                        groupMemberStatusService.broadcastMemberStatusUpdate(focusSession.getGroupId(), user.getId());
                     }
                 }
             }
@@ -316,6 +324,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 // 그룹에 입장한 상태에서 개인 타이머를 시작하면 PARTICIPATING으로 변경
                 userGroup.setParticipationStatus(GroupParticipationStatus.PARTICIPATING);
                 userGroupRepository.save(userGroup);
+                
+                // 그룹 멤버 상태 변경 브로드캐스트
+                groupMemberStatusService.broadcastMemberStatusUpdate(groupId, userId);
             }
         }
 

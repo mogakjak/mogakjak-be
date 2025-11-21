@@ -16,6 +16,7 @@ import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.websocket.service.FocusNotificationService;
+import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,6 +38,7 @@ public class GroupServiceImpl implements GroupService {
     private final GroupRepository groupRepository;
     private final InvitationRepository invitationRepository;
     private final FocusNotificationService focusNotificationService;
+    private final GroupMemberStatusService groupMemberStatusService;
 
     @Override
     @Transactional(readOnly = true)
@@ -114,6 +116,9 @@ public class GroupServiceImpl implements GroupService {
             userGroup.getParticipationStatus() == GroupParticipationStatus.NOT_PARTICIPATING) {
             userGroup.enterGroup(java.time.LocalDateTime.now());
             userGroupRepository.save(userGroup);
+            
+            // 그룹 멤버 상태 변경 브로드캐스트
+            groupMemberStatusService.broadcastMemberStatusUpdate(groupId, userId);
         }
 
         // 그룹 멤버 조회 시 레벨과 프로필 이미지 포함
@@ -220,6 +225,9 @@ public class GroupServiceImpl implements GroupService {
         // 그룹 세션에서 나가기: 참여 상태를 NOT_PARTICIPATING으로 변경 (멤버는 유지, enteredAt은 유지)
         userGroup.leaveGroupSession();
         userGroupRepository.save(userGroup);
+        
+        // 그룹 멤버 상태 변경 브로드캐스트
+        groupMemberStatusService.broadcastMemberStatusUpdate(groupId, userId);
     }
 
     @Override

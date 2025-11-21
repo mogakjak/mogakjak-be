@@ -97,14 +97,18 @@ public class StompHandler implements ChannelInterceptor {
             String destination = accessor.getDestination();
             log.debug("구독 destination: {}", destination);
             
-            // 집중 체크 알림 구독인지 확인
-            if (destination != null && destination.startsWith("/topic/group/") && destination.endsWith("/notification")) {
-                // 집중 체크 알림 구독은 그룹 멤버 검증만 수행 (별도 처리)
-                log.info("집중 체크 알림 구독 허용: {}", destination);
-                // 토큰 검증은 CONNECT에서 이미 수행되었으므로 여기서는 그룹 멤버 검증만 필요
-                // 실제 그룹 멤버 검증은 필요시 추가 가능
-                // 일단 허용
-            } else if (destination != null && destination.startsWith("/topic/") && !destination.contains("/group/")) {
+                   // 집중 체크 알림 구독인지 확인
+                   if (destination != null && destination.startsWith("/topic/group/") && destination.endsWith("/notification")) {
+                       // 집중 체크 알림 구독은 그룹 멤버 검증만 수행 (별도 처리)
+                       log.info("집중 체크 알림 구독 허용: {}", destination);
+                       // 토큰 검증은 CONNECT에서 이미 수행되었으므로 여기서는 그룹 멤버 검증만 필요
+                       // 실제 그룹 멤버 검증은 필요시 추가 가능
+                       // 일단 허용
+                   } else if (destination != null && destination.startsWith("/topic/group/") && destination.endsWith("/member-status")) {
+                       // 그룹 멤버 상태 구독 허용
+                       log.info("그룹 멤버 상태 구독 허용: {}", destination);
+                       // 토큰 검증은 CONNECT에서 이미 수행되었으므로 허용
+                   } else if (destination != null && destination.startsWith("/topic/") && !destination.contains("/group/")) {
                 // 채팅 룸 구독 검증 (/topic/{roomId} 패턴, /topic/group/으로 시작하지 않는 경우)
                 log.debug("채팅 룸 구독 검증: {}", destination);
                 String bearerToken = accessor.getFirstNativeHeader("Authorization");
