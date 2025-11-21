@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.mogakjak.mogakjak.global.websocket.dto.ChatMessageDto;
 import com.mogakjak.mogakjak.global.websocket.dto.FocusNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusUpdateDto;
+import com.mogakjak.mogakjak.global.websocket.dto.TimerCompletionNotificationDto;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
@@ -52,6 +53,11 @@ public class RedisPubSubService implements MessageListener {
                 // 그룹 멤버 상태 업데이트 처리
                 GroupMemberStatusUpdateDto statusUpdateDto = objectMapper.readValue(payload, GroupMemberStatusUpdateDto.class);
                 messageTemplate.convertAndSend("/topic/group/"+statusUpdateDto.getGroupId()+"/member-status", statusUpdateDto);
+            } else if ("timer-completion".equals(channel)) {
+                // 타이머 완료 알림 처리
+                TimerCompletionNotificationDto completionDto = objectMapper.readValue(payload, TimerCompletionNotificationDto.class);
+                // 개인 타이머 알림: /topic/user/{userId}/timer-completion
+                messageTemplate.convertAndSend("/topic/user/"+completionDto.getUserId()+"/timer-completion", completionDto);
             }
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize message from channel: " + channel, e);

@@ -25,7 +25,9 @@ import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
+import com.mogakjak.mogakjak.global.websocket.service.TimerCompletionNotificationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +36,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -47,6 +50,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     private final UserGroupRepository userGroupRepository;
     private final GroupRepository groupRepository;
     private final GroupMemberStatusService groupMemberStatusService;
+    private final TimerCompletionNotificationService timerCompletionNotificationService;
 
     @Override
     @Transactional
@@ -122,6 +126,13 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         Integer progressRate = calculateProgressRate(todo.getTargetTimeInSeconds(), currentFocusSession.getTotalDuration());
         currentFocusSession.pause(progressRate);
 
+        // pause 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
+        try {
+            timerCompletionNotificationService.rescheduleCompletionNotification(sessionId);
+        } catch (Exception e) {
+            log.warn("타이머 완료 알림 스케줄 재설정 실패 (sessionId: {}): {}", sessionId, e.getMessage());
+        }
+
         return TimerResponse.fromPause(currentFocusSession, now);
     }
 
@@ -146,6 +157,13 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         currentFocusSession.resume();
 
+        // resume 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
+        try {
+            timerCompletionNotificationService.rescheduleCompletionNotification(sessionId);
+        } catch (Exception e) {
+            log.warn("타이머 완료 알림 스케줄 재설정 실패 (sessionId: {}): {}", sessionId, e.getMessage());
+        }
+
         return TimerResponse.fromResume(currentFocusSession);
     }
 
@@ -169,6 +187,13 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         }
 
         activeFocusSessionRepository.deleteById(currentActiveSession.getId());
+
+        // 타이머 종료 시 스케줄된 알림 취소 (실패해도 기존 로직에는 영향 없음)
+        try {
+            timerCompletionNotificationService.cancelScheduledNotification(sessionId);
+        } catch (Exception e) {
+            log.warn("타이머 완료 알림 스케줄 취소 실패 (sessionId: {}): {}", sessionId, e.getMessage());
+        }
 
         // 개인 타이머 종료 시 isActive 업데이트
         // 다른 활성 세션이 있는지 확인 (예: 다른 타이머가 실행 중일 수 있음)
@@ -229,7 +254,14 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         if (currentPhase == PomodoroPhaseType.FOCUS && isPomodoroFinished(focusSession, intervals)) {
             focusSession.end(now, 100);
             activeFocusSessionRepository.deleteById(currentActiveSession.getId());
-            
+
+            // 타이머 종료 시 스케줄된 알림 취소 (실패해도 기존 로직에는 영향 없음)
+            try {
+                timerCompletionNotificationService.cancelScheduledNotification(sessionId);
+            } catch (Exception e) {
+                log.warn("타이머 완료 알림 스케줄 취소 실패 (sessionId: {}): {}", sessionId, e.getMessage());
+            }
+
             // 개인 타이머 종료 시 isActive 업데이트
             boolean hasOtherActiveSession = activeFocusSessionRepository.findByUserId(user.getId()).isPresent();
             if (!hasOtherActiveSession) {
@@ -337,6 +369,13 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 round
         );
         focusIntervalRepository.save(focusInterval);
+
+        // 타이머 완료 알림 스케줄링 (실패해도 기존 로직에는 영향 없음)
+        try {
+            timerCompletionNotificationService.scheduleCompletionNotification(savedFocusSession.getId());
+        } catch (Exception e) {
+            log.warn("타이머 완료 알림 스케줄링 실패 (sessionId: {}): {}", savedFocusSession.getId(), e.getMessage());
+        }
 
         return TimerResponse.fromStart(savedFocusSession, todo);
     }

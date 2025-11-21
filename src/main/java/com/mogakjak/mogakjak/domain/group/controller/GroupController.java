@@ -34,7 +34,7 @@ public class GroupController {
 
     private final GroupService groupService;
 
-    @Value("${frontend.vercel-url}")
+    @Value("${frontend.base-url}")
     private String frontendBaseUrl;
 
     @Operation(summary = "신규 그룹 생성", description = "새로운 스터디 그룹을 생성합니다.")
