@@ -124,7 +124,11 @@ public class StompHandler implements ChannelInterceptor {
                        // 그룹 타이머 이벤트 구독 허용
                        log.info("그룹 타이머 이벤트 구독 허용: {}", destination);
                        // 토큰 검증은 CONNECT에서 이미 수행되었으므로 허용
-                   } else if (destination != null && destination.startsWith("/topic/") && !destination.contains("/group/") && !destination.contains("/user/")) {
+                   } else if (destination != null && destination.equals("/topic/mates/active-status")) {
+                       // 메이트 isActive 상태 변경 구독 허용
+                       log.info("메이트 isActive 상태 구독 허용: {}", destination);
+                       // 토큰 검증은 CONNECT에서 이미 수행되었으므로 허용
+                   } else if (destination != null && destination.startsWith("/topic/") && !destination.contains("/group/") && !destination.contains("/user/") && !destination.contains("/mates/")) {
                 // 채팅 룸 구독 검증 (/topic/{roomId} 패턴, /topic/group/으로 시작하지 않는 경우)
                 log.debug("채팅 룸 구독 검증: {}", destination);
                 String bearerToken = accessor.getFirstNativeHeader("Authorization");

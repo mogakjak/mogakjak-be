@@ -11,6 +11,8 @@ import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusUpdateDto;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupTimerEventDto;
 import com.mogakjak.mogakjak.global.websocket.dto.TimerCompletionNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.PokeNotificationDto;
+import com.mogakjak.mogakjak.global.websocket.dto.UserActiveStatusDto;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
@@ -18,6 +20,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class RedisPubSubService implements MessageListener {
 
@@ -76,6 +79,16 @@ public class RedisPubSubService implements MessageListener {
                 GroupTimerEventDto timerEventDto = objectMapper.readValue(payload, GroupTimerEventDto.class);
                 // 그룹 알림: /topic/group/{groupId}/timer
                 messageTemplate.convertAndSend("/topic/group/"+timerEventDto.getGroupId()+"/timer", timerEventDto);
+            } else if ("user-active-status".equals(channel)) {
+                // 사용자 isActive 상태 변경 처리
+                log.info("===== Redis Pub/Sub에서 user-active-status 메시지 수신 =====");
+                log.info("원본 payload: {}", payload);
+                UserActiveStatusDto statusDto = objectMapper.readValue(payload, UserActiveStatusDto.class);
+                log.info("파싱된 DTO: userId={}, isActive={}", statusDto.getUserId(), statusDto.getIsActive());
+                // 모든 메이트 목록을 보는 사용자들에게 브로드캐스트: /topic/mates/active-status
+                log.info("WebSocket 브로드캐스트 시작: /topic/mates/active-status");
+                messageTemplate.convertAndSend("/topic/mates/active-status", statusDto);
+                log.info("===== WebSocket 브로드캐스트 완료 =====");
             }
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize message from channel: " + channel, e);
