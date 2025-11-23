@@ -52,6 +52,11 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
             Pageable pageable
     );
 
+    @Query("SELECT ug.group.name FROM UserGroup ug " +
+            "WHERE ug.user = :mate " +
+            "AND ug.group IN (SELECT myUg.group FROM UserGroup myUg WHERE myUg.user = :me)")
+    List<String> findSharedGroupNames(@Param("me") User me, @Param("mate") User mate);
+
     // 내 전체 메이트 조회 (UserGroup 객체 반환 - 그룹명 포함용)
     @Query("SELECT ug FROM UserGroup ug " +
             "JOIN FETCH ug.user " +

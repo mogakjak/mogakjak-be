@@ -176,31 +176,19 @@ public class GroupServiceImpl implements GroupService {
         User user = findUserById(userId);
 
         if (groupId == null) {
-            // 내 전체 메이트 조회: UserGroup 엔티티를 조회하여 그룹 정보까지 포함
-            // (UserGroupRepository에 findTotalMatesWithGroupByUser 메서드 추가 필요)
-            Page<UserGroup> userGroupPage = userGroupRepository.findTotalMatesWithGroupByUser(user, search, pageable);
+            Page<User> matePage = userGroupRepository.findTotalMatesByUser(user, search, pageable);
 
-            return userGroupPage.map(ug -> MateResponse.builder()
-                    .userId(ug.getUser().getId())
-                    .nickname(ug.getUser().getName())
-                    .profileUrl(ug.getUser().getImageUrl())
-                    .groupName(ug.getGroup().getName())
-                    .isActive(ug.getUser().getIsActive() != null ? ug.getUser().getIsActive() : false)
-                    .build());
+            return matePage.map(mate -> {
+                List<String> sharedGroupNames = userGroupRepository.findSharedGroupNames(user, mate);
+                return MateResponse.from(mate, sharedGroupNames);
+            });
         } else {
-            // 특정 그룹의 메이트 조회
             Group group = findGroupById(groupId);
             checkUserInGroup(user, group);
 
-            // 기존 메서드 활용 후 그룹 이름 매핑
             Page<User> users = userGroupRepository.findMatesByGroup(group, user, search, pageable);
-            return users.map(u -> MateResponse.builder()
-                    .userId(u.getId())
-                    .nickname(u.getName())
-                    .profileUrl(u.getImageUrl())
-                    .groupName(group.getName()) // 해당 그룹 이름
-                    .isActive(u.getIsActive() != null ? u.getIsActive() : false)
-                    .build());
+
+            return users.map(u -> MateResponse.from(u, List.of(group.getName())));
         }
     }
 
