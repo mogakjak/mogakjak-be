@@ -185,6 +185,7 @@ public class GroupServiceImpl implements GroupService {
                     .nickname(ug.getUser().getName())
                     .profileUrl(ug.getUser().getImageUrl())
                     .groupName(ug.getGroup().getName())
+                    .isActive(ug.getUser().getIsActive() != null ? ug.getUser().getIsActive() : false)
                     .build());
         } else {
             // 특정 그룹의 메이트 조회
@@ -198,6 +199,7 @@ public class GroupServiceImpl implements GroupService {
                     .nickname(u.getName())
                     .profileUrl(u.getImageUrl())
                     .groupName(group.getName()) // 해당 그룹 이름
+                    .isActive(u.getIsActive() != null ? u.getIsActive() : false)
                     .build());
         }
     }

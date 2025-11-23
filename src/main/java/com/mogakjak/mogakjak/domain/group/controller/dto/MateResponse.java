@@ -24,12 +24,16 @@ public class MateResponse {
     @Schema(description = "속한 그룹 이름")
     private String groupName;
 
+    @Schema(description = "활동 중 여부 (웹사이트 접속 중이거나 개인 타이머 실행 중)")
+    private Boolean isActive;
+
     public static MateResponse from(User user, String groupName) {
         return MateResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getName())
                 .profileUrl(user.getImageUrl())
                 .groupName(groupName)
+                .isActive(user.getIsActive() != null ? user.getIsActive() : false)
                 .build();
     }
 }

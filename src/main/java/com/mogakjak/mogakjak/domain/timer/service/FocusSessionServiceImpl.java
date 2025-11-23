@@ -27,6 +27,9 @@ import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
 import com.mogakjak.mogakjak.global.websocket.service.TimerCompletionNotificationService;
+import com.mogakjak.mogakjak.global.websocket.service.UserActiveStatusService;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -52,6 +55,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     private final GroupRepository groupRepository;
     private final GroupMemberStatusService groupMemberStatusService;
     private final TimerCompletionNotificationService timerCompletionNotificationService;
+    private final UserActiveStatusService userActiveStatusService;
     private final GroupService groupService;
 
     @Override
@@ -200,9 +204,28 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         // 개인 타이머 종료 시 isActive 업데이트
         // 다른 활성 세션이 있는지 확인 (예: 다른 타이머가 실행 중일 수 있음)
         boolean hasOtherActiveSession = activeFocusSessionRepository.findByUserId(user.getId()).isPresent();
+        boolean wasActive = user.getIsActive();
+        log.info("타이머 종료 (finishSession): userId={}, wasActive={}, hasOtherActiveSession={}", user.getId(), wasActive, hasOtherActiveSession);
         if (!hasOtherActiveSession) {
             user.setActive(false);
             userRepository.save(user);
+            log.info("타이머 종료: isActive를 false로 설정: userId={}", user.getId());
+            
+            // 상태가 변경되었으면 브로드캐스트 (트랜잭션 커밋 후)
+            if (wasActive) {
+                log.info("타이머 종료: isActive 상태 변경 감지, 브로드캐스트 예약: userId={}, isActive=false", user.getId());
+                TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronizationAdapter() {
+                        @Override
+                        public void afterCommit() {
+                            log.info("타이머 종료: 트랜잭션 커밋 완료, 브로드캐스트 실행: userId={}, isActive=false", user.getId());
+                            userActiveStatusService.broadcastActiveStatusChange(user.getId(), false);
+                        }
+                    }
+                );
+            } else {
+                log.info("타이머 종료: isActive 상태 변경 없음 (이미 false), 브로드캐스트 안 함: userId={}", user.getId());
+            }
 
                 // 그룹 내 개인 타이머인 경우 해당 그룹의 참여 상태를 RESTING으로 변경
                 if (currentFocusSession.getParticipationType() == ParticipationType.GROUP && currentFocusSession.getGroupId() != null) {
@@ -266,9 +289,28 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
             // 개인 타이머 종료 시 isActive 업데이트
             boolean hasOtherActiveSession = activeFocusSessionRepository.findByUserId(user.getId()).isPresent();
+            boolean wasActive = user.getIsActive();
+            log.info("타이머 종료 (nextPomodoroPhase): userId={}, wasActive={}, hasOtherActiveSession={}", user.getId(), wasActive, hasOtherActiveSession);
             if (!hasOtherActiveSession) {
                 user.setActive(false);
                 userRepository.save(user);
+                log.info("타이머 종료: isActive를 false로 설정: userId={}", user.getId());
+                
+                // 상태가 변경되었으면 브로드캐스트 (트랜잭션 커밋 후)
+                if (wasActive) {
+                    log.info("타이머 종료: isActive 상태 변경 감지, 브로드캐스트 예약: userId={}, isActive=false", user.getId());
+                    TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronizationAdapter() {
+                            @Override
+                            public void afterCommit() {
+                                log.info("타이머 종료: 트랜잭션 커밋 완료, 브로드캐스트 실행: userId={}, isActive=false", user.getId());
+                                userActiveStatusService.broadcastActiveStatusChange(user.getId(), false);
+                            }
+                        }
+                    );
+                } else {
+                    log.info("타이머 종료: isActive 상태 변경 없음 (이미 false), 브로드캐스트 안 함: userId={}", user.getId());
+                }
 
                 // 그룹 내 개인 타이머인 경우 해당 그룹의 참여 상태를 RESTING으로 변경
                 if (focusSession.getParticipationType() == ParticipationType.GROUP && focusSession.getGroupId() != null) {
@@ -383,8 +425,26 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         // 개인 타이머 활성화 시 isActive 업데이트
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        boolean wasActive = user.getIsActive();
+        log.info("타이머 시작: userId={}, wasActive={}, willSetActive=true", userId, wasActive);
         user.setActive(true);
         userRepository.save(user);
+        
+        // 상태가 변경되었으면 브로드캐스트 (트랜잭션 커밋 후)
+        if (!wasActive) {
+            log.info("타이머 시작: isActive 상태 변경 감지, 브로드캐스트 예약: userId={}, isActive=true", userId);
+            TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronizationAdapter() {
+                    @Override
+                    public void afterCommit() {
+                        log.info("타이머 시작: 트랜잭션 커밋 완료, 브로드캐스트 실행: userId={}, isActive=true", userId);
+                        userActiveStatusService.broadcastActiveStatusChange(userId, true);
+                    }
+                }
+            );
+        } else {
+            log.info("타이머 시작: isActive 상태 변경 없음 (이미 true), 브로드캐스트 안 함: userId={}", userId);
+        }
 
         // 그룹 내 개인 타이머인 경우 그룹 참여 상태를 PARTICIPATING으로 변경
         if (participationType == ParticipationType.GROUP && groupId != null) {

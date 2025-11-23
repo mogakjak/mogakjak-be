@@ -93,6 +93,7 @@ public class RedisConfig {
                container.addMessageListener(messageListenerAdapter, new PatternTopic("poke-notification"));
                container.addMessageListener(messageListenerAdapter, new PatternTopic("cheer-notification"));
                container.addMessageListener(messageListenerAdapter, new PatternTopic("group-timer-event"));
+               container.addMessageListener(messageListenerAdapter, new PatternTopic("user-active-status"));
         return container;
     }
 
