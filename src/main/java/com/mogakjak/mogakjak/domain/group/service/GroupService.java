@@ -81,7 +81,4 @@ public interface GroupService {
     
     // 그룹 타이머 누적 시간 초기화 (모든 멤버가 NOT_PARTICIPATING일 때)
     void resetAccumulatedDuration(UUID groupId);
-    
-    // 그룹 타이머 공개/비공개 설정
-    void updateTimerVisibility(UUID groupId, UUID userId, Boolean isTimerPublic);
 }

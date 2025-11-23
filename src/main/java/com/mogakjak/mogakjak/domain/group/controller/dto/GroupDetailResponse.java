@@ -28,9 +28,6 @@ public class GroupDetailResponse {
     @Schema(description = "그룹 타이머 누적 시간 (초 단위)")
     private Long accumulatedDuration;
 
-    @Schema(description = "그룹 타이머 공개 여부")
-    private Boolean isTimerPublic;
-
     @Schema(description = "그룹 멤버 목록")
     private List<MemberInfo> members;
 
@@ -54,7 +51,6 @@ public class GroupDetailResponse {
                 .imageUrl(group.getImageUrl())
                 .description(group.getDescription())
                 .accumulatedDuration(group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L)
-                .isTimerPublic(group.getIsTimerPublic() != null ? group.getIsTimerPublic() : true)
                 .members(members)
                 .build();
     }

@@ -332,23 +332,6 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     @Transactional
-    public void updateTimerVisibility(UUID groupId, UUID userId, Boolean isTimerPublic) {
-        User user = findUserById(userId);
-        Group group = findGroupById(groupId);
-        
-        // 그룹 멤버인지 확인
-        checkUserInGroup(user, group);
-        
-        // 타이머 공개/비공개 설정 업데이트
-        group.updateTimerVisibility(isTimerPublic);
-        groupRepository.save(group);
-        
-        // 그룹 타이머 이벤트로 공개/비공개 상태 브로드캐스트
-        groupTimerService.broadcastTimerVisibilityChange(groupId, isTimerPublic);
-    }
-
-    @Override
-    @Transactional
     public void inviteMate(UUID groupId, InviteMateRequest request, UUID inviterId) {
         User inviter = findUserById(inviterId);
         User invitee = findUserById(request.getInviteeId());

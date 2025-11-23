@@ -26,12 +26,11 @@ public class GroupTimerEventDto {
     private Long targetDuration;
     private Long totalDuration; // 현재 세션의 총 시간
     private Long accumulatedDuration; // 그룹 누적 시간 (여러 세션을 거쳐 쌓인 시간)
-    private Boolean isTimerPublic; // 그룹 타이머 공개 여부
     private Integer progressRate;
     private LocalDateTime serverTime; // 서버 시간 (동기화용)
     
     public enum TimerEventType {
-        START, PAUSE, RESUME, FINISH, SYNC, VISIBILITY_CHANGE
+        START, PAUSE, RESUME, FINISH, SYNC
     }
 }
 

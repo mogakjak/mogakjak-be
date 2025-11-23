@@ -44,11 +44,10 @@ public class GroupTimerService {
     @Transactional
     public void broadcastTimerEvent(UUID groupId, TimerResponse timerResponse, GroupTimerEventDto.TimerEventType eventType) {
         try {
-            // 그룹의 누적 시간 및 공개 여부 조회
+            // 그룹의 누적 시간 조회
             Group group = groupRepository.findById(groupId)
                     .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
             Long accumulatedDuration = group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L;
-            Boolean isTimerPublic = group.getIsTimerPublic() != null ? group.getIsTimerPublic() : true;
             
             GroupTimerEventDto eventDto = GroupTimerEventDto.builder()
                     .groupId(groupId)
@@ -62,7 +61,6 @@ public class GroupTimerService {
                     .targetDuration(timerResponse.targetDuration())
                     .totalDuration(timerResponse.totalDuration())
                     .accumulatedDuration(accumulatedDuration)
-                    .isTimerPublic(isTimerPublic)
                     .progressRate(timerResponse.progressRate())
                     .serverTime(LocalDateTime.now())
                     .build();
@@ -93,11 +91,10 @@ public class GroupTimerService {
                 progressRate = (int) Math.min(100, Math.floor(rate));
             }
             
-            // 그룹의 누적 시간 및 공개 여부 조회
+            // 그룹의 누적 시간 조회
             Group group = groupRepository.findById(groupId)
                     .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
             Long accumulatedDuration = group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L;
-            Boolean isTimerPublic = group.getIsTimerPublic() != null ? group.getIsTimerPublic() : true;
             
             GroupTimerEventDto eventDto = GroupTimerEventDto.builder()
                     .groupId(groupId)
@@ -109,7 +106,6 @@ public class GroupTimerService {
                     .targetDuration(session.getTargetDuration())
                     .totalDuration(calculatedTotalDuration)
                     .accumulatedDuration(accumulatedDuration)
-                    .isTimerPublic(isTimerPublic)
                     .progressRate(progressRate)
                     .serverTime(now)
                     .build();
@@ -123,32 +119,5 @@ public class GroupTimerService {
         }
     }
 
-    /**
-     * 그룹 타이머 공개/비공개 상태 변경 브로드캐스트
-     */
-    @Transactional
-    public void broadcastTimerVisibilityChange(UUID groupId, Boolean isTimerPublic) {
-        try {
-            // 그룹의 누적 시간 조회
-            Long accumulatedDuration = groupRepository.findById(groupId)
-                    .map(group -> group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L)
-                    .orElse(0L);
-            
-            GroupTimerEventDto eventDto = GroupTimerEventDto.builder()
-                    .groupId(groupId)
-                    .eventType(GroupTimerEventDto.TimerEventType.VISIBILITY_CHANGE)
-                    .isTimerPublic(isTimerPublic)
-                    .accumulatedDuration(accumulatedDuration)
-                    .serverTime(LocalDateTime.now())
-                    .build();
-
-            String message = objectMapper.writeValueAsString(eventDto);
-            redisPubSubService.publish("group-timer-event", message);
-            
-            log.debug("그룹 타이머 공개/비공개 상태 브로드캐스트: groupId={}, isTimerPublic={}", groupId, isTimerPublic);
-        } catch (JsonProcessingException e) {
-            log.error("그룹 타이머 공개/비공개 상태 브로드캐스트 실패: {}", e.getMessage(), e);
-        }
-    }
 }
 

@@ -51,10 +51,6 @@ public class Group extends BaseSchema {
     @Builder.Default
     private Long accumulatedDuration = 0L; // 그룹 타이머 누적 시간 (초 단위)
 
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean isTimerPublic = true; // 그룹 타이머 공개 여부
-
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<UserGroup> userGroups = new ArrayList<>();
@@ -103,9 +99,5 @@ public class Group extends BaseSchema {
 
     public void resetAccumulatedDuration() {
         this.accumulatedDuration = 0L;
-    }
-
-    public void updateTimerVisibility(Boolean isTimerPublic) {
-        this.isTimerPublic = isTimerPublic;
     }
 }
