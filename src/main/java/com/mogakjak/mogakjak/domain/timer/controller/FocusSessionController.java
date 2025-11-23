@@ -1,5 +1,6 @@
 package com.mogakjak.mogakjak.domain.timer.controller;
 
+import com.mogakjak.mogakjak.domain.timer.dto.request.PersonalTimerVisibilityRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.PomodoroStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.StopwatchStartRequest;
 import com.mogakjak.mogakjak.domain.timer.dto.request.TimerStartRequest;
@@ -12,6 +13,7 @@ import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -102,5 +104,16 @@ public class FocusSessionController {
     ) {
         TimerResponse response = focusSessionService.finishActiveSession(user);
         return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "개인 타이머 공개/비공개 설정", description = "개인 타이머의 할일 제목 및 타이머 누적 시간 공개/비공개 여부를 설정합니다.")
+    @PutMapping("/{sessionId}/visibility")
+    public ApiResponse<Void> updatePersonalTimerVisibility(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID sessionId,
+            @Valid @RequestBody PersonalTimerVisibilityRequest request
+    ) {
+        focusSessionService.updatePersonalTimerVisibility(user, sessionId, request.getIsTaskPublic(), request.getIsTimerPublic());
+        return ApiResponse.success(SuccessCode.OK);
     }
 }

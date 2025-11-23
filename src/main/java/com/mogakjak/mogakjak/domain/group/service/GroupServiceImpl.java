@@ -18,6 +18,7 @@ import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.FocusNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
+import com.mogakjak.mogakjak.global.websocket.service.GroupTimerService;
 import com.mogakjak.mogakjak.global.websocket.service.PokeNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -43,6 +44,7 @@ public class GroupServiceImpl implements GroupService {
     private final GroupMemberStatusService groupMemberStatusService;
     private final PokeNotificationService pokeNotificationService;
     private final CheerNotificationService cheerNotificationService;
+    private final GroupTimerService groupTimerService;
 
     @Override
     @Transactional(readOnly = true)
@@ -326,6 +328,23 @@ public class GroupServiceImpl implements GroupService {
             group.resetAccumulatedDuration();
             groupRepository.save(group);
         }
+    }
+
+    @Override
+    @Transactional
+    public void updateTimerVisibility(UUID groupId, UUID userId, Boolean isTimerPublic) {
+        User user = findUserById(userId);
+        Group group = findGroupById(groupId);
+        
+        // 그룹 멤버인지 확인
+        checkUserInGroup(user, group);
+        
+        // 타이머 공개/비공개 설정 업데이트
+        group.updateTimerVisibility(isTimerPublic);
+        groupRepository.save(group);
+        
+        // 그룹 타이머 이벤트로 공개/비공개 상태 브로드캐스트
+        groupTimerService.broadcastTimerVisibilityChange(groupId, isTimerPublic);
     }
 
     @Override

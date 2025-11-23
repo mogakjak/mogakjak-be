@@ -60,7 +60,13 @@ public class FocusSession extends BaseSchema {
     @Enumerated(EnumType.STRING)
     private TimerStatus status;
 
-    public static FocusSession createTimerSession(UUID userId, Todo todo, LocalDateTime startedAt, Long targetDuration, ParticipationType participationType, UUID groupId) {
+    @Column(nullable = false)
+    private Boolean isTaskPublic = true; // 할일 제목 공개 여부
+
+    @Column(nullable = false)
+    private Boolean isTimerPublic = true; // 타이머 누적 시간 공개 여부
+
+    public static FocusSession createTimerSession(UUID userId, Todo todo, LocalDateTime startedAt, Long targetDuration, ParticipationType participationType, UUID groupId, Boolean isTaskPublic, Boolean isTimerPublic) {
         return new FocusSession(
                 userId,
                 todo.getId(),
@@ -76,11 +82,13 @@ public class FocusSession extends BaseSchema {
                 null,
                 null,
                 null,
-                TimerStatus.RUNNING
+                TimerStatus.RUNNING,
+                isTaskPublic != null ? isTaskPublic : true,
+                isTimerPublic != null ? isTimerPublic : true
         );
     }
 
-    public static FocusSession createStopwatchSession(UUID userId, Todo todo, LocalDateTime startedAt, ParticipationType participationType, UUID groupId) {
+    public static FocusSession createStopwatchSession(UUID userId, Todo todo, LocalDateTime startedAt, ParticipationType participationType, UUID groupId, Boolean isTaskPublic, Boolean isTimerPublic) {
         return new FocusSession(
                 userId,
                 todo.getId(),
@@ -96,11 +104,13 @@ public class FocusSession extends BaseSchema {
                 null,
                 null,
                 null,
-                TimerStatus.RUNNING
+                TimerStatus.RUNNING,
+                isTaskPublic != null ? isTaskPublic : true,
+                isTimerPublic != null ? isTimerPublic : true
         );
     }
 
-    public static FocusSession createPomodoroSession(UUID userId, Todo todo, LocalDateTime startedAt, Long focusDuration, Long breakDuration, Integer repeatCount, ParticipationType participationType, UUID groupId) {
+    public static FocusSession createPomodoroSession(UUID userId, Todo todo, LocalDateTime startedAt, Long focusDuration, Long breakDuration, Integer repeatCount, ParticipationType participationType, UUID groupId, Boolean isTaskPublic, Boolean isTimerPublic) {
         return new FocusSession(
                 userId,
                 todo.getId(),
@@ -116,7 +126,9 @@ public class FocusSession extends BaseSchema {
                 focusDuration,
                 breakDuration,
                 repeatCount,
-                TimerStatus.RUNNING
+                TimerStatus.RUNNING,
+                isTaskPublic != null ? isTaskPublic : true,
+                isTimerPublic != null ? isTimerPublic : true
         );
     }
 
@@ -141,5 +153,13 @@ public class FocusSession extends BaseSchema {
             this.totalDuration = 0L;
         }
         this.totalDuration += seconds;
+    }
+
+    public void updateTaskVisibility(Boolean isTaskPublic) {
+        this.isTaskPublic = isTaskPublic != null ? isTaskPublic : true;
+    }
+
+    public void updateTimerVisibility(Boolean isTimerPublic) {
+        this.isTimerPublic = isTimerPublic != null ? isTimerPublic : true;
     }
 }

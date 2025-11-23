@@ -67,7 +67,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        FocusSession focusSession = createFocusSession(TimerMode.TIMER, user, todo, now, request.targetSeconds(), null, null, null, request.participationType(), request.groupId());
+        FocusSession focusSession = createFocusSession(TimerMode.TIMER, user, todo, now, request.targetSeconds(), null, null, null, request.participationType(), request.groupId(), request.isTaskPublic(), request.isTimerPublic());
 
         return startCommon(user.getId(), request.groupId(), now, focusSession, todo, PomodoroPhaseType.NORMAL, 0, request.participationType());
     }
@@ -85,7 +85,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        FocusSession focusSession = createFocusSession(TimerMode.STOPWATCH, user, todo, now, null, null, null, null, request.participationType(), request.groupId());
+        FocusSession focusSession = createFocusSession(TimerMode.STOPWATCH, user, todo, now, null, null, null, null, request.participationType(), request.groupId(), request.isTaskPublic(), request.isTimerPublic());
 
         return startCommon(user.getId(), request.groupId(), now, focusSession, todo, PomodoroPhaseType.NORMAL, 0, request.participationType());
     }
@@ -103,7 +103,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        FocusSession focusSession = createFocusSession(TimerMode.POMODORO, user, todo, now, null, request.focusSeconds(), request.breakSeconds(), request.repeatCount(), request.participationType(), request.groupId());
+        FocusSession focusSession = createFocusSession(TimerMode.POMODORO, user, todo, now, null, request.focusSeconds(), request.breakSeconds(), request.repeatCount(), request.participationType(), request.groupId(), request.isTaskPublic(), request.isTimerPublic());
 
         return startCommon(user.getId(), request.groupId(), now, focusSession, todo, PomodoroPhaseType.FOCUS, 1, request.participationType());
     }
@@ -302,6 +302,40 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
     @Override
     @Transactional
+    public void updatePersonalTimerVisibility(User user, UUID sessionId, Boolean isTaskPublic, Boolean isTimerPublic) {
+        FocusSession focusSession = getValidatedFocusSession(user.getId(), sessionId);
+        
+        // 공개/비공개 설정 업데이트
+        if (isTaskPublic != null) {
+            focusSession.updateTaskVisibility(isTaskPublic);
+        }
+        if (isTimerPublic != null) {
+            focusSession.updateTimerVisibility(isTimerPublic);
+        }
+        focusSessionRepository.save(focusSession);
+        
+        // 그룹 내 개인 타이머인 경우 그룹 멤버 상태 브로드캐스트
+        if (focusSession.getParticipationType() == ParticipationType.GROUP && focusSession.getGroupId() != null) {
+            UUID groupId = focusSession.getGroupId();
+            UUID userId = user.getId();
+            log.info("개인 타이머 공개/비공개 설정 변경 - sessionId: {}, isTaskPublic: {}, isTimerPublic: {}, groupId: {}", 
+                    sessionId, focusSession.getIsTaskPublic(), focusSession.getIsTimerPublic(), groupId);
+            
+            // 트랜잭션 커밋 후 브로드캐스트를 위해 TransactionSynchronizationManager 사용
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronizationAdapter() {
+                    @Override
+                    public void afterCommit() {
+                        log.info("트랜잭션 커밋 완료, 그룹 멤버 상태 브로드캐스트 시작 - groupId: {}, userId: {}", groupId, userId);
+                        groupMemberStatusService.broadcastMemberStatusUpdate(groupId, userId);
+                    }
+                }
+            );
+        }
+    }
+
+    @Override
+    @Transactional
     public TimerResponse finishActiveSession(User user) {
         ActiveFocusSession activeSession = activeFocusSessionRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
@@ -321,11 +355,11 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         return (int) Math.min(100, Math.floor(rate));
     }
 
-    private FocusSession createFocusSession(TimerMode mode, User user, Todo todo, LocalDateTime now, Long targetSeconds, Long focusDuration, Long breakDuration, Integer repeatCount, ParticipationType participationType, UUID groupId) {
+    private FocusSession createFocusSession(TimerMode mode, User user, Todo todo, LocalDateTime now, Long targetSeconds, Long focusDuration, Long breakDuration, Integer repeatCount, ParticipationType participationType, UUID groupId, Boolean isTaskPublic, Boolean isTimerPublic) {
         return switch (mode) {
-            case TIMER -> FocusSession.createTimerSession(user.getId(), todo, now, targetSeconds, participationType, groupId);
-            case STOPWATCH -> FocusSession.createStopwatchSession(user.getId(), todo, now, participationType, groupId);
-            case POMODORO -> FocusSession.createPomodoroSession(user.getId(), todo, now, focusDuration, breakDuration, repeatCount, participationType, groupId);
+            case TIMER -> FocusSession.createTimerSession(user.getId(), todo, now, targetSeconds, participationType, groupId, isTaskPublic, isTimerPublic);
+            case STOPWATCH -> FocusSession.createStopwatchSession(user.getId(), todo, now, participationType, groupId, isTaskPublic, isTimerPublic);
+            case POMODORO -> FocusSession.createPomodoroSession(user.getId(), todo, now, focusDuration, breakDuration, repeatCount, participationType, groupId, isTaskPublic, isTimerPublic);
         };
     }
 

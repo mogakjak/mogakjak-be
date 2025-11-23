@@ -116,6 +116,17 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
+    @Operation(summary = "그룹 타이머 공개/비공개 설정", description = "그룹 타이머의 공개/비공개 여부를 설정합니다.")
+    @PutMapping("/{groupId}/timer/visibility")
+    public ApiResponse<Void> updateTimerVisibility(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID groupId,
+            @Valid @RequestBody GroupTimerVisibilityRequest request
+    ) {
+        groupService.updateTimerVisibility(groupId, user.getId(), request.getIsTimerPublic());
+        return ApiResponse.success(SuccessCode.OK);
+    }
+
     // --- Member API ---
 
     @Operation(summary = "메이트 조회 (전체/그룹별)",

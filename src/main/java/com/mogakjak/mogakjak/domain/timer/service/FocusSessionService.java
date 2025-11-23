@@ -26,6 +26,8 @@ public interface FocusSessionService {
 
     TimerResponse finishActiveSession(User user);
 
+    void updatePersonalTimerVisibility(User user, UUID sessionId, Boolean isTaskPublic, Boolean isTimerPublic);
+
 //    /**
 //     * 일일 몰입량 통계
 //     */

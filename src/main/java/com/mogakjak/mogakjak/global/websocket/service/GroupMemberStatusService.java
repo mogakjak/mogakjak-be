@@ -98,7 +98,9 @@ public class GroupMemberStatusService {
             String message = objectMapper.writeValueAsString(updateDto);
             redisPubSubService.publish("group-member-status", message);
             
-            log.debug("그룹 {} 멤버 {} 상태 브로드캐스트 완료", groupId, userId);
+            log.info("그룹 {} 멤버 {} 상태 브로드캐스트 완료", groupId, userId);
+            log.info("그룹 멤버 상태 브로드캐스트 - groupId: {}, userId: {}, personalTimerSeconds: {}, todoTitle: {}", 
+                    groupId, userId, memberStatus.getPersonalTimerSeconds(), memberStatus.getTodoTitle());
         } catch (JsonProcessingException e) {
             log.error("그룹 멤버 상태 브로드캐스트 실패: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to broadcast member status", e);
@@ -148,31 +150,38 @@ public class GroupMemberStatusService {
             if (focusSessionOpt.isPresent()) {
                 FocusSession focusSession = focusSessionOpt.get();
                 
-                // 현재 실행 중인 interval 조회
-                Optional<FocusInterval> currentIntervalOpt = focusIntervalRepository
-                        .findTopBySessionIdOrderByStartedAtDesc(focusSession.getId());
-                
-                if (currentIntervalOpt.isPresent()) {
-                    FocusInterval currentInterval = currentIntervalOpt.get();
-                    LocalDateTime intervalStart = currentInterval.getStartedAt();
-                    LocalDateTime intervalEnd = currentInterval.getEndedAt() != null 
-                            ? currentInterval.getEndedAt() 
-                            : now;
+                // 타이머 누적 시간 공개 여부 확인
+                Boolean isTimerPublic = focusSession.getIsTimerPublic();
+                if (isTimerPublic == null || isTimerPublic) {
+                    // 현재 실행 중인 interval 조회
+                    Optional<FocusInterval> currentIntervalOpt = focusIntervalRepository
+                            .findTopBySessionIdOrderByStartedAtDesc(focusSession.getId());
                     
-                    // interval 경과 시간 계산
-                    long intervalSeconds = Duration.between(intervalStart, intervalEnd).getSeconds();
-                    personalTimerSeconds = (focusSession.getTotalDuration() != null ? focusSession.getTotalDuration() : 0L) + intervalSeconds;
-                } else {
-                    personalTimerSeconds = focusSession.getTotalDuration() != null ? focusSession.getTotalDuration() : 0L;
+                    if (currentIntervalOpt.isPresent()) {
+                        FocusInterval currentInterval = currentIntervalOpt.get();
+                        LocalDateTime intervalStart = currentInterval.getStartedAt();
+                        LocalDateTime intervalEnd = currentInterval.getEndedAt() != null 
+                                ? currentInterval.getEndedAt() 
+                                : now;
+                        
+                        // interval 경과 시간 계산
+                        long intervalSeconds = Duration.between(intervalStart, intervalEnd).getSeconds();
+                        personalTimerSeconds = (focusSession.getTotalDuration() != null ? focusSession.getTotalDuration() : 0L) + intervalSeconds;
+                    } else {
+                        personalTimerSeconds = focusSession.getTotalDuration() != null ? focusSession.getTotalDuration() : 0L;
+                    }
                 }
+                // isTimerPublic이 false이면 personalTimerSeconds는 null로 유지됨
 
-                // 할 일 제목 조회
-                if (focusSession.getTodoId() != null) {
+                // 할일 제목 공개 여부 확인
+                Boolean isTaskPublic = focusSession.getIsTaskPublic();
+                if ((isTaskPublic == null || isTaskPublic) && focusSession.getTodoId() != null) {
                     Optional<Todo> todoOpt = todoRepository.findById(focusSession.getTodoId());
                     if (todoOpt.isPresent()) {
                         todoTitle = todoOpt.get().getTask();
                     }
                 }
+                // isTaskPublic이 false이면 todoTitle은 null로 유지됨
             }
         }
 

@@ -29,6 +29,12 @@ public record PomodoroStartRequest(
         ParticipationType participationType,
 
         @Schema(description = "그룹 ID (participationType이 GROUP일 때 필수)", example = "7f000001-9a3d-1f34-819a-3d92e3800004")
-        UUID groupId
+        UUID groupId,
+
+        @Schema(description = "할일 제목 공개 여부 (기본값: true)", example = "true")
+        Boolean isTaskPublic,
+
+        @Schema(description = "타이머 누적 시간 공개 여부 (기본값: true)", example = "true")
+        Boolean isTimerPublic
 
 ) {}
