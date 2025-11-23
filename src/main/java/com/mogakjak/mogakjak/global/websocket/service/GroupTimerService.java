@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.mogakjak.mogakjak.domain.group.entity.Group;
 import com.mogakjak.mogakjak.domain.group.repository.GroupRepository;
 import com.mogakjak.mogakjak.domain.timer.dto.response.TimerResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.GroupFocusSession;
@@ -44,9 +45,9 @@ public class GroupTimerService {
     public void broadcastTimerEvent(UUID groupId, TimerResponse timerResponse, GroupTimerEventDto.TimerEventType eventType) {
         try {
             // 그룹의 누적 시간 조회
-            Long accumulatedDuration = groupRepository.findById(groupId)
-                    .map(group -> group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L)
-                    .orElse(0L);
+            Group group = groupRepository.findById(groupId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+            Long accumulatedDuration = group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L;
             
             GroupTimerEventDto eventDto = GroupTimerEventDto.builder()
                     .groupId(groupId)
@@ -91,9 +92,9 @@ public class GroupTimerService {
             }
             
             // 그룹의 누적 시간 조회
-            Long accumulatedDuration = groupRepository.findById(groupId)
-                    .map(group -> group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L)
-                    .orElse(0L);
+            Group group = groupRepository.findById(groupId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+            Long accumulatedDuration = group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L;
             
             GroupTimerEventDto eventDto = GroupTimerEventDto.builder()
                     .groupId(groupId)
@@ -117,5 +118,6 @@ public class GroupTimerService {
             log.error("그룹 타이머 동기화 브로드캐스트 실패: {}", e.getMessage(), e);
         }
     }
+
 }
 

@@ -18,6 +18,7 @@ import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.FocusNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
+import com.mogakjak.mogakjak.global.websocket.service.GroupTimerService;
 import com.mogakjak.mogakjak.global.websocket.service.PokeNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -43,6 +44,7 @@ public class GroupServiceImpl implements GroupService {
     private final GroupMemberStatusService groupMemberStatusService;
     private final PokeNotificationService pokeNotificationService;
     private final CheerNotificationService cheerNotificationService;
+    private final GroupTimerService groupTimerService;
 
     @Override
     @Transactional(readOnly = true)
