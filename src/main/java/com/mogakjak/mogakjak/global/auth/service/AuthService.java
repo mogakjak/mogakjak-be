@@ -33,14 +33,14 @@ public class AuthService {
     private final JwtConfig jwtConfig;
     private final TokenStorageService tokenStorageService;
 
-    public ApiResponse<LoginResponse> handleRefreshToken(String refreshTokenHeader) {
+    public ApiResponse<TokenRefreshResponse> handleRefreshToken(String refreshTokenHeader) {
         if (refreshTokenHeader == null || refreshTokenHeader.isBlank()) {
             throw new CustomException(AuthExceptionCode.TOKEN_NOT_FOUND);
         }
 
         TokenRefreshResponse tokenResponse = this.refreshToken(refreshTokenHeader);
 
-        return ApiResponse.success(SuccessCode.OK, tokenResponse.getUserInfo());
+        return ApiResponse.success(SuccessCode.OK, tokenResponse);
     }
 
 

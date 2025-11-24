@@ -10,10 +10,10 @@ import lombok.*;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class TokenRefreshResponse {
 
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+//    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String accessToken;
 
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+//    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String refreshToken;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
