@@ -1,6 +1,6 @@
 package com.mogakjak.mogakjak.global.auth.controller;
 
-import com.mogakjak.mogakjak.global.auth.dto.LoginResponse;
+import com.mogakjak.mogakjak.global.auth.dto.TokenRefreshResponse;
 import com.mogakjak.mogakjak.global.auth.service.AuthService;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +15,7 @@ public class AuthController{
     private final AuthService authService;
 
     @PostMapping("/auth/refresh")
-    public ApiResponse<LoginResponse> refreshToken(
+    public ApiResponse<TokenRefreshResponse> refreshToken(
             @RequestHeader(value = "Refresh-Token", required = false) String refreshTokenHeader) {
         return authService.handleRefreshToken(refreshTokenHeader);
     }
