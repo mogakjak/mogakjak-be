@@ -28,6 +28,11 @@ public class GroupDetailResponse {
     @Schema(description = "그룹 타이머 누적 시간 (초 단위)")
     private Long accumulatedDuration;
 
+    @Schema(description = "그룹 공동 목표")
+    private GroupGoalResponse groupGoal;
+
+    private Long progressRate;
+
     @Schema(description = "그룹 멤버 목록")
     private List<MemberInfo> members;
 
@@ -45,12 +50,22 @@ public class GroupDetailResponse {
     }
 
     public static GroupDetailResponse from(Group group, List<MemberInfo> members) {
+        long accumulated = group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L;
+        long goalSeconds = group.getGoalSeconds() != null ? group.getGoalSeconds() : 0L;
+
+        long progressRate = 0L;
+        if (goalSeconds > 0) {
+            progressRate = (long) ((double) accumulated / goalSeconds * 100);
+        }
+
         return GroupDetailResponse.builder()
                 .groupId(group.getId())
                 .name(group.getName())
                 .imageUrl(group.getImageUrl())
                 .description(group.getDescription())
                 .accumulatedDuration(group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L)
+                .groupGoal(GroupGoalResponse.from(group))
+                .progressRate(progressRate)
                 .members(members)
                 .build();
     }
