@@ -5,6 +5,8 @@ import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.exception.status.StatusCode;
 import io.swagger.v3.oas.annotations.Hidden;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -19,13 +21,17 @@ public class GlobalExceptionHandler {
         StatusCode errorCode = e.getStatusCode();
         log.warn("CustomException occurred: {}", errorCode.getMessage());
         ApiResponse<Void> errorResponse = ApiResponse.error(errorCode);
-        return new ResponseEntity<>(errorResponse, errorCode.getHttpStatus());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new ResponseEntity<>(errorResponse, headers, errorCode.getHttpStatus());
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         log.error("Unexpected exception occurred", e);
         ApiResponse<Void> errorResponse = ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR);
-        return new ResponseEntity<>(errorResponse, ErrorCode.INTERNAL_SERVER_ERROR.getHttpStatus());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new ResponseEntity<>(errorResponse, headers, ErrorCode.INTERNAL_SERVER_ERROR.getHttpStatus());
     }
 }
