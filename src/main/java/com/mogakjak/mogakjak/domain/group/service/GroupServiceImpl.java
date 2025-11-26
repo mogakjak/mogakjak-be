@@ -21,6 +21,7 @@ import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
 import com.mogakjak.mogakjak.global.websocket.service.GroupTimerService;
 import com.mogakjak.mogakjak.global.websocket.service.PokeNotificationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class GroupServiceImpl implements GroupService {
 
     private final UserRepository userRepository;
@@ -541,8 +543,12 @@ public class GroupServiceImpl implements GroupService {
     }
 
     private Group findGroupById(UUID groupId) {
+        log.info("Finding group with id: {}", groupId);
         return groupRepository.findById(groupId)
-                .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.error("Group not found with id: {}", groupId);
+                    return new CustomException(ErrorCode.GROUP_NOT_FOUND);
+                });
     }
 
     private Invitation findInvitationById(UUID invitationId) {
@@ -584,6 +590,16 @@ public class GroupServiceImpl implements GroupService {
                 .groupId(group.getId())
                 .groupName(group.getName())
                 .imageUrl(group.getImageUrl())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GroupNameResponse getGroupName(UUID groupId) {
+        log.info("getGroupName called with groupId: {}", groupId);
+        Group group = findGroupById(groupId);
+        return GroupNameResponse.builder()
+                .groupName(group.getName())
                 .build();
     }
 }
