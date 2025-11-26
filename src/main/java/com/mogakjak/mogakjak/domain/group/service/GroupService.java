@@ -49,6 +49,8 @@ public interface GroupService {
     // 초대 거절
     void declineInvitation(UUID invitationId, UUID userId);
 
+
+
     // 그룹 집중 체크 알림 설정
     FocusNotificationResponse modifyFocusNotification(User user, UUID groupId, FocusNotificationRequest request);
 
@@ -81,4 +83,7 @@ public interface GroupService {
     
     // 그룹 타이머 누적 시간 초기화 (모든 멤버가 NOT_PARTICIPATING일 때)
     void resetAccumulatedDuration(UUID groupId);
+
+    // 그룹 이름 조회 (메타태그용)
+    GroupNameResponse getGroupName(UUID groupId);
 }

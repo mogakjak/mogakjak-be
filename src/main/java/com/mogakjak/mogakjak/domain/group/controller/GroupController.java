@@ -37,6 +37,16 @@ public class GroupController {
     @Value("${frontend.base-url}")
     private String frontendBaseUrl;
 
+    @Operation(summary = "그룹 이름 조회 (메타태그용)", description = "초대 링크 메타태그에 표시될 그룹 이름을 조회합니다. (인증 불필요)")
+    @GetMapping("/meta/{groupId}")
+    public ApiResponse<GroupNameResponse> getGroupNameForMeta(
+            @Parameter(description = "조회할 그룹의 ID (UUID)", required = true)
+            @PathVariable UUID groupId
+    ) {
+        GroupNameResponse response = groupService.getGroupName(groupId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
     @Operation(summary = "신규 그룹 생성", description = "새로운 스터디 그룹을 생성합니다.")
     @PostMapping
     public ApiResponse<GroupDetailResponse> createGroup(

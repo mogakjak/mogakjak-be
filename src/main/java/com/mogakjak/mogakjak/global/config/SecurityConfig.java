@@ -49,7 +49,8 @@ public class SecurityConfig {
                                 "/api/test/**",
                                 "/connect/**",
                                 "/member/create",
-                                "/member/doLogin"
+                                "/member/doLogin",
+                                "/api/groups/meta/**"
                         ).permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
