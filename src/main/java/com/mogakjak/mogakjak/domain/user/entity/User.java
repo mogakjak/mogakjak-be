@@ -7,6 +7,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToOne;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Builder
@@ -29,6 +31,9 @@ public class User extends BaseSchema {
     @Builder.Default
     private Boolean isActive = false;
 
+    @Column(nullable = true)
+    private LocalDateTime lastActivityAt;
+
     public void updateInfo(String newName, String newEmail, String newImageUrl) {
         this.name = newName;
         this.email = newEmail;
@@ -37,5 +42,9 @@ public class User extends BaseSchema {
 
     public void setActive(Boolean isActive) {
         this.isActive = isActive;
+        // 활동 상태가 true로 변경될 때만 lastActivityAt 업데이트
+        if (isActive) {
+            this.lastActivityAt = LocalDateTime.now();
+        }
     }
 }

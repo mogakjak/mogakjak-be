@@ -6,6 +6,7 @@ import java.util.List;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -28,6 +29,9 @@ public class MateResponse {
     @Schema(description = "활동 중 여부 (웹사이트 접속 중이거나 개인 타이머 실행 중)")
     private Boolean isActive;
 
+    @Schema(description = "마지막 활동 시간")
+    private LocalDateTime lastActivityAt;
+
     public static MateResponse from(User user, List<String> groupNames) {
         return MateResponse.builder()
                 .userId(user.getId())
@@ -35,6 +39,7 @@ public class MateResponse {
                 .profileUrl(user.getImageUrl())
                 .groupNames(groupNames)
                 .isActive(user.getIsActive() != null ? user.getIsActive() : false)
+                .lastActivityAt(user.getLastActivityAt())
                 .build();
     }
 }
