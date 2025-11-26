@@ -51,7 +51,7 @@ public class MyPageServiceImpl implements MyPageService {
 
         List<ImageCharacter> allImageCharacters = imageCharacterRepository.findAll();
 
-        Set<UUID> ownedCharacterIds = userCharacterRepository.findAllByUserWithImageCharacter(user)
+        Set<UUID> ownedCharacterIds = userCharacterRepository.findAllByUser(user)
                 .stream()
                 .map(userCharacter -> userCharacter.getImageCharacter().getId())
                 .collect(Collectors.toSet());
