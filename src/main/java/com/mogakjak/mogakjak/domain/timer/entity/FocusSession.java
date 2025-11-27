@@ -162,4 +162,8 @@ public class FocusSession extends BaseSchema {
     public void updateTimerVisibility(Boolean isTimerPublic) {
         this.isTimerPublic = isTimerPublic != null ? isTimerPublic : true;
     }
+
+    public void setProgressRate(Integer progressRate) {
+        this.progressRate = progressRate;
+    }
 }

@@ -18,8 +18,14 @@ public class TodoResponse {
     private Integer targetTimeInSeconds;
     private Integer actualTimeInSeconds;
     private Boolean isCompleted;
+    private Integer achievementRate;
 
     public static TodoResponse from(Todo todo) {
+        Integer achievementRate = calculateAchievementRate(
+                todo.getActualTimeInSeconds(),
+                todo.getTargetTimeInSeconds()
+        );
+
         return TodoResponse.builder()
                 .id(todo.getId())
                 .categoryId(todo.getCategory().getId())
@@ -28,6 +34,19 @@ public class TodoResponse {
                 .targetTimeInSeconds(todo.getTargetTimeInSeconds())
                 .actualTimeInSeconds(todo.getActualTimeInSeconds())
                 .isCompleted(todo.getIsCompleted())
+                .achievementRate(achievementRate)
                 .build();
+    }
+
+    private static Integer calculateAchievementRate(Integer actualTimeInSeconds, Integer targetTimeInSeconds) {
+        if (targetTimeInSeconds == null || targetTimeInSeconds <= 0) {
+            return 0;
+        }
+        if (actualTimeInSeconds == null || actualTimeInSeconds <= 0) {
+            return 0;
+        }
+
+        double rate = (double) actualTimeInSeconds / targetTimeInSeconds * 100;
+        return (int) Math.min(100, Math.floor(rate));
     }
 }

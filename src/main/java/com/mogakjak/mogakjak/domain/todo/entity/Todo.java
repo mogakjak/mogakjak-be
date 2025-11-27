@@ -58,4 +58,14 @@ public class Todo extends BaseSchema {
     }
 
     public void softDelete() { this.isDeleted = true; }
+
+    public void addActualTime(Long seconds) {
+        if (seconds != null && seconds > 0) {
+            this.actualTimeInSeconds = (this.actualTimeInSeconds != null ? this.actualTimeInSeconds : 0) + seconds.intValue();
+        }
+    }
+
+    public void updateActualTime(Integer actualTimeInSeconds) {
+        this.actualTimeInSeconds = actualTimeInSeconds != null ? actualTimeInSeconds : 0;
+    }
 }
