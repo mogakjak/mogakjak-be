@@ -47,7 +47,7 @@ public class MyPageServiceImpl implements MyPageService {
 
         Long totalTaskCount = todoRepository.countByUserAndIsCompletedAndIsDeletedFalse(user, true);
 
-        Long totalSeconds = todoRepository.sumActualTimeByUser(user).orElse(0L);
+        Long totalSeconds = todoRepository.sumCompletedWorksTimeByUser(user).orElse(0L);
         String formattedTotalTime = formatSecondsToHoursMinutes(totalSeconds);
 
         List<ImageCharacter> allImageCharacters = imageCharacterRepository.findAll();
