@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.user.controller;
 
 import com.mogakjak.mogakjak.domain.user.controller.dto.*;
+import com.mogakjak.mogakjak.domain.user.dto.response.TotalStudyTimeResponse;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
 import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
@@ -55,6 +56,15 @@ public class MyPageController {
 
         myPageService.updateProfile(userId, request);
         return ApiResponse.success(SuccessCode.OK);
+    }
+
+    @Operation(summary = "총 누적 학습 시간 조회", description = "사용자의 총 누적 학습 시간을 초 단위로 조회합니다.")
+    @GetMapping("/total-study-time")
+    public ApiResponse<TotalStudyTimeResponse> getTotalStudyTime(
+            @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        TotalStudyTimeResponse response = myPageService.getTotalStudyTime(user);
+        return ApiResponse.success(SuccessCode.OK, response);
     }
 
     @Operation(summary = "대표 캐릭터 변경", description = "사용자의 대표 캐릭터를 변경합니다.")
