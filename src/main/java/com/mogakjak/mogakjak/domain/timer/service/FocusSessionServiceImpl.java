@@ -130,10 +130,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         currentFocusSession.addDuration(intervalDurationSeconds);
         
-        // Todo의 actualTimeInSeconds 업데이트
-        Long totalDuration = currentFocusSession.getTotalDuration();
-        if (totalDuration != null && totalDuration > 0) {
-            todo.updateActualTime(totalDuration.intValue());
+        // Todo의 actualTimeInSeconds 누적 업데이트 (이번 intervalDurationSeconds만 추가)
+        if (intervalDurationSeconds > 0) {
+            todo.addActualTime(intervalDurationSeconds);
             todoRepository.save(todo);
         }
         
@@ -258,10 +257,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
 
         currentFocusSession.addDuration(intervalDurationSeconds);
         
-        // Todo의 actualTimeInSeconds 업데이트
-        Long totalDuration = currentFocusSession.getTotalDuration();
-        if (totalDuration != null && totalDuration > 0) {
-            todo.updateActualTime(totalDuration.intValue());
+        // Todo의 actualTimeInSeconds 누적 업데이트 (마지막 intervalDurationSeconds만 추가)
+        if (intervalDurationSeconds > 0) {
+            todo.addActualTime(intervalDurationSeconds);
             todoRepository.save(todo);
         }
         
@@ -300,11 +298,10 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         if (currentPhase == PomodoroPhaseType.FOCUS && isPomodoroFinished(focusSession, intervals)) {
             activeFocusSessionRepository.deleteById(currentActiveSession.getId());
 
-            // Todo의 actualTimeInSeconds 업데이트
+            // Todo의 actualTimeInSeconds 누적 업데이트 (이번 accumulatedSeconds만 추가)
             Todo todo = getValidatedTodo(user.getId(), focusSession.getTodoId());
-            Long totalDuration = focusSession.getTotalDuration();
-            if (totalDuration != null && totalDuration > 0) {
-                todo.updateActualTime(totalDuration.intValue());
+            if (accumulatedSeconds > 0) {
+                todo.addActualTime(accumulatedSeconds);
                 todoRepository.save(todo);
             }
             
