@@ -129,6 +129,14 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         long intervalDurationSeconds = calculateIntervalDurationSeconds(currentInterval);
 
         currentFocusSession.addDuration(intervalDurationSeconds);
+        
+        // Todo의 actualTimeInSeconds 업데이트
+        Long totalDuration = currentFocusSession.getTotalDuration();
+        if (totalDuration != null && totalDuration > 0) {
+            todo.updateActualTime(totalDuration.intValue());
+            todoRepository.save(todo);
+        }
+        
         Integer progressRate = calculateProgressRate(todo.getTargetTimeInSeconds(), currentFocusSession.getTotalDuration());
         currentFocusSession.pause(progressRate);
 
@@ -244,6 +252,14 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         }
 
         currentFocusSession.addDuration(intervalDurationSeconds);
+        
+        // Todo의 actualTimeInSeconds 업데이트
+        Long totalDuration = currentFocusSession.getTotalDuration();
+        if (totalDuration != null && totalDuration > 0) {
+            todo.updateActualTime(totalDuration.intValue());
+            todoRepository.save(todo);
+        }
+        
         Integer progressRate = calculateProgressRate(todo.getTargetTimeInSeconds(), currentFocusSession.getTotalDuration());
         currentFocusSession.end(now, progressRate);
 
@@ -277,8 +293,17 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         focusSession.addDuration(accumulatedSeconds);
 
         if (currentPhase == PomodoroPhaseType.FOCUS && isPomodoroFinished(focusSession, intervals)) {
-            focusSession.end(now, 100);
             activeFocusSessionRepository.deleteById(currentActiveSession.getId());
+
+            // Todo의 actualTimeInSeconds 업데이트
+            Todo todo = getValidatedTodo(user.getId(), focusSession.getTodoId());
+            Long totalDuration = focusSession.getTotalDuration();
+            if (totalDuration != null && totalDuration > 0) {
+                todo.updateActualTime(totalDuration.intValue());
+                todoRepository.save(todo);
+            }
+            
+            focusSession.end(now, 100);
 
             // 타이머 종료 시 스케줄된 알림 취소 (실패해도 기존 로직에는 영향 없음)
             try {
@@ -397,6 +422,21 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         return (int) Math.min(100, Math.floor(rate));
     }
 
+    private Integer calculateProgressRateFromTodo(Todo todo) {
+        Integer targetTime = todo.getTargetTimeInSeconds();
+        Integer actualTime = todo.getActualTimeInSeconds();
+
+        if (targetTime == null || targetTime <= 0) {
+            return 0;
+        }
+        if (actualTime == null || actualTime <= 0) {
+            return 0;
+        }
+
+        double rate = (double) actualTime / targetTime * 100;
+        return (int) Math.min(100, Math.floor(rate));
+    }
+
     private FocusSession createFocusSession(TimerMode mode, User user, Todo todo, LocalDateTime now, Long targetSeconds, Long focusDuration, Long breakDuration, Integer repeatCount, ParticipationType participationType, UUID groupId, Boolean isTaskPublic, Boolean isTimerPublic) {
         return switch (mode) {
             case TIMER -> FocusSession.createTimerSession(user.getId(), todo, now, targetSeconds, participationType, groupId, isTaskPublic, isTimerPublic);
@@ -468,6 +508,11 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 round
         );
         focusIntervalRepository.save(focusInterval);
+
+        // 시작 시점에 Todo의 actualTimeInSeconds를 기준으로 progressRate 계산 (그룹 타이머 제외)
+        Integer progressRate = calculateProgressRateFromTodo(todo);
+        savedFocusSession.setProgressRate(progressRate);
+        focusSessionRepository.save(savedFocusSession);
 
         // 타이머 완료 알림 스케줄링 (실패해도 기존 로직에는 영향 없음)
         try {
