@@ -190,7 +190,12 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         FocusSession currentFocusSession = getValidatedFocusSession(user.getId(), sessionId);
         FocusInterval currentInterval = getLatestInterval(sessionId);
 
-        Todo todo = getValidatedTodo(user.getId(), currentFocusSession.getTodoId());
+        Todo todo = todoRepository.findById(currentFocusSession.getTodoId())
+                .orElseThrow(() -> new CustomException(ErrorCode.TODO_NOT_FOUND));
+
+        if (!todo.getCategory().getUser().getId().equals(user.getId())) {
+            throw new CustomException(ErrorCode.FORBIDDEN_TODO_ACCESS);
+        }
 
         validateFinishableState(currentFocusSession);
 
