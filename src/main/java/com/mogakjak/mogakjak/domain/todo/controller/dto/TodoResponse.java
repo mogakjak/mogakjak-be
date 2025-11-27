@@ -18,7 +18,7 @@ public class TodoResponse {
     private Integer targetTimeInSeconds;
     private Integer actualTimeInSeconds;
     private Boolean isCompleted;
-    private Integer achievementRate;
+    private Integer progressRate;
 
     public static TodoResponse from(Todo todo) {
         Integer achievementRate = calculateAchievementRate(
@@ -34,7 +34,7 @@ public class TodoResponse {
                 .targetTimeInSeconds(todo.getTargetTimeInSeconds())
                 .actualTimeInSeconds(todo.getActualTimeInSeconds())
                 .isCompleted(todo.getIsCompleted())
-                .achievementRate(achievementRate)
+                .progressRate(achievementRate)
                 .build();
     }
 
