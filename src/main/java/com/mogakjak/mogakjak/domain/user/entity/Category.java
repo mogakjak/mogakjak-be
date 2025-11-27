@@ -50,4 +50,9 @@ public class Category extends BaseSchema {
         this.isDeleted = true;
     }
 
+    public void update(String name, CategoryColor color) {
+        this.name = name;
+        this.color = color;
+    }
+
 }

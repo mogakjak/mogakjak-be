@@ -1,13 +1,8 @@
 package com.mogakjak.mogakjak.domain.todo.service;
 
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CategoryResponse;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CategoryWithTodosResponse;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CreateCategoryRequest;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CreateTodoRequest;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.TodoResponse;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateCategoryOrderRequest;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateTodoRequest;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.*;
 import com.mogakjak.mogakjak.domain.user.entity.User;
+import jakarta.validation.Valid;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -19,6 +14,11 @@ public interface TodoService {
      * 카테고리 생성
      */
     CategoryResponse createCategory(UUID userId, CreateCategoryRequest req);
+
+    /**
+     * 카테고리 수정
+     */
+    CategoryResponse modifyCategory(UUID userId, @Valid UpdateCategoryRequest updateCategoryRequest);
 
     /**
      * 카테고리 순서 변경

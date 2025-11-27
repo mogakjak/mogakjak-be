@@ -1,18 +1,12 @@
 package com.mogakjak.mogakjak.domain.todo.controller;
 
+import com.mogakjak.mogakjak.domain.todo.controller.dto.*;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
 import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CategoryResponse;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CategoryWithTodosResponse;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CreateCategoryRequest;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CreateTodoRequest;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.TodoResponse;
 import com.mogakjak.mogakjak.domain.todo.service.TodoService;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateCategoryOrderRequest;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateTodoRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -40,6 +34,17 @@ public class TodoController {
 
         UUID userId = getUserId(userDetails);
         CategoryResponse categoryResponse = todoService.createCategory(userId, createCategoryRequest);
+        return ApiResponse.success(SuccessCode.CREATED, categoryResponse);
+    }
+
+    @Operation(summary = "카테고리 수정", description = "카테고리를 수정합니다.")
+    @PutMapping("/categories")
+    public ApiResponse<CategoryResponse> modifyCategory(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody UpdateCategoryRequest updateCategoryRequest) {
+
+        UUID userId = getUserId(userDetails);
+        CategoryResponse categoryResponse = todoService.modifyCategory(userId, updateCategoryRequest);
         return ApiResponse.success(SuccessCode.CREATED, categoryResponse);
     }
 

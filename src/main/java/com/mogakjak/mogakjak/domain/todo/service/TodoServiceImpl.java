@@ -1,13 +1,7 @@
 package com.mogakjak.mogakjak.domain.todo.service;
 
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CategoryResponse;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CategoryWithTodosResponse;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CreateCategoryRequest;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.CreateTodoRequest;
+import com.mogakjak.mogakjak.domain.todo.controller.dto.*;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.TodoResponse;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateCategoryOrderRequest;
-import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateTodoRequest;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.entity.Category;
 import com.mogakjak.mogakjak.domain.user.entity.User;
@@ -55,6 +49,16 @@ public class TodoServiceImpl implements TodoService {
 
         Category savedCategory = categoryRepository.save(category);
         return CategoryResponse.from(savedCategory);
+    }
+
+    @Override
+    public CategoryResponse modifyCategory(UUID userId, UpdateCategoryRequest updateCategoryRequest) {
+        Category category = categoryRepository.findById(updateCategoryRequest.getCategoryId())
+                .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        category.update(updateCategoryRequest.getName(), updateCategoryRequest.getColor());
+
+        return CategoryResponse.from(category);
     }
 
     /**
