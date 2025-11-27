@@ -49,7 +49,8 @@ public interface GroupService {
     // 초대 거절
     void declineInvitation(UUID invitationId, UUID userId);
 
-
+    // 그룹 집중 체크 알림 조회
+    FocusNotificationResponse getFocusNotification(UUID userId, UUID groupId);
 
     // 그룹 집중 체크 알림 설정
     FocusNotificationResponse modifyFocusNotification(User user, UUID groupId, FocusNotificationRequest request);

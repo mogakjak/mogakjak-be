@@ -407,6 +407,16 @@ public class GroupServiceImpl implements GroupService {
         invitation.decline();
     }
 
+    @Override
+    public FocusNotificationResponse getFocusNotification(UUID userId, UUID groupId) {
+        Group group = findGroupById(groupId);
+
+        // User user = findUserById(user); // TODO: 이런 유효성 검사가 연관관계 무한루프 떄문에 안됨. 무한로딩됨 ㅠㅠ
+        // findUserGroup(user, group);
+
+        return FocusNotificationResponse.from(group);
+    }
+
     // === 편의 메서드 ===
     @Override
     @Transactional
