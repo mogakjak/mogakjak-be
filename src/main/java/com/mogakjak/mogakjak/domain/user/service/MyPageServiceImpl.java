@@ -5,6 +5,7 @@ import com.mogakjak.mogakjak.domain.quote.entity.Quote;
 import com.mogakjak.mogakjak.domain.quote.repository.QuoteRepository;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.controller.dto.*;
+import com.mogakjak.mogakjak.domain.user.dto.response.TotalStudyTimeResponse;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
@@ -167,6 +168,12 @@ public class MyPageServiceImpl implements MyPageService {
                 .character(ImageCharacterResponse.from(mainCharacter))
                 .quote(QuoteResponse.from(getRandomQuote()))
                 .build();
+    }
+
+    @Override
+    public TotalStudyTimeResponse getTotalStudyTime(User user) {
+        Long totalSeconds = todoRepository.sumActualTimeByUser(user).orElse(0L);
+        return new TotalStudyTimeResponse(totalSeconds);
     }
 
     private Quote getRandomQuote() {

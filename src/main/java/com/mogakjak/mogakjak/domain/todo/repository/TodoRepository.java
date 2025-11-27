@@ -34,8 +34,6 @@ public interface TodoRepository extends JpaRepository<Todo, UUID> {
         SELECT SUM(t.actualTimeInSeconds)
         FROM Todo t
         WHERE t.user = :user
-        AND t.isCompleted = true
-        AND t.isDeleted = false
     """)
     Optional<Long> sumActualTimeByUser(@Param("user") User user);
 

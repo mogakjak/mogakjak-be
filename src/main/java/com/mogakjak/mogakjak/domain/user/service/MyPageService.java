@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.user.service;
 
 import com.mogakjak.mogakjak.domain.user.controller.dto.*;
+import com.mogakjak.mogakjak.domain.user.dto.response.TotalStudyTimeResponse;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 
 import java.util.List;
@@ -22,4 +23,7 @@ public interface MyPageService {
 
     // 내 프로필 조회 (홈 용)
     MyProfileResponse getProfile(User user);
+
+    // 총 누적 학습 시간 조회
+    TotalStudyTimeResponse getTotalStudyTime(User user);
 }
