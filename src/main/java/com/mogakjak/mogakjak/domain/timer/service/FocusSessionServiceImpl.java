@@ -136,7 +136,8 @@ public class FocusSessionServiceImpl implements FocusSessionService {
             todoRepository.save(todo);
         }
         
-        Integer progressRate = calculateProgressRate(todo.getTargetTimeInSeconds(), currentFocusSession.getTotalDuration());
+        // Todo의 누적 actualTimeInSeconds를 기준으로 progressRate 계산
+        Integer progressRate = calculateProgressRateFromTodo(todo);
         currentFocusSession.pause(progressRate);
 
         // pause 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
@@ -263,7 +264,8 @@ public class FocusSessionServiceImpl implements FocusSessionService {
             todoRepository.save(todo);
         }
         
-        Integer progressRate = calculateProgressRate(todo.getTargetTimeInSeconds(), currentFocusSession.getTotalDuration());
+        // Todo의 누적 actualTimeInSeconds를 기준으로 progressRate 계산
+        Integer progressRate = calculateProgressRateFromTodo(todo);
         currentFocusSession.end(now, progressRate);
 
         return TimerResponse.fromFinish(currentFocusSession);
@@ -305,7 +307,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 todoRepository.save(todo);
             }
             
-            focusSession.end(now, 100);
+            // Todo의 누적 actualTimeInSeconds를 기준으로 progressRate 계산
+            Integer progressRate = calculateProgressRateFromTodo(todo);
+            focusSession.end(now, progressRate);
 
             // 타이머 종료 시 스케줄된 알림 취소 (실패해도 기존 로직에는 영향 없음)
             try {
