@@ -6,6 +6,7 @@ import com.mogakjak.mogakjak.domain.quote.repository.QuoteRepository;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.controller.dto.*;
 import com.mogakjak.mogakjak.domain.user.dto.response.TotalStudyTimeResponse;
+import com.mogakjak.mogakjak.domain.user.entity.UserCharacter;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
@@ -72,7 +73,9 @@ public class MyPageServiceImpl implements MyPageService {
                 .map(this::toCharacterDto)
                 .collect(Collectors.toList());
 
-        ImageCharacter mainCharacterEntity = userProfile.getMainImageCharacter();
+//        ImageCharacter mainCharacterEntity = userProfile.getMainImageCharacter();
+
+        ImageCharacter mainCharacterEntity = getHighestLevelCharacter(user);
         CharacterBasketResponse.CharacterDto mainCharacterDto = null;
         ImageCharacter defaultCharacter = allImageCharacters.stream()
                 .filter(c -> c.getUnlockTimeInSeconds() == 0)
@@ -156,7 +159,8 @@ public class MyPageServiceImpl implements MyPageService {
 
         UserProfile userProfile = findOrCreateUserProfile(user);
 
-        ImageCharacter mainCharacter = userProfile.getMainImageCharacter();
+//        ImageCharacter mainCharacter = userProfile.getMainImageCharacter();
+        ImageCharacter mainCharacter = getHighestLevelCharacter(user);
         if (mainCharacter == null) {
             mainCharacter = imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(DEFAULT_CHARACTER_LEVEL)
                     .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND));
@@ -233,5 +237,12 @@ public class MyPageServiceImpl implements MyPageService {
                 .imageUrl(imageCharacter.getImageUrl())
                 .unlockTime(formatSecondsToUnlockCondition(imageCharacter.getUnlockTimeInSeconds()))
                 .build();
+    }
+
+    private ImageCharacter getHighestLevelCharacter(User user) {
+        return userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(user)
+                .map(UserCharacter::getImageCharacter)
+                .orElseGet(() -> imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(DEFAULT_CHARACTER_LEVEL)
+                        .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_NOT_FOUND)));
     }
 }

@@ -9,8 +9,11 @@ import com.mogakjak.mogakjak.domain.invitation.repository.InvitationRepository;
 import com.mogakjak.mogakjak.domain.invitation.controller.dto.*;
 import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
 import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
+import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserGroup;
+import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
+import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
@@ -46,6 +49,8 @@ public class GroupServiceImpl implements GroupService {
     private final GroupMemberStatusService groupMemberStatusService;
     private final PokeNotificationService pokeNotificationService;
     private final CheerNotificationService cheerNotificationService;
+    private final UserCharacterRepository userCharacterRepository;
+    private final ImageCharacterRepository imageCharacterRepository;
     private final GroupTimerService groupTimerService;
 
     @Override
@@ -577,22 +582,22 @@ public class GroupServiceImpl implements GroupService {
     }
 
     private Integer getLevelFromUser(User user) {
-        if (user.getUserProfile() != null && user.getUserProfile().getMainImageCharacter() != null) {
-            return user.getUserProfile().getMainImageCharacter().getLevel();
-        }
-        return 1;
+        return userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(user)
+                .map(uc -> uc.getImageCharacter().getLevel())
+                .orElse(1);
     }
 
     private String getProfileUrlFromUser(User user) {
-        // 사용자가 설정한 프로필 사진이 있으면 반환
         if (user.getImageUrl() != null) {
             return user.getImageUrl();
         }
-        // 없으면 기존 로직대로 캐릭터 이미지 반환
-        if (user.getUserProfile() != null && user.getUserProfile().getMainImageCharacter() != null) {
-            return user.getUserProfile().getMainImageCharacter().getImageUrl();
-        }
-        return null;
+        return userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(user)
+                .map(uc -> uc.getImageCharacter().getImageUrl())
+                .orElseGet(() -> {
+                    return imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1)
+                            .map(ImageCharacter::getImageUrl)
+                            .orElse(null);
+                });
     }
 
     private MyGroupResponse toMyGroupDto(Group group) {
