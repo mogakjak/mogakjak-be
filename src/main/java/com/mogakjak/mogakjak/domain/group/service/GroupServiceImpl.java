@@ -142,7 +142,7 @@ public class GroupServiceImpl implements GroupService {
                             return GroupDetailResponse.MemberInfo.builder()
                                     .userId(member.getId())
                                     .nickname(member.getName())
-                                    .profileUrl(getProfileUrlFromUser(member))
+                                    .profileUrl(getCharacterUrlFromUser(member))
                                     .level(getLevelFromUser(member)) // 레벨 정보 포함
                                     .build();
                         }).collect(Collectors.toList());
@@ -591,6 +591,16 @@ public class GroupServiceImpl implements GroupService {
         if (user.getImageUrl() != null) {
             return user.getImageUrl();
         }
+        return userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(user)
+                .map(uc -> uc.getImageCharacter().getImageUrl())
+                .orElseGet(() -> {
+                    return imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1)
+                            .map(ImageCharacter::getImageUrl)
+                            .orElse(null);
+                });
+    }
+
+    private String getCharacterUrlFromUser(User user) {
         return userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(user)
                 .map(uc -> uc.getImageCharacter().getImageUrl())
                 .orElseGet(() -> {
