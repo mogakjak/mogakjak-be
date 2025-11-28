@@ -15,8 +15,11 @@ import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
+import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserGroup;
+import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
+import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusDto;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusUpdateDto;
@@ -46,6 +49,8 @@ public class GroupMemberStatusService {
     private final FocusIntervalRepository focusIntervalRepository;
     private final TodoRepository todoRepository;
     private final RedisPubSubService redisPubSubService;
+    private final UserCharacterRepository userCharacterRepository;
+    private final ImageCharacterRepository imageCharacterRepository;
     
     // ObjectMapper는 JavaTimeModule을 등록한 상태로 초기화
     private ObjectMapper objectMapper;
@@ -195,7 +200,8 @@ public class GroupMemberStatusService {
                 .groupId(groupId)
                 .userId(userId)
                 .nickname(user.getName())
-                .profileUrl(user.getImageUrl())
+//                .profileUrl(user.getImageUrl())
+                .profileUrl(getProfileUrlFromUser(user))
                 .level(getLevelFromUser(user))
                 .participationStatus(userGroup.getParticipationStatus() != null 
                         ? userGroup.getParticipationStatus() 
@@ -208,29 +214,22 @@ public class GroupMemberStatusService {
                 .build();
     }
 
-    /**
-     * User로부터 레벨 계산
-     */
     private Integer getLevelFromUser(User user) {
-        if (user.getUserProfile() != null && user.getUserProfile().getMainImageCharacter() != null) {
-            return user.getUserProfile().getMainImageCharacter().getLevel();
-        }
-        return 1;
+        return userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(user)
+                .map(uc -> uc.getImageCharacter().getLevel())
+                .orElse(1);
     }
 
-    /**
-     * User로부터 프로필 URL 조회
-     */
     private String getProfileUrlFromUser(User user) {
-        // 사용자가 설정한 프로필 사진이 있으면 반환
         if (user.getImageUrl() != null) {
             return user.getImageUrl();
         }
-        // 없으면 기존 로직대로 캐릭터 이미지 반환
-        if (user.getUserProfile() != null && user.getUserProfile().getMainImageCharacter() != null) {
-            return user.getUserProfile().getMainImageCharacter().getImageUrl();
-        }
-        return null;
+        return userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(user)
+                .map(uc -> uc.getImageCharacter().getImageUrl())
+                .orElseGet(() ->
+                        imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1)
+                                .map(ImageCharacter::getImageUrl)
+                                .orElse(null)
+                );
     }
 }
-
