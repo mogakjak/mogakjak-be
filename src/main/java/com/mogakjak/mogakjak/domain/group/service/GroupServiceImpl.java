@@ -223,6 +223,19 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     @Transactional
+    public void deleteGroupByHost(UUID groupId, UUID userId) {
+        User user = findUserById(userId);
+        Group group = findGroupById(groupId);
+        UserGroup userGroup = findUserGroup(user, group);
+
+        if (userGroup.getRole() == GroupRole.HOST) {
+            userGroupRepository.delete(userGroup);
+            groupRepository.delete(group);
+        }
+    }
+
+    @Override
+    @Transactional
     public void leaveGroupSession(UUID groupId, UUID userId) {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
@@ -241,6 +254,7 @@ public class GroupServiceImpl implements GroupService {
     }
 
     @Override
+    @Transactional
     public void ejectMemberFromGroup(UUID groupId, UUID targetUserId, UUID userId) {
         // 권한 확인 - 방장만 강퇴하도록 제한
         User user = findUserById(userId);
