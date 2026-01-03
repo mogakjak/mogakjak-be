@@ -8,8 +8,12 @@ import com.mogakjak.mogakjak.domain.user.entity.UserProvider;
 import com.mogakjak.mogakjak.domain.user.repository.UserProviderRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 
+import com.mogakjak.mogakjak.global.exception.CustomException;
+import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -58,7 +62,7 @@ public class UserService {
     public List<MemberListResDto> findAll() {
         List<User> members = userRepository.findAll();
         List<MemberListResDto> memberListResDtos = new ArrayList<>();
-        for (User m : members){
+        for (User m : members) {
             MemberListResDto memberListResDto = new MemberListResDto();
             memberListResDto.setId(m.getId());
             memberListResDto.setEmail(m.getEmail());
@@ -67,5 +71,20 @@ public class UserService {
             memberListResDtos.add(memberListResDto);
         }
         return memberListResDtos;
+    }
+
+    @Transactional
+    public boolean checkFirstVisitAndMarkOnboarded(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 온보딩을 이미 했다면 false 반환 (첫 방문 아님)
+        if (user.getIsOnboard()) {
+            return false;
+        }
+
+        // 온보딩 안 되어 있으면 isOnboard true로 변경하고 true 반환 (첫 방문 맞음)
+        user.updateIsOnboard(true);
+        return true;
     }
 }

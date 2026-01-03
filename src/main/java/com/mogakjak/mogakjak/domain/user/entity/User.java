@@ -31,6 +31,10 @@ public class User extends BaseSchema {
     @Builder.Default
     private Boolean isActive = false;
 
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    @Builder.Default
+    private Boolean isOnboard = false;
+
     @Column(nullable = true)
     private LocalDateTime lastActivityAt;
 
@@ -38,6 +42,10 @@ public class User extends BaseSchema {
         this.name = newName;
         this.email = newEmail;
         this.imageUrl = newImageUrl;
+    }
+
+    public void updateIsOnboard(Boolean isOnboard) {
+        this.isOnboard = isOnboard;
     }
 
     public void setActive(Boolean isActive) {
