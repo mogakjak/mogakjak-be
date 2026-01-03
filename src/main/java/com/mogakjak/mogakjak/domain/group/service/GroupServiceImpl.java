@@ -242,7 +242,7 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     public void ejectMemberFromGroup(UUID groupId, UUID targetUserId, UUID userId) {
-        // 권한 확인 - 방장
+        // 권한 확인 - 방장만 강퇴하도록 제한
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
         UserGroup userGroup = findUserGroup(user, group);
