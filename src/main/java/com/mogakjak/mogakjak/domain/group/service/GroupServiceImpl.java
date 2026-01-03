@@ -241,6 +241,18 @@ public class GroupServiceImpl implements GroupService {
     }
 
     @Override
+    public void ejectMemberFromGroup(UUID groupId, UUID targetUserId, UUID userId) {
+        // 권한 확인 - 방장
+        User user = findUserById(userId);
+        Group group = findGroupById(groupId);
+        UserGroup userGroup = findUserGroup(user, group);
+
+        if (userGroup.getRole() == GroupRole.HOST) return;
+
+        leaveGroup(groupId, targetUserId);
+    }
+
+    @Override
     @Transactional
     public void sendCheer(UUID userId, UUID groupId, UUID targetUserId) {
         User user = findUserById(userId);

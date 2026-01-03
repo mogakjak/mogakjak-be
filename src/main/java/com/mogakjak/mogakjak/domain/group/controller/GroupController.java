@@ -185,6 +185,19 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK);
     }
 
+    @Operation(summary = "그룹에서 강퇴하기")
+    @DeleteMapping("/{groupId}/members/{targetUserId}")
+    public ApiResponse<Void> ejectMemberFromGroup(
+            @Parameter(description = "강퇴할 그룹의 ID (UUID)", required = true)
+            @PathVariable UUID groupId,
+            @Parameter(description = "강퇴할 사용자의 ID (UUID)", required = true)
+            @PathVariable UUID targetUserId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.ejectMemberFromGroup(groupId, targetUserId, userId);
+        return ApiResponse.success(SuccessCode.OK);
+    }
 
     // --- Invitation API ---
 
