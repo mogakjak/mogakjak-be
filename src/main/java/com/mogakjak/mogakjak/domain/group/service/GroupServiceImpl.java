@@ -228,10 +228,12 @@ public class GroupServiceImpl implements GroupService {
         Group group = findGroupById(groupId);
         UserGroup userGroup = findUserGroup(user, group);
 
-        if (userGroup.getRole() == GroupRole.HOST) {
-            userGroupRepository.delete(userGroup);
-            groupRepository.delete(group);
+        if (userGroup.getRole() != GroupRole.HOST) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
         }
+
+        userGroupRepository.delete(userGroup);
+        groupRepository.delete(group);
     }
 
     @Override
@@ -261,7 +263,7 @@ public class GroupServiceImpl implements GroupService {
         Group group = findGroupById(groupId);
         UserGroup userGroup = findUserGroup(user, group);
 
-        if (userGroup.getRole() == GroupRole.HOST) return;
+        if (userGroup.getRole() != GroupRole.HOST) throw new CustomException(ErrorCode.FORBIDDEN);;
 
         leaveGroup(groupId, targetUserId);
     }
