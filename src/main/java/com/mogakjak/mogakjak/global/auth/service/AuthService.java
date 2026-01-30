@@ -13,6 +13,7 @@ import com.mogakjak.mogakjak.global.auth.security.util.JwtUtil;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.config.JwtConfig;
 import com.mogakjak.mogakjak.global.exception.CustomException;
+import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +56,11 @@ public class AuthService {
         // 사용자 조회 또는 생성
         User user = userRepository.findByEmail(normalizedEmail)
                 .orElseGet(() -> userService.createUser(normalizedEmail, name));
+
+        // 탈퇴된 유저인 경우 에러 반환
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new CustomException(ErrorCode.WITHDRAWN_USER);
+        }
 
         // OAuth2 제공자 정보를 user_provider 테이블에 저장 (보안 검증 포함)
         if (providerId == null) {
