@@ -40,6 +40,7 @@ public enum ErrorCode implements StatusCode {
     // Auth Errors
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다."),
+    WITHDRAWN_USER(HttpStatus.FORBIDDEN, "탈퇴한 유저입니다."),
 
     // Group Errors
     GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "그룹을 찾을 수 없습니다."),
