@@ -16,6 +16,10 @@ public class CustomUserDetails implements UserDetails {
 
     private final User user;
 
+    public boolean isDeleted() {
+        return Boolean.TRUE.equals(user.getIsDeleted());
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_USER"));
@@ -30,4 +34,16 @@ public class CustomUserDetails implements UserDetails {
     public String getUsername() {
         return user.getId().toString();
     }
+
+    @Override
+    public boolean isAccountNonLocked() { return !isDeleted(); }
+
+    @Override
+    public boolean isEnabled() { return !isDeleted(); }
+
+    @Override
+    public boolean isAccountNonExpired() { return true; }
+
+    @Override
+    public boolean isCredentialsNonExpired() { return true; }
 }
