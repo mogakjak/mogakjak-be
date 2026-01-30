@@ -13,11 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -59,6 +55,15 @@ public class UserController {
                 .build();
 
         return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "계정 탈퇴", description = "유저 계정을 탈퇴합니다.")
+    @DeleteMapping("/withdrawal")
+    public ApiResponse<String> withdrawUser(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        userService.deleteUser(getUserId(userDetails));
+        return ApiResponse.success(SuccessCode.OK, "계정 탈퇴가 완료되었습니다.");
     }
 
     private UUID getUserId(CustomUserDetails userDetails) {

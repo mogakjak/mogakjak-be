@@ -87,4 +87,12 @@ public class UserService {
         user.updateIsOnboard(true);
         return true;
     }
+
+    @Transactional
+    public void deleteUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        user.softDelete();
+    }
 }
