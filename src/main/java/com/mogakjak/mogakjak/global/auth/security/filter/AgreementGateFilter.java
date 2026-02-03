@@ -48,7 +48,7 @@ public class AgreementGateFilter extends OncePerRequestFilter {
     private void handleException(HttpServletResponse response) throws IOException {
         ApiResponse<?> apiResponse = ApiResponse.error(ErrorCode.REQUIRED_AGREEMENT_MISSING);
 
-        response.setStatus(HttpServletResponse.SC_OK);
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
