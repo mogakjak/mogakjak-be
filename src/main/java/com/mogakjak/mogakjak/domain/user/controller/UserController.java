@@ -1,9 +1,6 @@
 package com.mogakjak.mogakjak.domain.user.controller;
 
-import com.mogakjak.mogakjak.domain.user.controller.dto.CharacterGuideResponse;
-import com.mogakjak.mogakjak.domain.user.controller.dto.CheckOnboardingStatusResponse;
-import com.mogakjak.mogakjak.domain.user.controller.dto.MemberListResDto;
-import com.mogakjak.mogakjak.domain.user.controller.dto.UserSearchResponse;
+import com.mogakjak.mogakjak.domain.user.controller.dto.*;
 import com.mogakjak.mogakjak.domain.user.service.UserService;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
@@ -11,7 +8,10 @@ import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +24,17 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "개인 정보 동의", description = "개인 정보 동의 항목들에 동의 여부를 표시합니다.")
+    @PostMapping("/agreements")
+    public ApiResponse<Void> agreeTerms(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody AgreementRequest request
+    ) {
+        userService.agreeTerms(getUserId(userDetails), request);
+        return ApiResponse.success(SuccessCode.OK);
+    }
 
     @Operation(summary = "초대할 사용자 검색", description = "닉네임으로 사용자를 검색합니다.")
     @GetMapping("/search")

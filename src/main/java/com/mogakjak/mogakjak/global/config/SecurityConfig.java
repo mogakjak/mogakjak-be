@@ -1,5 +1,6 @@
 package com.mogakjak.mogakjak.global.config;
 
+import com.mogakjak.mogakjak.global.auth.security.filter.AgreementGateFilter;
 import com.mogakjak.mogakjak.global.auth.security.filter.JwtAuthenticationFilter;
 import com.mogakjak.mogakjak.global.auth.security.filter.RedirectUriCookieFilter;
 import com.mogakjak.mogakjak.global.auth.security.handler.OAuth2AuthenticationFailureHandler;
@@ -30,6 +31,7 @@ public class SecurityConfig {
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
     private final RedirectUriCookieFilter redirectUriCookieFilter;
+    private final AgreementGateFilter agreementGateFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -67,7 +69,8 @@ public class SecurityConfig {
                         .failureHandler(oAuth2AuthenticationFailureHandler)
                 )
                 .addFilterBefore(redirectUriCookieFilter, OAuth2AuthorizationRequestRedirectFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(agreementGateFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

@@ -41,6 +41,7 @@ public enum ErrorCode implements StatusCode {
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다."),
     WITHDRAWN_USER(HttpStatus.FORBIDDEN, "탈퇴한 유저입니다."),
+    REQUIRED_AGREEMENT_MISSING(HttpStatus.BAD_REQUEST, "필수 약관 동의가 필요합니다."),
 
     // Group Errors
     GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "그룹을 찾을 수 없습니다."),
@@ -59,7 +60,7 @@ public enum ErrorCode implements StatusCode {
 
     // User Errors
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
-  
+
     // Active Focus Session Errors
     ACTIVE_SESSION_EXISTS(HttpStatus.CONFLICT, "해당 계정에 이미 실행 중인 타이머가 있습니다."),
     ACTIVE_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 계정에 활성화된 세션이 존재하지 않습니다."),
