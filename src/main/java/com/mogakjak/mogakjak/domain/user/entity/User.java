@@ -3,7 +3,6 @@ package com.mogakjak.mogakjak.domain.user.entity;
 import com.mogakjak.mogakjak.global.common.BaseSchema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToOne;
 import lombok.*;
 
@@ -24,7 +23,7 @@ public class User extends BaseSchema {
 
     private String imageUrl;
 
-    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "user")
     private UserProfile userProfile;
 
     @Column(nullable = false)
@@ -37,6 +36,12 @@ public class User extends BaseSchema {
 
     @Column(nullable = true)
     private LocalDateTime lastActivityAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
+
+    private LocalDateTime deletedAt;
 
     public void updateInfo(String newName, String newEmail, String newImageUrl) {
         this.name = newName;
@@ -54,5 +59,10 @@ public class User extends BaseSchema {
         if (isActive) {
             this.lastActivityAt = LocalDateTime.now();
         }
+    }
+
+    public void softDelete() {
+        this.isDeleted = true;
+        this.deletedAt = LocalDateTime.now();
     }
 }

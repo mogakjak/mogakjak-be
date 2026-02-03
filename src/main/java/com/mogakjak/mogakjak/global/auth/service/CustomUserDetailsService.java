@@ -3,6 +3,8 @@ package com.mogakjak.mogakjak.global.auth.service;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
+import com.mogakjak.mogakjak.global.exception.CustomException;
+import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -19,6 +21,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + email));
+
+        if (Boolean.TRUE.equals(user.getIsDeleted())) {
+            throw new CustomException(ErrorCode.WITHDRAWN_USER);
+        }
 
         return CustomUserDetails.of(user);
     }

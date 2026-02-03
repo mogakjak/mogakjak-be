@@ -89,10 +89,17 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         } catch (Exception e) {
             log.error("OAuth2 로그인 처리 중 오류 발생", e);
 
+            String targetBaseUrl = resolveFrontendBaseUrl(request);
+
+            String code = "OAUTH2_LOGIN_FAILED";
+            if (e instanceof CustomException ce) {
+                code = ((Enum<?>) ce.getStatusCode()).name();
+            }
+
             String errorRedirectUrl = String.format(
                     "%s/auth/error#code=%s",
-                    frontendBaseUrl,
-                    "OAUTH2_LOGIN_FAILED"
+                    targetBaseUrl,
+                    code
             );
             getRedirectStrategy().sendRedirect(request, response, errorRedirectUrl);
         }
