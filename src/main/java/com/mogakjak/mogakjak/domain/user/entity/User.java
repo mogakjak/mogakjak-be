@@ -34,7 +34,6 @@ public class User extends BaseSchema {
     @Builder.Default
     private Boolean isOnboard = false;
 
-    @Column(nullable = true)
     private LocalDateTime lastActivityAt;
 
     @Column(nullable = false)
@@ -42,6 +41,30 @@ public class User extends BaseSchema {
     private Boolean isDeleted = false;
 
     private LocalDateTime deletedAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean termsAgreed = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean privacyAgreed = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean marketingAgreed = false;
+
+    public static User create(String email, String name) {
+        return User.builder()
+                .email(email)
+                .name(name)
+                .isActive(false)
+                .isOnboard(false)
+                .termsAgreed(false)
+                .privacyAgreed(false)
+                .marketingAgreed(false)
+                .build();
+    }
 
     public void updateInfo(String newName, String newEmail, String newImageUrl) {
         this.name = newName;
@@ -64,5 +87,22 @@ public class User extends BaseSchema {
     public void softDelete() {
         this.isDeleted = true;
         this.deletedAt = LocalDateTime.now();
+    }
+
+    public void agreeTerms() {
+        this.termsAgreed = true;
+    }
+
+    public void agreePrivacy() {
+        this.privacyAgreed = true;
+    }
+
+    public void agreeMarketing() {
+        this.marketingAgreed = true;
+    }
+
+    public boolean isAgreementCompleted() {
+        return Boolean.TRUE.equals(termsAgreed)
+                && Boolean.TRUE.equals(privacyAgreed);
     }
 }

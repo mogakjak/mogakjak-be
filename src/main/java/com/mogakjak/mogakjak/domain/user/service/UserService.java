@@ -1,23 +1,23 @@
 package com.mogakjak.mogakjak.domain.user.service;
 
+import com.mogakjak.mogakjak.domain.user.controller.dto.AgreementRequest;
 import com.mogakjak.mogakjak.domain.user.controller.dto.MemberListResDto;
 import com.mogakjak.mogakjak.domain.user.controller.dto.UserSearchResponse;
-import com.mogakjak.mogakjak.global.enumerate.ProviderType;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserProvider;
 import com.mogakjak.mogakjak.domain.user.repository.UserProviderRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
-
+import com.mogakjak.mogakjak.global.enumerate.ProviderType;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,10 +29,7 @@ public class UserService {
 
     @Transactional
     public User createUser(String email, String name) {
-        User user = User.builder()
-                .email(email)
-                .name(name)
-                .build();
+        User user = User.create(email, name);
 
         return userRepository.save(user);
     }
@@ -94,5 +91,21 @@ public class UserService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         user.softDelete();
+    }
+
+    @Transactional
+    public void agreeTerms(UUID userId, AgreementRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (!Boolean.TRUE.equals(request.isTermsAgreed())
+                || !Boolean.TRUE.equals(request.isPrivacyAgreed())) {
+            throw new CustomException(ErrorCode.REQUIRED_AGREEMENT_MISSING);
+        }
+
+        user.agreeTerms();
+        user.agreePrivacy();
+
+        if (Boolean.TRUE.equals(request.isMarketingAgreed())) user.agreeMarketing();
     }
 }
