@@ -23,7 +23,7 @@ public class AgreementGateFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
+        String path = request.getServletPath();
 
         return path.equals("/api/users/agreements") || !path.startsWith("/api/");
     }
