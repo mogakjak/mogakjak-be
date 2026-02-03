@@ -106,6 +106,8 @@ public class UserService {
         user.agreeTerms();
         user.agreePrivacy();
 
-        if (Boolean.TRUE.equals(request.isMarketingAgreed())) user.agreeMarketing();
+        if (Boolean.TRUE.equals(request.isMarketingAgreed())){
+            user.agreeMarketing();
+        }
     }
 }
