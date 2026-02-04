@@ -64,6 +64,10 @@ public class UserGroup extends BaseSchema {
         this.participationStatus = GroupParticipationStatus.NOT_PARTICIPATING;
     }
 
+    public void updateRole(GroupRole role) {
+        this.role = role;
+    }
+
     /**
      * 그룹 세션에서 나가기 (멤버는 유지, enteredAt은 유지)
      * enteredAt은 그룹 입장 이력을 위해 유지하고, participationStatus만 변경
