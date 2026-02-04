@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.group.controller.dto;
 
 import com.mogakjak.mogakjak.domain.group.entity.Group;
+import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
@@ -46,7 +47,10 @@ public class GroupDetailResponse {
         private String nickname;
         @Schema(description = "유저 프로필 이미지 URL")
         private String profileUrl;
+        @Schema(description = "유저 레벨")
         private Integer level;
+        @Schema(description = "유저 역할(방장/팀원)")
+        private GroupRole role;
     }
 
     public static GroupDetailResponse from(Group group, List<MemberInfo> members) {

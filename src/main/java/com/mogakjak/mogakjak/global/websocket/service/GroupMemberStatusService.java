@@ -203,6 +203,7 @@ public class GroupMemberStatusService {
 //                .profileUrl(user.getImageUrl())
                 .profileUrl(getProfileUrlFromUser(user))
                 .level(getLevelFromUser(user))
+                .role(userGroup.getRole())
                 .participationStatus(userGroup.getParticipationStatus() != null 
                         ? userGroup.getParticipationStatus() 
                         : GroupParticipationStatus.NOT_PARTICIPATING)

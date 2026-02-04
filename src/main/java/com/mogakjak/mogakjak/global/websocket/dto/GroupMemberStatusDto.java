@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.global.websocket.dto;
 
 import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
+import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,6 +20,7 @@ public class GroupMemberStatusDto {
     private String nickname;
     private String profileUrl;
     private Integer level;
+    private GroupRole role;
     private GroupParticipationStatus participationStatus;
     private LocalDateTime enteredAt;
     private Long daysSinceLastParticipation; // 최근 참여 며칠 전 (null이면 참여한 적 없음)
