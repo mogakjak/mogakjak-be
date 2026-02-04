@@ -204,20 +204,22 @@ public class GroupServiceImpl implements GroupService {
     public void leaveGroup(UUID groupId, UUID userId) {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
-        UserGroup userGroup = findUserGroup(user, group);
-        
-        if (userGroup.getRole() == GroupRole.HOST) {
-            long memberCount = userGroupRepository.countByGroup(group);
-            if (memberCount > 1) {
-                throw new CustomException(ErrorCode.CANNOT_LEAVE_AS_HOST);
-            }
-            userGroupRepository.delete(userGroup);
-            groupRepository.delete(group);
-            // 그룹이 삭제되면 브로드캐스트 불필요
+        UserGroup currentUserGroup = findUserGroup(user, group);
+
+        if (currentUserGroup.getRole() == GroupRole.HOST) {
+            userGroupRepository.findTopByGroupAndUserNotOrderByCreatedAtAsc(group, user)
+                    .ifPresentOrElse(
+                            nextHostUserGroup -> {
+                                nextHostUserGroup.updateRole(GroupRole.HOST);
+                                userGroupRepository.delete(currentUserGroup);
+                            },
+                            () -> {
+                                userGroupRepository.delete(currentUserGroup);
+                                groupRepository.delete(group);
+                            }
+                    );
         } else {
-            userGroupRepository.delete(userGroup);
-            // 멤버 탈퇴 시 전체 멤버 상태 브로드캐스트 (멤버 목록 변경)
-            groupMemberStatusService.broadcastAllMemberStatuses(groupId);
+            userGroupRepository.delete(currentUserGroup);
         }
     }
 

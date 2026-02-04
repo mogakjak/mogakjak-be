@@ -90,4 +90,6 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
             "AND ug1.group IN (SELECT ug2.group FROM UserGroup ug2 WHERE ug2.user.id = :userId2) " +
             "ORDER BY ug1.group.createdAt DESC")
     List<Group> findCommonGroups(@Param("userId1") UUID userId1, @Param("userId2") UUID userId2);
+
+    Optional<UserGroup> findTopByGroupAndUserNotOrderByCreatedAtAsc(Group group, User user);
 }
