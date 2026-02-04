@@ -70,11 +70,13 @@ public class GroupServiceImpl implements GroupService {
                     userGroupRepository.findByGroupIdWithUserAndProfile(group.getId()).stream()
                             .map(ug -> {
                                 User member = ug.getUser();
+                                UserGroup memberGroup = checkUserInGroup(member, group);
                                 return MyGroupResponse.GroupMemberDto.builder()
                                         .userId(member.getId())
                                         .nickname(member.getName())
                                         .profileUrl(getProfileUrlFromUser(member))
                                         .level(getLevelFromUser(member))
+                                        .role(memberGroup.getRole())
                                         .build();
                             }).collect(Collectors.toList());
 
