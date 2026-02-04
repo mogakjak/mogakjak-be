@@ -156,6 +156,12 @@ public class GroupServiceImpl implements GroupService {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
 
+        UserGroup userGroup = findUserGroup(user, group);
+        // 방장 권한 체크
+        if (userGroup.getRole() != GroupRole.HOST) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
         String newName = StringUtils.hasText(request.getName()) ? request.getName() : group.getName();
         String newImageUrl = StringUtils.hasText(request.getImageUrl()) ? request.getImageUrl() : group.getImageUrl();
 
@@ -212,6 +218,7 @@ public class GroupServiceImpl implements GroupService {
                             nextHostUserGroup -> {
                                 nextHostUserGroup.updateRole(GroupRole.HOST);
                                 userGroupRepository.delete(currentUserGroup);
+                                groupMemberStatusService.broadcastAllMemberStatuses(groupId);
                             },
                             () -> {
                                 userGroupRepository.delete(currentUserGroup);
@@ -220,6 +227,7 @@ public class GroupServiceImpl implements GroupService {
                     );
         } else {
             userGroupRepository.delete(currentUserGroup);
+            groupMemberStatusService.broadcastAllMemberStatuses(groupId);
         }
     }
 
@@ -452,14 +460,16 @@ public class GroupServiceImpl implements GroupService {
         return FocusNotificationResponse.from(group);
     }
 
-    // === 편의 메서드 ===
     @Override
     @Transactional
     public FocusNotificationResponse modifyFocusNotification(User user, UUID groupId, FocusNotificationRequest request) {
         Group group = findGroupById(groupId);
 
-        // 유저가 그룹에 접근 권한이 있는지 확인
-        findUserGroup(user, group);
+        UserGroup userGroup = findUserGroup(user, group);
+        // 방장 권한 체크
+        if (userGroup.getRole() != GroupRole.HOST) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
 
         group.updateFocusNotificationInfo(
                 request.isNotificationAgreed(),
