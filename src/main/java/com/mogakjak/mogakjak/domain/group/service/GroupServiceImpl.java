@@ -70,13 +70,12 @@ public class GroupServiceImpl implements GroupService {
                     userGroupRepository.findByGroupIdWithUserAndProfile(group.getId()).stream()
                             .map(ug -> {
                                 User member = ug.getUser();
-                                UserGroup memberGroup = checkUserInGroup(member, group);
                                 return MyGroupResponse.GroupMemberDto.builder()
                                         .userId(member.getId())
                                         .nickname(member.getName())
                                         .profileUrl(getProfileUrlFromUser(member))
                                         .level(getLevelFromUser(member))
-                                        .role(memberGroup.getRole())
+                                        .role(ug.getRole())
                                         .build();
                             }).collect(Collectors.toList());
 
@@ -142,13 +141,12 @@ public class GroupServiceImpl implements GroupService {
                 userGroupRepository.findByGroupIdWithUserAndProfile(groupId).stream()
                         .map(ug -> {
                             User member = ug.getUser();
-                            UserGroup memberGroup = checkUserInGroup(member, group);
                             return GroupDetailResponse.MemberInfo.builder()
                                     .userId(member.getId())
                                     .nickname(member.getName())
                                     .profileUrl(getCharacterUrlFromUser(member))
                                     .level(getLevelFromUser(member)) // 레벨 정보 포함
-                                    .role(memberGroup.getRole())
+                                    .role(ug.getRole())
                                     .build();
                         }).collect(Collectors.toList());
 
@@ -171,13 +169,12 @@ public class GroupServiceImpl implements GroupService {
                 userGroupRepository.findByGroupIdWithUserAndProfile(groupId).stream()
                         .map(ug -> {
                             User member = ug.getUser();
-                            UserGroup memberGroup = checkUserInGroup(member, group);
                             return GroupDetailResponse.MemberInfo.builder()
                                     .userId(member.getId())
                                     .nickname(member.getName())
                                     .profileUrl(getProfileUrlFromUser(member))
                                     .level(getLevelFromUser(member))
-                                    .role(memberGroup.getRole())
+                                    .role(ug.getRole())
                                     .build();
                         }).collect(Collectors.toList());
 
