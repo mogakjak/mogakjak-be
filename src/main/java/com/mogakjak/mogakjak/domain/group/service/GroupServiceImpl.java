@@ -75,6 +75,7 @@ public class GroupServiceImpl implements GroupService {
                                         .nickname(member.getName())
                                         .profileUrl(getProfileUrlFromUser(member))
                                         .level(getLevelFromUser(member))
+                                        .role(ug.getRole())
                                         .build();
                             }).collect(Collectors.toList());
 
@@ -111,6 +112,7 @@ public class GroupServiceImpl implements GroupService {
                 .nickname(user.getName())
                 .profileUrl(getProfileUrlFromUser(user))
                 .level(getLevelFromUser(user))
+                .role(userGroup.getRole())
                 .build();
 
         return GroupDetailResponse.from(group, List.of(hostInfo));
@@ -144,6 +146,7 @@ public class GroupServiceImpl implements GroupService {
                                     .nickname(member.getName())
                                     .profileUrl(getCharacterUrlFromUser(member))
                                     .level(getLevelFromUser(member)) // 레벨 정보 포함
+                                    .role(ug.getRole())
                                     .build();
                         }).collect(Collectors.toList());
 
@@ -171,6 +174,7 @@ public class GroupServiceImpl implements GroupService {
                                     .nickname(member.getName())
                                     .profileUrl(getProfileUrlFromUser(member))
                                     .level(getLevelFromUser(member))
+                                    .role(ug.getRole())
                                     .build();
                         }).collect(Collectors.toList());
 
