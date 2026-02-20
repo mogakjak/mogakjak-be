@@ -43,7 +43,7 @@ public class Group extends BaseSchema {
 
     @Column(nullable = false)
     @Builder.Default
-    private String notificationMessage = "집중 좀 해보시는 거 어때염?";
+    private String notificationMessage = "여전히 몰입 중이시네요. 멋져요!";
 
     private LocalDateTime lastNotificationSentAt;
 
