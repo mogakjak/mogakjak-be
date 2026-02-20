@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.mogakjak.mogakjak.global.websocket.dto.ChatMessageDto;
 import com.mogakjak.mogakjak.global.websocket.dto.CheerNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.FocusNotificationDto;
+import com.mogakjak.mogakjak.global.websocket.dto.FocusNotificationPublishDto;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusUpdateDto;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupTimerEventDto;
 import com.mogakjak.mogakjak.global.websocket.dto.TimerCompletionNotificationDto;
@@ -52,9 +53,16 @@ public class RedisPubSubService implements MessageListener {
                 ChatMessageDto chatMessageDto = objectMapper.readValue(payload, ChatMessageDto.class);
                 messageTemplate.convertAndSend("/topic/"+chatMessageDto.getRoomId(), chatMessageDto);
             } else if ("focus-notification".equals(channel)) {
-                // 집중 체크 알림 처리
-                FocusNotificationDto notificationDto = objectMapper.readValue(payload, FocusNotificationDto.class);
-                messageTemplate.convertAndSend("/topic/group/"+notificationDto.getGroupId()+"/notification", notificationDto);
+                // 집중 체크 알림 처리 - 참여 중인 유저에게만 유저별 토픽으로 전송
+                FocusNotificationPublishDto publishDto = objectMapper.readValue(payload, FocusNotificationPublishDto.class);
+                FocusNotificationDto notificationDto = publishDto.getNotification();
+                if (publishDto.getRecipientUserIds() != null) {
+                    for (var userId : publishDto.getRecipientUserIds()) {
+                        String destination = "/topic/user/" + userId + "/focus-notification";
+                        log.info("WebSocket 전송: {} -> {}", destination, notificationDto);
+                        messageTemplate.convertAndSend(destination, notificationDto);
+                    }
+                }
             } else if ("group-member-status".equals(channel)) {
                 // 그룹 멤버 상태 업데이트 처리
                 GroupMemberStatusUpdateDto statusUpdateDto = objectMapper.readValue(payload, GroupMemberStatusUpdateDto.class);
