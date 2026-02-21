@@ -141,16 +141,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         currentFocusSession.pause(progressRate);
         focusSessionRepository.save(currentFocusSession);
 
-        // 그룹 내 개인 타이머 pause 시 참여 상태를 RESTING(휴식중)으로 변경 → 카드가 "잠시 쉬어갈래요/휴식중"으로 표시됨
-        if (currentFocusSession.getParticipationType() == ParticipationType.GROUP && currentFocusSession.getGroupId() != null) {
-            UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), currentFocusSession.getGroupId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
-            if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
-                userGroup.setParticipationStatus(GroupParticipationStatus.RESTING);
-                userGroupRepository.save(userGroup);
-            }
-            groupMemberStatusService.broadcastMemberStatusUpdate(currentFocusSession.getGroupId(), user.getId());
-        }
+        updateUserGroupStatusAndBroadcast(user, currentFocusSession, GroupParticipationStatus.RESTING);
 
         // pause 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
         try {
@@ -184,16 +175,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         currentFocusSession.resume();
         focusSessionRepository.save(currentFocusSession);
 
-        // 그룹 내 개인 타이머 resume 시 참여 상태를 PARTICIPATING(몰입 중)으로 복구
-        if (currentFocusSession.getParticipationType() == ParticipationType.GROUP && currentFocusSession.getGroupId() != null) {
-            UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), currentFocusSession.getGroupId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
-            if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
-                userGroup.setParticipationStatus(GroupParticipationStatus.PARTICIPATING);
-                userGroupRepository.save(userGroup);
-            }
-            groupMemberStatusService.broadcastMemberStatusUpdate(currentFocusSession.getGroupId(), user.getId());
-        }
+        updateUserGroupStatusAndBroadcast(user, currentFocusSession, GroupParticipationStatus.PARTICIPATING);
 
         // resume 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
         try {
@@ -438,6 +420,18 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
 
         return finishSession(user, activeSession.getSessionId());
+    }
+
+    private void updateUserGroupStatusAndBroadcast(User user, FocusSession focusSession, GroupParticipationStatus newStatus) {
+        if (focusSession.getParticipationType() == ParticipationType.GROUP && focusSession.getGroupId() != null) {
+            UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), focusSession.getGroupId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+            if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
+                userGroup.setParticipationStatus(newStatus);
+                userGroupRepository.save(userGroup);
+            }
+            groupMemberStatusService.broadcastMemberStatusUpdate(focusSession.getGroupId(), user.getId());
+        }
     }
 
     private Integer calculateProgressRate(Integer todoTargetDuration, Long totalDuration) {
