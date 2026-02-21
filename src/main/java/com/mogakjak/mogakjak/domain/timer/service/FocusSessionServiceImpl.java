@@ -139,6 +139,18 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         // Todo의 누적 actualTimeInSeconds를 기준으로 progressRate 계산
         Integer progressRate = calculateProgressRateFromTodo(todo);
         currentFocusSession.pause(progressRate);
+        focusSessionRepository.save(currentFocusSession);
+
+        // 그룹 내 개인 타이머 pause 시 참여 상태를 RESTING(휴식중)으로 변경 → 카드가 "잠시 쉬어갈래요/휴식중"으로 표시됨
+        if (currentFocusSession.getParticipationType() == ParticipationType.GROUP && currentFocusSession.getGroupId() != null) {
+            UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), currentFocusSession.getGroupId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+            if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
+                userGroup.setParticipationStatus(GroupParticipationStatus.RESTING);
+                userGroupRepository.save(userGroup);
+            }
+            groupMemberStatusService.broadcastMemberStatusUpdate(currentFocusSession.getGroupId(), user.getId());
+        }
 
         // pause 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
         try {
@@ -170,6 +182,18 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         focusIntervalRepository.save(focusInterval);
 
         currentFocusSession.resume();
+        focusSessionRepository.save(currentFocusSession);
+
+        // 그룹 내 개인 타이머 resume 시 참여 상태를 PARTICIPATING(몰입 중)으로 복구
+        if (currentFocusSession.getParticipationType() == ParticipationType.GROUP && currentFocusSession.getGroupId() != null) {
+            UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), currentFocusSession.getGroupId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+            if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
+                userGroup.setParticipationStatus(GroupParticipationStatus.PARTICIPATING);
+                userGroupRepository.save(userGroup);
+            }
+            groupMemberStatusService.broadcastMemberStatusUpdate(currentFocusSession.getGroupId(), user.getId());
+        }
 
         // resume 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
         try {
