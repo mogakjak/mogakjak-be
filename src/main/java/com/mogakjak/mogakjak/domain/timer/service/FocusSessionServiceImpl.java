@@ -139,6 +139,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         // Todo의 누적 actualTimeInSeconds를 기준으로 progressRate 계산
         Integer progressRate = calculateProgressRateFromTodo(todo);
         currentFocusSession.pause(progressRate);
+        focusSessionRepository.save(currentFocusSession);
+
+        updateUserGroupStatusAndBroadcast(user, currentFocusSession, GroupParticipationStatus.RESTING);
 
         // pause 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
         try {
@@ -170,6 +173,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         focusIntervalRepository.save(focusInterval);
 
         currentFocusSession.resume();
+        focusSessionRepository.save(currentFocusSession);
+
+        updateUserGroupStatusAndBroadcast(user, currentFocusSession, GroupParticipationStatus.PARTICIPATING);
 
         // resume 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
         try {
@@ -414,6 +420,18 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 .orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_SESSION_NOT_FOUND));
 
         return finishSession(user, activeSession.getSessionId());
+    }
+
+    private void updateUserGroupStatusAndBroadcast(User user, FocusSession focusSession, GroupParticipationStatus newStatus) {
+        if (focusSession.getParticipationType() == ParticipationType.GROUP && focusSession.getGroupId() != null) {
+            UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), focusSession.getGroupId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
+            if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
+                userGroup.setParticipationStatus(newStatus);
+                userGroupRepository.save(userGroup);
+            }
+            groupMemberStatusService.broadcastMemberStatusUpdate(focusSession.getGroupId(), user.getId());
+        }
     }
 
     private Integer calculateProgressRate(Integer todoTargetDuration, Long totalDuration) {

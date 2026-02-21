@@ -9,6 +9,7 @@ import com.mogakjak.mogakjak.domain.group.repository.GroupRepository;
 import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
+import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
@@ -158,22 +159,25 @@ public class GroupMemberStatusService {
                 // 타이머 누적 시간 공개 여부 확인
                 Boolean isTimerPublic = focusSession.getIsTimerPublic();
                 if (isTimerPublic == null || isTimerPublic) {
-                    // 현재 실행 중인 interval 조회
-                    Optional<FocusInterval> currentIntervalOpt = focusIntervalRepository
-                            .findTopBySessionIdOrderByStartedAtDesc(focusSession.getId());
-                    
-                    if (currentIntervalOpt.isPresent()) {
-                        FocusInterval currentInterval = currentIntervalOpt.get();
-                        LocalDateTime intervalStart = currentInterval.getStartedAt();
-                        LocalDateTime intervalEnd = currentInterval.getEndedAt() != null 
-                                ? currentInterval.getEndedAt() 
-                                : now;
-                        
-                        // interval 경과 시간 계산
-                        long intervalSeconds = Duration.between(intervalStart, intervalEnd).getSeconds();
-                        personalTimerSeconds = (focusSession.getTotalDuration() != null ? focusSession.getTotalDuration() : 0L) + intervalSeconds;
+                    long total = focusSession.getTotalDuration() != null ? focusSession.getTotalDuration() : 0L;
+                    // PAUSED면 pause 시점에 이미 마지막 interval이 totalDuration에 반영되어 있음 → 중복 가산 방지
+                    if (focusSession.getStatus() == TimerStatus.PAUSED) {
+                        personalTimerSeconds = total;
                     } else {
-                        personalTimerSeconds = focusSession.getTotalDuration() != null ? focusSession.getTotalDuration() : 0L;
+                        // RUNNING 등: 현재 구간 경과 시간을 더해서 실시간 표시
+                        Optional<FocusInterval> currentIntervalOpt = focusIntervalRepository
+                                .findTopBySessionIdOrderByStartedAtDesc(focusSession.getId());
+                        if (currentIntervalOpt.isPresent()) {
+                            FocusInterval currentInterval = currentIntervalOpt.get();
+                            LocalDateTime intervalStart = currentInterval.getStartedAt();
+                            LocalDateTime intervalEnd = currentInterval.getEndedAt() != null
+                                    ? currentInterval.getEndedAt()
+                                    : now;
+                            long intervalSeconds = Duration.between(intervalStart, intervalEnd).getSeconds();
+                            personalTimerSeconds = total + intervalSeconds;
+                        } else {
+                            personalTimerSeconds = total;
+                        }
                     }
                 }
                 // isTimerPublic이 false이면 personalTimerSeconds는 null로 유지됨
