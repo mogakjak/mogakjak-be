@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.mogakjak.mogakjak.domain.group.entity.Group;
 import com.mogakjak.mogakjak.domain.invitation.entity.Invitation;
+import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
 import com.mogakjak.mogakjak.domain.user.entity.User;
+import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.global.websocket.dto.InvitationNotificationDto;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class InvitationNotificationService {
 
+    private final UserGroupRepository userGroupRepository;
     private final RedisPubSubService redisPubSubService;
     private ObjectMapper objectMapper;
 
@@ -43,10 +46,16 @@ public class InvitationNotificationService {
 
         String message = String.format("%s님이 \"%s\"에 초대했어요!", inviter.getName(), group.getName());
 
+        long memberCount = userGroupRepository.countByGroup(group);
+        long activeMemberCount = userGroupRepository.countActiveByGroup(group, GroupParticipationStatus.NOT_PARTICIPATING);
+
         InvitationNotificationDto dto = InvitationNotificationDto.builder()
                 .invitationId(invitation.getId())
                 .groupId(group.getId())
                 .groupName(group.getName())
+                .groupImageUrl(group.getImageUrl())
+                .activeMemberCount(activeMemberCount)
+                .memberCount(memberCount)
                 .inviterId(inviter.getId())
                 .inviterNickname(inviter.getName())
                 .inviteeId(invitee.getId())

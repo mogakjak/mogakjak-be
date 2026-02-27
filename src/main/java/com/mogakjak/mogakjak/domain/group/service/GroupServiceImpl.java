@@ -388,12 +388,13 @@ public class GroupServiceImpl implements GroupService {
             throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
         }
 
-        invitationRepository.findByGroupAndInvitee(group, invitee)
-                .ifPresent(invitation -> {
-                    if (invitation.getStatus() == InvitationStatus.PENDING) {
-                        throw new CustomException(ErrorCode.ALREADY_INVITED);
-                    }
-                });
+        // 과거에 초대 기록이 여러 개 있을 수 있어(중복 데이터) 목록으로 조회 후 PENDING만 차단
+        List<Invitation> existingInvitations = invitationRepository.findAllByGroupAndInvitee(group, invitee);
+        boolean hasPending = existingInvitations.stream()
+                .anyMatch(inv -> inv.getStatus() == InvitationStatus.PENDING);
+        if (hasPending) {
+            throw new CustomException(ErrorCode.ALREADY_INVITED);
+        }
 
         Invitation invitation = Invitation.builder()
                 .group(group)
@@ -411,8 +412,26 @@ public class GroupServiceImpl implements GroupService {
     @Transactional(readOnly = true)
     public List<InvitationResponse> getMyInvitations(UUID userId) {
         User user = findUserById(userId);
-        return invitationRepository.findByInviteeAndStatus(user, InvitationStatus.PENDING).stream()
-                .map(InvitationResponse::from)
+        List<Invitation> invitations = invitationRepository.findByInviteeAndStatus(user, InvitationStatus.PENDING);
+
+        // 그룹별 카운트 쿼리 중복 방지
+        java.util.Map<java.util.UUID, long[]> groupCounts = new java.util.HashMap<>();
+        for (Invitation inv : invitations) {
+            java.util.UUID groupId = inv.getGroup().getId();
+            if (!groupCounts.containsKey(groupId)) {
+                long memberCount = userGroupRepository.countByGroup(inv.getGroup());
+                long activeMemberCount = userGroupRepository.countActiveByGroup(inv.getGroup(), GroupParticipationStatus.NOT_PARTICIPATING);
+                groupCounts.put(groupId, new long[]{memberCount, activeMemberCount});
+            }
+        }
+
+        return invitations.stream()
+                .map(inv -> {
+                    long[] counts = groupCounts.get(inv.getGroup().getId());
+                    long memberCount = counts != null ? counts[0] : 0L;
+                    long activeMemberCount = counts != null ? counts[1] : 0L;
+                    return InvitationResponse.from(inv, memberCount, activeMemberCount);
+                })
                 .collect(Collectors.toList());
     }
 

@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.user.repository;
 
 import com.mogakjak.mogakjak.domain.group.entity.Group;
+import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
 import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserGroup;
@@ -91,6 +92,16 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
     @Query("SELECT COUNT(ug) FROM UserGroup ug " +
             "WHERE ug.group = :group AND ug.user.isDeleted = false")
     long countByGroup(@Param("group") Group group);
+
+    // 그룹 내 활동(참여) 중인 멤버 수 (탈퇴 사용자 제외, NOT_PARTICIPATING 제외)
+    @Query("SELECT COUNT(ug) FROM UserGroup ug " +
+            "WHERE ug.group = :group " +
+            "AND ug.user.isDeleted = false " +
+            "AND ug.participationStatus <> :notParticipating")
+    long countActiveByGroup(
+            @Param("group") Group group,
+            @Param("notParticipating") GroupParticipationStatus notParticipating
+    );
     
     // 두 사용자가 함께 있는 그룹 목록 조회
     @Query("SELECT ug1.group FROM UserGroup ug1 " +

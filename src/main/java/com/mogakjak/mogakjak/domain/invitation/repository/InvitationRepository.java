@@ -7,7 +7,6 @@ import com.mogakjak.mogakjak.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,5 +18,6 @@ public interface InvitationRepository extends JpaRepository<Invitation, UUID> {
     List<Invitation> findByInviteeAndStatus(@Param("invitee") User invitee, @Param("status") InvitationStatus status);
 
     // 이미 초대를 보냈는지 확인
-    Optional<Invitation> findByGroupAndInvitee(Group group, User invitee);
+    @Query("SELECT i FROM Invitation i WHERE i.group = :group AND i.invitee = :invitee ORDER BY i.createdAt DESC")
+    List<Invitation> findAllByGroupAndInvitee(@Param("group") Group group, @Param("invitee") User invitee);
 }
