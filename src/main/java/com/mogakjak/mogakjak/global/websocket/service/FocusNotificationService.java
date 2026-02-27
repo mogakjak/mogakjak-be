@@ -82,6 +82,7 @@ public class FocusNotificationService {
         );
 
         return userGroups.stream()
+                .filter(ug -> Boolean.FALSE.equals(ug.getUser().getIsDeleted()))
                 .filter(userGroup -> isUserActiveInGroup(userGroup.getUser(), userGroup, groupId))
                 .map(userGroup -> userGroup.getUser().getId())
                 .collect(Collectors.toSet());
