@@ -85,6 +85,10 @@ public class GroupMemberStatusService {
         UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(userId, groupId)
                 .orElseThrow(() -> new RuntimeException("UserGroup not found"));
 
+        if (Boolean.TRUE.equals(userGroup.getUser().getIsDeleted())) {
+            throw new RuntimeException("User is deleted");
+        }
+
         return buildMemberStatusDto(userGroup, LocalDateTime.now());
     }
 
