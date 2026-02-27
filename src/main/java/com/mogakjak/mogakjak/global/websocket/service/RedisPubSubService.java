@@ -10,6 +10,8 @@ import com.mogakjak.mogakjak.global.websocket.dto.FocusNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.FocusNotificationPublishDto;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusUpdateDto;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupTimerEventDto;
+import com.mogakjak.mogakjak.global.websocket.dto.InvitationNotificationDto;
+import com.mogakjak.mogakjak.global.websocket.dto.InvitationResponseNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.TimerCompletionNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.PokeNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.UserActiveStatusDto;
@@ -82,6 +84,14 @@ public class RedisPubSubService implements MessageListener {
                 CheerNotificationDto cheerDto = objectMapper.readValue(payload, CheerNotificationDto.class);
                 // 개인 알림: /topic/user/{userId}/cheer
                 messageTemplate.convertAndSend("/topic/user/"+cheerDto.getTargetUserId()+"/cheer", cheerDto);
+            } else if ("invitation-notification".equals(channel)) {
+                // 초대 알림 처리 (개인 알림 - 초대받은 사람)
+                InvitationNotificationDto invitationDto = objectMapper.readValue(payload, InvitationNotificationDto.class);
+                messageTemplate.convertAndSend("/topic/user/" + invitationDto.getInviteeId() + "/invitation", invitationDto);
+            } else if ("invitation-response".equals(channel)) {
+                // 초대 응답 알림 처리 (개인 알림 - 초대한 사람)
+                InvitationResponseNotificationDto responseDto = objectMapper.readValue(payload, InvitationResponseNotificationDto.class);
+                messageTemplate.convertAndSend("/topic/user/" + responseDto.getInviterId() + "/invitation-response", responseDto);
             } else if ("group-timer-event".equals(channel)) {
                 // 그룹 타이머 이벤트 처리
                 GroupTimerEventDto timerEventDto = objectMapper.readValue(payload, GroupTimerEventDto.class);

@@ -92,6 +92,8 @@ public class RedisConfig {
                container.addMessageListener(messageListenerAdapter, new PatternTopic("timer-completion"));
                container.addMessageListener(messageListenerAdapter, new PatternTopic("poke-notification"));
                container.addMessageListener(messageListenerAdapter, new PatternTopic("cheer-notification"));
+               container.addMessageListener(messageListenerAdapter, new PatternTopic("invitation-notification"));
+               container.addMessageListener(messageListenerAdapter, new PatternTopic("invitation-response"));
                container.addMessageListener(messageListenerAdapter, new PatternTopic("group-timer-event"));
                container.addMessageListener(messageListenerAdapter, new PatternTopic("user-active-status"));
         return container;

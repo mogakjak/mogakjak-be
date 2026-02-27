@@ -22,6 +22,8 @@ import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.FocusNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
 import com.mogakjak.mogakjak.global.websocket.service.GroupTimerService;
+import com.mogakjak.mogakjak.global.websocket.service.InvitationNotificationService;
+import com.mogakjak.mogakjak.global.websocket.service.InvitationResponseNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.PokeNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +51,8 @@ public class GroupServiceImpl implements GroupService {
     private final GroupMemberStatusService groupMemberStatusService;
     private final PokeNotificationService pokeNotificationService;
     private final CheerNotificationService cheerNotificationService;
+    private final InvitationNotificationService invitationNotificationService;
+    private final InvitationResponseNotificationService invitationResponseNotificationService;
     private final UserCharacterRepository userCharacterRepository;
     private final ImageCharacterRepository imageCharacterRepository;
     private final GroupTimerService groupTimerService;
@@ -397,7 +401,10 @@ public class GroupServiceImpl implements GroupService {
                 .invitee(invitee)
                 .status(InvitationStatus.PENDING)
                 .build();
-        invitationRepository.save(invitation);
+        Invitation saved = invitationRepository.save(invitation);
+
+        // 초대된 상대방에게 실시간 알림 전송
+        invitationNotificationService.sendInvitationNotification(saved);
     }
 
     @Override
@@ -435,6 +442,9 @@ public class GroupServiceImpl implements GroupService {
         
         // 새 멤버 추가 시 전체 멤버 상태 브로드캐스트 (멤버 목록 변경)
         groupMemberStatusService.broadcastAllMemberStatuses(invitation.getGroup().getId());
+
+        // 초대한 사람에게 "수락됨" 알림 전송
+        invitationResponseNotificationService.sendInvitationResponse(invitation, "ACCEPTED");
     }
 
     @Override
@@ -452,6 +462,9 @@ public class GroupServiceImpl implements GroupService {
         }
 
         invitation.decline();
+
+        // 초대한 사람에게 "거절됨" 알림 전송
+        invitationResponseNotificationService.sendInvitationResponse(invitation, "DECLINED");
     }
 
     @Override
