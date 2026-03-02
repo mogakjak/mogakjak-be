@@ -40,6 +40,10 @@ public class UserGroup extends BaseSchema {
     @Builder.Default
     private Integer cheerCount = 0;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer hostAckState = -1;
+
     public static UserGroup create(User user, Group group, GroupRole role) {
         return UserGroup.builder()
                 .user(user)
@@ -47,6 +51,7 @@ public class UserGroup extends BaseSchema {
                 .role(role)
                 .participationStatus(GroupParticipationStatus.NOT_PARTICIPATING)
                 .cheerCount(0)
+                .hostAckState(role == GroupRole.HOST ? 1 : -1)
                 .build();
     }
 
@@ -68,24 +73,25 @@ public class UserGroup extends BaseSchema {
         this.role = role;
     }
 
-    /**
-     * 그룹 세션에서 나가기 (멤버는 유지, enteredAt은 유지)
-     * enteredAt은 그룹 입장 이력을 위해 유지하고, participationStatus만 변경
-     */
+    public void designateAsNewHost() {
+        this.role = GroupRole.HOST;
+        this.hostAckState = 0;
+    }
+
+    public void acknowledgeHost() {
+        if (this.role == GroupRole.HOST && this.hostAckState != null && this.hostAckState == 0) {
+            this.hostAckState = 1;
+        }
+    }
+
     public void leaveGroupSession() {
         this.participationStatus = GroupParticipationStatus.NOT_PARTICIPATING;
     }
 
-    /**
-     * 응원 수 증가
-     */
     public void incrementCheerCount() {
         this.cheerCount++;
     }
 
-    /**
-     * 응원 수 초기화
-     */
     public void resetCheerCount() {
         this.cheerCount = 0;
     }

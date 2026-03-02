@@ -91,4 +91,10 @@ public interface GroupService {
 
     // 그룹 이름 조회 (메타태그용)
     GroupNameResponse getGroupName(UUID groupId);
+
+    // 새로운 방장 확인 필요 여부 조회
+    HostAckResponse getHostAckStatus(UUID groupId, UUID userId);
+
+    // 모달 확인 후 명시적으로 확인 상태 변경
+    void acknowledgeNewHost(UUID groupId, UUID userId);
 }
