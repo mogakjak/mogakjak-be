@@ -137,6 +137,30 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
+    @Operation(summary = "새로운 방장 인지 필요 여부 조회", description = "내가 새로운 방장으로 지정되어 확인(모달)이 필요한 상태인지 조회합니다.")
+    @GetMapping("/{groupId}/host-ack")
+    public ApiResponse<HostAckResponse> getHostAckStatus(
+            @Parameter(description = "조회할 그룹의 ID (UUID)", required = true)
+            @PathVariable UUID groupId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        HostAckResponse response = groupService.getHostAckStatus(groupId, userId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "방장 인지 확인 처리 (모달 확인)", description = "본인이 방장이 되었음을 인지하고 확인했음을 서버에 알립니다. 상태가 1로 업데이트되어 이후 모달이 뜨지 않습니다.")
+    @PutMapping("/{groupId}/host-ack")
+    public ApiResponse<Void> acknowledgeNewHost(
+            @Parameter(description = "확인할 그룹의 ID (UUID)", required = true)
+            @PathVariable UUID groupId,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        groupService.acknowledgeNewHost(groupId, userId);
+        return ApiResponse.success(SuccessCode.OK);
+    }
+
     // --- Member API ---
 
     @Operation(summary = "메이트 조회 (전체/그룹별)",

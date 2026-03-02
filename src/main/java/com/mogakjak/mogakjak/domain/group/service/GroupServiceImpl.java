@@ -224,7 +224,7 @@ public class GroupServiceImpl implements GroupService {
             userGroupRepository.findTopByGroupAndUserNotOrderByCreatedAtAsc(group, user)
                     .ifPresentOrElse(
                             nextHostUserGroup -> {
-                                nextHostUserGroup.updateRole(GroupRole.HOST);
+                                nextHostUserGroup.designateAsNewHost();
                                 userGroupRepository.delete(currentUserGroup);
                                 groupMemberStatusService.broadcastAllMemberStatuses(groupId);
                             },
@@ -236,6 +236,34 @@ public class GroupServiceImpl implements GroupService {
         } else {
             userGroupRepository.delete(currentUserGroup);
             groupMemberStatusService.broadcastAllMemberStatuses(groupId);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public HostAckResponse getHostAckStatus(UUID groupId, UUID userId) {
+        User user = findUserById(userId);
+        Group group = findGroupById(groupId);
+        UserGroup userGroup = findUserGroup(user, group);
+
+        boolean needsAck = (userGroup.getRole() == GroupRole.HOST &&
+                userGroup.getHostAckState() != null &&
+                userGroup.getHostAckState() == 0);
+
+        return HostAckResponse.builder()
+                .needsAcknowledgment(needsAck)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void acknowledgeNewHost(UUID groupId, UUID userId) {
+        User user = findUserById(userId);
+        Group group = findGroupById(groupId);
+        UserGroup userGroup = findUserGroup(user, group);
+
+        if (userGroup.getRole() == GroupRole.HOST && userGroup.getHostAckState() == 0) {
+            userGroup.acknowledgeHost(); // 1로 업데이트
         }
     }
 
