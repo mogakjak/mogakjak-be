@@ -23,6 +23,9 @@ public class MateResponse {
     @Schema(description = "프로필 이미지 URL")
     private String profileUrl;
 
+    @Schema(description = "유저 레벨")
+    private Integer level;
+
     @Schema(description = "속한 그룹 이름")
     private List<String> groupNames;
 
@@ -32,11 +35,12 @@ public class MateResponse {
     @Schema(description = "마지막 활동 시간")
     private LocalDateTime lastActivityAt;
 
-    public static MateResponse from(User user, List<String> groupNames) {
+    public static MateResponse from(User user, Integer level, List<String> groupNames) {
         return MateResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getName())
                 .profileUrl(user.getImageUrl())
+                .level(level)
                 .groupNames(groupNames)
                 .isActive(user.getIsActive() != null ? user.getIsActive() : false)
                 .lastActivityAt(user.getLastActivityAt())

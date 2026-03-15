@@ -201,7 +201,7 @@ public class GroupServiceImpl implements GroupService {
 
             return matePage.map(mate -> {
                 List<String> sharedGroupNames = userGroupRepository.findSharedGroupNames(user, mate);
-                return MateResponse.from(mate, sharedGroupNames);
+                return MateResponse.from(mate, getLevelFromUser(mate), sharedGroupNames);
             });
         } else {
             Group group = findGroupById(groupId);
@@ -209,7 +209,7 @@ public class GroupServiceImpl implements GroupService {
 
             Page<User> users = userGroupRepository.findMatesByGroup(group, user, search, pageable);
 
-            return users.map(u -> MateResponse.from(u, List.of(group.getName())));
+            return users.map(u -> MateResponse.from(u, getLevelFromUser(u), List.of(group.getName())));
         }
     }
 
