@@ -25,6 +25,9 @@ public class StorageService {
     @Value("${cloud.aws.s3.endpoint}")
     private String endpoint;
 
+    @Value("${cloud.aws.s3.namespace}")
+    private String namespace;
+
     /**
      * Presigned URL 발급
      * @param prefix 파일 경로 (예: profile/, group/)
@@ -54,7 +57,7 @@ public class StorageService {
 
         // 3. 조회용 Public URL 생성 (DB 저장용)
         // 형식: https://kr.object.ncloudstorage.com/버킷명/파일키
-        String imageUrl = endpoint + "/" + bucket + "/" + fileKey;
+        String imageUrl = endpoint + "/n/" + namespace + "/b/" + bucket + "/o/" + fileKey;
 
         return new PresignedUrlResponse(url.toString(), imageUrl);
     }
