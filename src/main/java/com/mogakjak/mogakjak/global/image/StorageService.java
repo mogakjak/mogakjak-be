@@ -22,8 +22,8 @@ public class StorageService {
     @Value("${application.bucket.name}")
     private String bucket;
 
-    @Value("${cloud.aws.s3.endpoint}")
-    private String endpoint;
+    @Value("${cloud.aws.s3.public-endpoint}")
+    private String publicEndpoint;
 
     @Value("${cloud.aws.s3.namespace}")
     private String namespace;
@@ -57,7 +57,7 @@ public class StorageService {
 
         // 3. 조회용 Public URL 생성 (DB 저장용)
         // 형식: https://kr.object.ncloudstorage.com/버킷명/파일키
-        String imageUrl = endpoint + "/n/" + namespace + "/b/" + bucket + "/o/" + fileKey;
+        String imageUrl = publicEndpoint + "/n/" + namespace + "/b/" + bucket + "/o/" + fileKey;
 
         return new PresignedUrlResponse(url.toString(), imageUrl);
     }
