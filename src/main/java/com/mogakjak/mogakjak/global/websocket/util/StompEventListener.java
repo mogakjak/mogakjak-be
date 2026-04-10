@@ -4,6 +4,8 @@ import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepositor
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.auth.security.util.JwtUtil;
+import com.mogakjak.mogakjak.domain.lounge.service.OfficialLoungePresenceService;
+import com.mogakjak.mogakjak.domain.lounge.service.OfficialLoungeService;
 import com.mogakjak.mogakjak.global.websocket.service.UserActiveStatusService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,8 @@ public class StompEventListener {
     private final ActiveFocusSessionRepository activeFocusSessionRepository;
     private final JwtUtil jwtUtil;
     private final UserActiveStatusService userActiveStatusService;
+    private final OfficialLoungePresenceService officialLoungePresenceService;
+    private final OfficialLoungeService officialLoungeService;
 
     @EventListener
     @Transactional
@@ -52,6 +56,8 @@ public class StompEventListener {
                 // 세션 ID와 userId 매핑 저장
                 sessionUserIdMap.put(sessionId, userId);
                 log.info("WebSocket 연결: 세션 매핑 저장: sessionId={}, userId={}", sessionId, userId);
+                long sessionCount = officialLoungePresenceService.registerWebSocketSession(userId);
+                log.info("공식 라운지 웹소켓 세션 등록: userId={}, sessionCount={}", userId, sessionCount);
                 
                 User user = userRepository.findById(userId).orElse(null);
                 if (user != null) {
@@ -110,6 +116,11 @@ public class StompEventListener {
                 // 세션 매핑에서 제거
                 sessionUserIdMap.remove(sessionId);
                 log.info("WebSocket 해제: 세션 매핑 제거: sessionId={}, userId={}", sessionId, userId);
+                boolean removedFromLounge = officialLoungePresenceService.removePresenceIfNoWebSocketSession(userId);
+                if (removedFromLounge) {
+                    log.info("공식 라운지 presence 자동 제거 완료: userId={}", userId);
+                    officialLoungeService.publishPresenceUpdate(null, userId, "DISCONNECT");
+                }
                 
                 User user = userRepository.findById(userId).orElse(null);
                 if (user != null) {

@@ -12,6 +12,7 @@ import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusUpdateDto;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupTimerEventDto;
 import com.mogakjak.mogakjak.global.websocket.dto.InvitationNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.InvitationResponseNotificationDto;
+import com.mogakjak.mogakjak.global.websocket.dto.OfficialLoungePresenceUpdateDto;
 import com.mogakjak.mogakjak.global.websocket.dto.TimerCompletionNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.PokeNotificationDto;
 import com.mogakjak.mogakjak.global.websocket.dto.UserActiveStatusDto;
@@ -69,6 +70,11 @@ public class RedisPubSubService implements MessageListener {
                 // 그룹 멤버 상태 업데이트 처리
                 GroupMemberStatusUpdateDto statusUpdateDto = objectMapper.readValue(payload, GroupMemberStatusUpdateDto.class);
                 messageTemplate.convertAndSend("/topic/group/"+statusUpdateDto.getGroupId()+"/member-status", statusUpdateDto);
+            } else if ("official-lounge-presence".equals(channel)) {
+                // 공식 라운지 입실/퇴실 상태 업데이트 처리
+                OfficialLoungePresenceUpdateDto presenceUpdateDto =
+                        objectMapper.readValue(payload, OfficialLoungePresenceUpdateDto.class);
+                messageTemplate.convertAndSend("/topic/lounge/presence", presenceUpdateDto);
             } else if ("timer-completion".equals(channel)) {
                 // 타이머 완료 알림 처리
                 TimerCompletionNotificationDto completionDto = objectMapper.readValue(payload, TimerCompletionNotificationDto.class);
