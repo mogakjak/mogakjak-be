@@ -3,17 +3,16 @@ package com.mogakjak.mogakjak.domain.quote.service;
 import com.mogakjak.mogakjak.domain.quote.dto.QuoteRequest;
 import com.mogakjak.mogakjak.domain.quote.dto.QuoteResponse;
 import com.mogakjak.mogakjak.domain.quote.entity.Quote;
-
 import com.mogakjak.mogakjak.domain.quote.repository.QuoteRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +38,22 @@ public class QuoteService {
                 .stream()
                 .map(QuoteResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public QuoteResponse getRandomQuote() {
+        long count = quoteRepository.count();
+        if (count <= 0) {
+            throw new CustomException(ErrorCode.QUOTE_NOT_FOUND);
+        }
+
+        int offset = ThreadLocalRandom.current().nextInt((int) count);
+        Quote quote = quoteRepository.findRandomByOffset(offset);
+        if (quote == null) {
+            throw new CustomException(ErrorCode.QUOTE_NOT_FOUND);
+        }
+
+        return QuoteResponse.from(quote);
     }
 
     @Transactional(readOnly = true)

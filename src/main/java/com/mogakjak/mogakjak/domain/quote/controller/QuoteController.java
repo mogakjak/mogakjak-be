@@ -42,6 +42,12 @@ public class QuoteController {
         return ApiResponse.success(SuccessCode.OK, quoteService.getAllQuotes());
     }
 
+    @Operation(summary = "랜덤 명언 조회", description = "공식 라운지와 홈 화면에서 사용할 랜덤 명언을 조회합니다.")
+    @GetMapping("/random")
+    public ApiResponse<QuoteResponse> getRandomQuote() {
+        return ApiResponse.success(SuccessCode.OK, quoteService.getRandomQuote());
+    }
+
     @Operation(summary = "명언 단건 조회", description = "특정 명언을 조회합니다.")
     @GetMapping("/{id}")
     public ApiResponse<QuoteResponse> getQuote(@PathVariable UUID id) {

@@ -18,6 +18,8 @@ import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
+import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeSummaryResponse;
+import com.mogakjak.mogakjak.domain.lounge.service.OfficialLoungeService;
 import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.FocusNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
@@ -53,6 +55,7 @@ public class GroupServiceImpl implements GroupService {
     private final CheerNotificationService cheerNotificationService;
     private final InvitationNotificationService invitationNotificationService;
     private final InvitationResponseNotificationService invitationResponseNotificationService;
+    private final OfficialLoungeService officialLoungeService;
     private final UserCharacterRepository userCharacterRepository;
     private final ImageCharacterRepository imageCharacterRepository;
     private final GroupTimerService groupTimerService;
@@ -61,35 +64,33 @@ public class GroupServiceImpl implements GroupService {
     @Transactional(readOnly = true)
     public List<MyGroupResponse> getMyGroups(UUID userId) {
         User user = findUserById(userId);
+        OfficialLoungeSummaryResponse officialLoungeSummary = officialLoungeService.getSummary(userId);
 
-        // 내가 가입한 그룹 목록 조회
         List<UserGroup> myUserGroups = userGroupRepository.findAllByUserWithGroup(user);
 
-        return myUserGroups.stream().map(myUg -> {
-            Group group = myUg.getGroup();
+        List<MyGroupResponse> response = new java.util.ArrayList<>();
+        response.add(MyGroupResponse.fromOfficialLounge(officialLoungeSummary));
+        response.addAll(myUserGroups.stream()
+                .map(myUg -> {
+                    Group group = myUg.getGroup();
+                    List<MyGroupResponse.GroupMemberDto> members =
+                            userGroupRepository.findByGroupIdWithUserAndProfile(group.getId()).stream()
+                                    .map(ug -> {
+                                        User member = ug.getUser();
+                                        return MyGroupResponse.GroupMemberDto.builder()
+                                                .userId(member.getId())
+                                                .nickname(member.getName())
+                                                .profileUrl(getProfileUrlFromUser(member))
+                                                .level(getLevelFromUser(member))
+                                                .role(ug.getRole())
+                                                .build();
+                                    }).collect(Collectors.toList());
 
-            // 해당 그룹의 멤버들을 프로필 정보(레벨, 이미지)와 함께 조회
-            // (UserGroupRepository에 findByGroupIdWithUserAndProfile 메서드 추가 필요)
-            List<MyGroupResponse.GroupMemberDto> members =
-                    userGroupRepository.findByGroupIdWithUserAndProfile(group.getId()).stream()
-                            .map(ug -> {
-                                User member = ug.getUser();
-                                return MyGroupResponse.GroupMemberDto.builder()
-                                        .userId(member.getId())
-                                        .nickname(member.getName())
-                                        .profileUrl(getProfileUrlFromUser(member))
-                                        .level(getLevelFromUser(member))
-                                        .role(ug.getRole())
-                                        .build();
-                            }).collect(Collectors.toList());
+                    return MyGroupResponse.fromGroup(group.getId(), group.getName(), group.getImageUrl(), members);
+                })
+                .collect(Collectors.toList()));
 
-            return MyGroupResponse.builder()
-                    .groupId(group.getId())
-                    .groupName(group.getName())
-                    .imageUrl(group.getImageUrl()) // 그룹 이미지 URL 포함
-                    .members(members)              // 그룹 멤버 리스트 포함
-                    .build();
-        }).collect(Collectors.toList());
+        return response;
     }
 
     @Override
@@ -712,14 +713,6 @@ public class GroupServiceImpl implements GroupService {
                             .map(ImageCharacter::getImageUrl)
                             .orElse(null);
                 });
-    }
-
-    private MyGroupResponse toMyGroupDto(Group group) {
-        return MyGroupResponse.builder()
-                .groupId(group.getId())
-                .groupName(group.getName())
-                .imageUrl(group.getImageUrl())
-                .build();
     }
 
     @Override

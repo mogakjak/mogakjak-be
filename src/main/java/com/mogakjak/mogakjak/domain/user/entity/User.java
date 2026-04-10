@@ -40,6 +40,10 @@ public class User extends BaseSchema {
     @Builder.Default
     private Boolean isDeleted = false;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isOfficialLoungeFocusCheckEnabled = true;
+
     private LocalDateTime deletedAt;
 
     @Column(nullable = false)
@@ -87,6 +91,10 @@ public class User extends BaseSchema {
     public void softDelete() {
         this.isDeleted = true;
         this.deletedAt = LocalDateTime.now();
+    }
+
+    public void updateOfficialLoungeFocusCheckEnabled(Boolean enabled) {
+        this.isOfficialLoungeFocusCheckEnabled = enabled;
     }
 
     public void agreeTerms() {

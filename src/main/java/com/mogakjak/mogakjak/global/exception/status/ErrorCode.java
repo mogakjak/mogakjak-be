@@ -48,6 +48,8 @@ public enum ErrorCode implements StatusCode {
     NOT_GROUP_MEMBER(HttpStatus.FORBIDDEN, "그룹의 멤버가 아닙니다."),
     CANNOT_LEAVE_AS_HOST(HttpStatus.BAD_REQUEST, "방장은 다른 멤버가 있을 경우 그룹을 탈퇴할 수 없습니다."),
     ALREADY_GROUP_MEMBER(HttpStatus.CONFLICT, "이미 그룹에 속한 멤버입니다."),
+    OFFICIAL_LOUNGE_NOT_FOUND(HttpStatus.NOT_FOUND, "공식 라운지를 찾을 수 없습니다."),
+    OFFICIAL_LOUNGE_FULL(HttpStatus.CONFLICT, "지금 라운지가 열기로 가득 찼어요! 잠시 후 다시 시도해 주세요."),
 
     // Invitation Errors
     INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "초대를 찾을 수 없습니다."),
