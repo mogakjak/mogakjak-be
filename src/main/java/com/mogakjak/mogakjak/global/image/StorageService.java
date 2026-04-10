@@ -19,13 +19,13 @@ public class StorageService {
 
     private final AmazonS3 amazonS3;
 
-    @Value("${application.bucket.name}")
+    @Value("${application.bucket.name:}")
     private String bucket;
 
-    @Value("${cloud.aws.s3.public-endpoint}")
+    @Value("${cloud.aws.s3.public-endpoint:}")
     private String publicEndpoint;
 
-    @Value("${cloud.aws.s3.namespace}")
+    @Value("${cloud.aws.s3.namespace:}")
     private String namespace;
 
     /**
@@ -57,7 +57,13 @@ public class StorageService {
 
         // 3. 조회용 Public URL 생성 (DB 저장용)
         // 형식: https://kr.object.ncloudstorage.com/버킷명/파일키
-        String imageUrl = publicEndpoint + "/n/" + namespace + "/b/" + bucket + "/o/" + fileKey;
+        String resolvedPublicEndpoint = (publicEndpoint == null || publicEndpoint.isBlank())
+                ? "https://kr.object.ncloudstorage.com"
+                : publicEndpoint;
+        String resolvedNamespace = (namespace == null || namespace.isBlank())
+                ? bucket
+                : namespace;
+        String imageUrl = resolvedPublicEndpoint + "/n/" + resolvedNamespace + "/b/" + bucket + "/o/" + fileKey;
 
         return new PresignedUrlResponse(url.toString(), imageUrl);
     }
