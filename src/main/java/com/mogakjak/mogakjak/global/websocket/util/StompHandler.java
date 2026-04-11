@@ -98,7 +98,11 @@ public class StompHandler implements ChannelInterceptor {
             log.debug("구독 destination: {}", destination);
             
                    // 집중 체크 알림 구독인지 확인
-                   if (destination != null && destination.startsWith("/topic/group/") && destination.endsWith("/notification")) {
+                   if (destination != null && destination.startsWith("/topic/user/") && destination.endsWith("/focus-notification")) {
+                       // 공식 라운지 및 개인 집중 체크 알림 구독 허용
+                       log.info("집중 체크 알림 구독 허용: {}", destination);
+                       // 토큰 검증은 CONNECT에서 이미 수행되었으므로 허용
+                   } else if (destination != null && destination.startsWith("/topic/group/") && destination.endsWith("/notification")) {
                        // 집중 체크 알림 구독은 그룹 멤버 검증만 수행 (별도 처리)
                        log.info("집중 체크 알림 구독 허용: {}", destination);
                        // 토큰 검증은 CONNECT에서 이미 수행되었으므로 여기서는 그룹 멤버 검증만 필요
@@ -107,6 +111,10 @@ public class StompHandler implements ChannelInterceptor {
                    } else if (destination != null && destination.startsWith("/topic/group/") && destination.endsWith("/member-status")) {
                        // 그룹 멤버 상태 구독 허용
                        log.info("그룹 멤버 상태 구독 허용: {}", destination);
+                       // 토큰 검증은 CONNECT에서 이미 수행되었으므로 허용
+                   } else if (destination != null && destination.equals("/topic/lounge/presence")) {
+                       // 공식 라운지 입실/퇴실/타이머 상태 구독 허용
+                       log.info("공식 라운지 presence 구독 허용: {}", destination);
                        // 토큰 검증은 CONNECT에서 이미 수행되었으므로 허용
                    } else if (destination != null && destination.startsWith("/topic/user/") && destination.endsWith("/timer-completion")) {
                        // 개인 타이머 완료 알림 구독 허용

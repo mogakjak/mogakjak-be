@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +15,8 @@ public interface FocusIntervalRepository extends JpaRepository<FocusInterval, UU
     Optional<FocusInterval> findTopBySessionIdOrderByStartedAtDesc(UUID sessionId);
 
     List<FocusInterval> findAllBySessionId(UUID sessionId);
+
+    List<FocusInterval> findAllBySessionIdInOrderBySessionIdAscStartedAtDesc(Collection<UUID> sessionIds);
 
     @Query(value = """
     SELECT 

@@ -27,8 +27,9 @@ import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
 import com.mogakjak.mogakjak.global.websocket.service.TimerCompletionNotificationService;
+import com.mogakjak.mogakjak.domain.lounge.service.OfficialLoungeService;
 import com.mogakjak.mogakjak.global.websocket.service.UserActiveStatusService;
-import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +56,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     private final GroupRepository groupRepository;
     private final GroupMemberStatusService groupMemberStatusService;
     private final TimerCompletionNotificationService timerCompletionNotificationService;
+    private final OfficialLoungeService officialLoungeService;
     private final UserActiveStatusService userActiveStatusService;
     private final GroupService groupService;
 
@@ -141,7 +143,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         currentFocusSession.pause(progressRate);
         focusSessionRepository.save(currentFocusSession);
 
-        updateUserGroupStatusAndBroadcast(user, currentFocusSession, GroupParticipationStatus.RESTING);
+        boolean officialLoungeGroup = isOfficialLoungeGroup(currentFocusSession.getGroupId());
+        updateUserGroupStatusAndBroadcast(user, currentFocusSession, GroupParticipationStatus.RESTING, officialLoungeGroup);
+        publishOfficialLoungePresenceUpdateAfterCommit(currentFocusSession.getGroupId(), user.getId(), "TIMER_PAUSE", officialLoungeGroup);
 
         // pause 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
         try {
@@ -175,7 +179,9 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         currentFocusSession.resume();
         focusSessionRepository.save(currentFocusSession);
 
-        updateUserGroupStatusAndBroadcast(user, currentFocusSession, GroupParticipationStatus.PARTICIPATING);
+        boolean officialLoungeGroup = isOfficialLoungeGroup(currentFocusSession.getGroupId());
+        updateUserGroupStatusAndBroadcast(user, currentFocusSession, GroupParticipationStatus.PARTICIPATING, officialLoungeGroup);
+        publishOfficialLoungePresenceUpdateAfterCommit(currentFocusSession.getGroupId(), user.getId(), "TIMER_RESUME", officialLoungeGroup);
 
         // resume 시 종료 예정 시간 재계산하여 알림 스케줄 재설정 (실패해도 기존 로직에는 영향 없음)
         try {
@@ -224,6 +230,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         // 다른 활성 세션이 있는지 확인 (예: 다른 타이머가 실행 중일 수 있음)
         boolean hasOtherActiveSession = activeFocusSessionRepository.findByUserId(user.getId()).isPresent();
         boolean wasActive = user.getIsActive();
+        boolean officialLoungeGroup = isOfficialLoungeGroup(currentFocusSession.getGroupId());
         log.info("타이머 종료 (finishSession): userId={}, wasActive={}, hasOtherActiveSession={}", user.getId(), wasActive, hasOtherActiveSession);
         if (!hasOtherActiveSession) {
             user.setActive(false);
@@ -234,7 +241,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
             if (wasActive) {
                 log.info("타이머 종료: isActive 상태 변경 감지, 브로드캐스트 예약: userId={}, isActive=false", user.getId());
                 TransactionSynchronizationManager.registerSynchronization(
-                    new TransactionSynchronizationAdapter() {
+                    new TransactionSynchronization() {
                         @Override
                         public void afterCommit() {
                             log.info("타이머 종료: 트랜잭션 커밋 완료, 브로드캐스트 실행: userId={}, isActive=false", user.getId());
@@ -246,20 +253,13 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 log.info("타이머 종료: isActive 상태 변경 없음 (이미 false), 브로드캐스트 안 함: userId={}", user.getId());
             }
 
-                // 그룹 내 개인 타이머인 경우 해당 그룹의 참여 상태를 RESTING으로 변경
-                if (currentFocusSession.getParticipationType() == ParticipationType.GROUP && currentFocusSession.getGroupId() != null) {
-                    UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), currentFocusSession.getGroupId())
-                            .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
-                    
-                    // 다른 활성 세션이 없고 그룹 세션에 참여 중인 상태면 RESTING으로 변경
-                    if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
-                        userGroup.setParticipationStatus(GroupParticipationStatus.RESTING);
-                        userGroupRepository.save(userGroup);
-                        
-                        // 그룹 멤버 상태 변경 브로드캐스트
-                        groupMemberStatusService.broadcastMemberStatusUpdate(currentFocusSession.getGroupId(), user.getId());
-                    }
-                }
+                syncGroupParticipationStatusIfPresent(
+                        user.getId(),
+                        currentFocusSession.getGroupId(),
+                        GroupParticipationStatus.RESTING,
+                        false,
+                        officialLoungeGroup
+                );
         }
 
         currentFocusSession.addDuration(intervalDurationSeconds);
@@ -273,6 +273,12 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         // Todo의 누적 actualTimeInSeconds를 기준으로 progressRate 계산
         Integer progressRate = calculateProgressRateFromTodo(todo);
         currentFocusSession.end(now, progressRate);
+        publishOfficialLoungePresenceUpdateAfterCommit(
+                currentFocusSession.getGroupId(),
+                user.getId(),
+                "TIMER_FINISH",
+                officialLoungeGroup
+        );
 
         return TimerResponse.fromFinish(currentFocusSession);
     }
@@ -302,6 +308,8 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         // 다음 단계로 전환
         if (focusSession.getStatus() != TimerStatus.PAUSED) latestInterval.end(now);
         focusSession.addDuration(accumulatedSeconds);
+        boolean officialLoungeGroup = isOfficialLoungeGroup(focusSession.getGroupId());
+        publishOfficialLoungePresenceUpdateAfterCommit(focusSession.getGroupId(), user.getId(), "POMODORO_PHASE", officialLoungeGroup);
 
         if (currentPhase == PomodoroPhaseType.FOCUS && isPomodoroFinished(focusSession, intervals)) {
             activeFocusSessionRepository.deleteById(currentActiveSession.getId());
@@ -337,7 +345,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 if (wasActive) {
                     log.info("타이머 종료: isActive 상태 변경 감지, 브로드캐스트 예약: userId={}, isActive=false", user.getId());
                     TransactionSynchronizationManager.registerSynchronization(
-                        new TransactionSynchronizationAdapter() {
+                        new TransactionSynchronization() {
                             @Override
                             public void afterCommit() {
                                 log.info("타이머 종료: 트랜잭션 커밋 완료, 브로드캐스트 실행: userId={}, isActive=false", user.getId());
@@ -349,23 +357,13 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                     log.info("타이머 종료: isActive 상태 변경 없음 (이미 false), 브로드캐스트 안 함: userId={}", user.getId());
                 }
 
-                // 그룹 내 개인 타이머인 경우 해당 그룹의 참여 상태를 RESTING으로 변경
-                if (focusSession.getParticipationType() == ParticipationType.GROUP && focusSession.getGroupId() != null) {
-                    UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), focusSession.getGroupId())
-                            .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
-                    
-                    // 다른 활성 세션이 없고 그룹 세션에 참여 중인 상태면 RESTING으로 변경
-                    if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
-                        userGroup.setParticipationStatus(GroupParticipationStatus.RESTING);
-                        userGroupRepository.save(userGroup);
-                        
-                        // 그룹 멤버 상태 변경 브로드캐스트
-                        groupMemberStatusService.broadcastMemberStatusUpdate(focusSession.getGroupId(), user.getId());
-                        
-                        // 모든 멤버가 NOT_PARTICIPATING이 되면 응원 수 초기화
-                        groupService.resetAllCheerCounts(focusSession.getGroupId());
-                    }
-                }
+                syncGroupParticipationStatusIfPresent(
+                        user.getId(),
+                        focusSession.getGroupId(),
+                        GroupParticipationStatus.RESTING,
+                        true,
+                        officialLoungeGroup
+                );
             }
             
             return TimerResponse.fromFinish(focusSession);
@@ -393,16 +391,19 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         }
         focusSessionRepository.save(focusSession);
         
-        // 그룹 내 개인 타이머인 경우 그룹 멤버 상태 브로드캐스트
-        if (focusSession.getParticipationType() == ParticipationType.GROUP && focusSession.getGroupId() != null) {
-            UUID groupId = focusSession.getGroupId();
+        // 공식 라운지는 membership이 없으므로 그룹 멤버 상태 브로드캐스트는 일반 그룹에만 적용
+        UUID groupId = focusSession.getGroupId();
+        boolean officialLoungeGroup = isOfficialLoungeGroup(groupId);
+        if (focusSession.getParticipationType() == ParticipationType.GROUP
+                && groupId != null
+                && !officialLoungeGroup) {
             UUID userId = user.getId();
             log.info("개인 타이머 공개/비공개 설정 변경 - sessionId: {}, isTaskPublic: {}, isTimerPublic: {}, groupId: {}", 
                     sessionId, focusSession.getIsTaskPublic(), focusSession.getIsTimerPublic(), groupId);
             
             // 트랜잭션 커밋 후 브로드캐스트를 위해 TransactionSynchronizationManager 사용
             org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
-                new org.springframework.transaction.support.TransactionSynchronizationAdapter() {
+                new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
                         log.info("트랜잭션 커밋 완료, 그룹 멤버 상태 브로드캐스트 시작 - groupId: {}, userId: {}", groupId, userId);
@@ -411,6 +412,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 }
             );
         }
+        publishOfficialLoungePresenceUpdateAfterCommit(focusSession.getGroupId(), user.getId(), "TIMER_VISIBILITY", officialLoungeGroup);
     }
 
     @Override
@@ -422,16 +424,77 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         return finishSession(user, activeSession.getSessionId());
     }
 
-    private void updateUserGroupStatusAndBroadcast(User user, FocusSession focusSession, GroupParticipationStatus newStatus) {
-        if (focusSession.getParticipationType() == ParticipationType.GROUP && focusSession.getGroupId() != null) {
-            UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(user.getId(), focusSession.getGroupId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
-            if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
-                userGroup.setParticipationStatus(newStatus);
-                userGroupRepository.save(userGroup);
-            }
-            groupMemberStatusService.broadcastMemberStatusUpdate(focusSession.getGroupId(), user.getId());
+    private void updateUserGroupStatusAndBroadcast(
+            User user,
+            FocusSession focusSession,
+            GroupParticipationStatus newStatus,
+            boolean officialLoungeGroup
+    ) {
+        syncGroupParticipationStatusIfPresent(user.getId(), focusSession.getGroupId(), newStatus, false, officialLoungeGroup);
+    }
+
+    private void syncGroupParticipationStatusIfPresent(
+            UUID userId,
+            UUID groupId,
+            GroupParticipationStatus newStatus,
+            boolean resetCheerCountsWhenIdle,
+            boolean officialLoungeGroup
+    ) {
+        if (groupId == null || officialLoungeGroup) {
+            return;
         }
+
+        userGroupRepository.findByUser_IdAndGroup_Id(userId, groupId)
+                .ifPresent(userGroup -> {
+                    if (newStatus == GroupParticipationStatus.PARTICIPATING) {
+                        if (userGroup.getEnteredAt() != null) {
+                            userGroup.setParticipationStatus(newStatus);
+                            userGroupRepository.save(userGroup);
+                            groupMemberStatusService.broadcastMemberStatusUpdate(groupId, userId);
+                        }
+                        return;
+                    }
+
+                    if (userGroup.getParticipationStatus() != GroupParticipationStatus.NOT_PARTICIPATING) {
+                        userGroup.setParticipationStatus(newStatus);
+                        userGroupRepository.save(userGroup);
+                        groupMemberStatusService.broadcastMemberStatusUpdate(groupId, userId);
+                    }
+
+                    if (resetCheerCountsWhenIdle) {
+                        groupService.resetAllCheerCounts(groupId);
+                    }
+                });
+    }
+
+    private void publishOfficialLoungePresenceUpdateAfterCommit(
+            UUID groupId,
+            UUID changedUserId,
+            String eventType,
+            boolean officialLoungeGroup
+    ) {
+        if (groupId == null || !officialLoungeGroup) {
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        officialLoungeService.publishPresenceUpdate(groupId, changedUserId, eventType);
+                    }
+                }
+        );
+    }
+
+    private boolean isOfficialLoungeGroup(UUID groupId) {
+        if (groupId == null) {
+            return false;
+        }
+
+        return groupRepository.findById(groupId)
+                .map(group -> Boolean.TRUE.equals(group.getIsOfficialLounge()))
+                .orElse(false);
     }
 
     private Integer calculateProgressRate(Integer todoTargetDuration, Long totalDuration) {
@@ -490,6 +553,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         boolean wasActive = user.getIsActive();
+        boolean officialLoungeGroup = isOfficialLoungeGroup(groupId);
         log.info("타이머 시작: userId={}, wasActive={}, willSetActive=true", userId, wasActive);
         user.setActive(true);
         userRepository.save(user);
@@ -498,7 +562,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         if (!wasActive) {
             log.info("타이머 시작: isActive 상태 변경 감지, 브로드캐스트 예약: userId={}, isActive=true", userId);
             TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronizationAdapter() {
+                new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
                         log.info("타이머 시작: 트랜잭션 커밋 완료, 브로드캐스트 실행: userId={}, isActive=true", userId);
@@ -510,20 +574,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
             log.info("타이머 시작: isActive 상태 변경 없음 (이미 true), 브로드캐스트 안 함: userId={}", userId);
         }
 
-        // 그룹 내 개인 타이머인 경우 그룹 참여 상태를 PARTICIPATING으로 변경
-        if (participationType == ParticipationType.GROUP && groupId != null) {
-            UserGroup userGroup = userGroupRepository.findByUser_IdAndGroup_Id(userId, groupId)
-                    .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
-            
-            if (userGroup.getEnteredAt() != null) {
-                // 그룹에 입장한 상태에서 개인 타이머를 시작하면 PARTICIPATING으로 변경
-                userGroup.setParticipationStatus(GroupParticipationStatus.PARTICIPATING);
-                userGroupRepository.save(userGroup);
-                
-                // 그룹 멤버 상태 변경 브로드캐스트
-                groupMemberStatusService.broadcastMemberStatusUpdate(groupId, userId);
-            }
-        }
+        syncGroupParticipationStatusIfPresent(userId, groupId, GroupParticipationStatus.PARTICIPATING, false, officialLoungeGroup);
 
         FocusInterval focusInterval = FocusInterval.create(
                 focusSession.getId(),
@@ -532,6 +583,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 round
         );
         focusIntervalRepository.save(focusInterval);
+        publishOfficialLoungePresenceUpdateAfterCommit(groupId, userId, "TIMER_START", officialLoungeGroup);
 
         // 시작 시점에 Todo의 actualTimeInSeconds를 기준으로 progressRate 계산 (그룹 타이머 제외)
         Integer progressRate = calculateProgressRateFromTodo(todo);
