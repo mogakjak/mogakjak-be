@@ -129,6 +129,21 @@ public class GroupServiceImpl implements GroupService {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
 
+        if (Boolean.TRUE.equals(group.getIsOfficialLounge())) {
+            OfficialLoungeSummaryResponse officialLoungeSummary = officialLoungeService.getSummary(userId);
+            List<GroupDetailResponse.MemberInfo> members = officialLoungeSummary.getMembers().stream()
+                    .map(member -> GroupDetailResponse.MemberInfo.builder()
+                            .userId(member.getUserId())
+                            .nickname(member.getNickname())
+                            .profileUrl(member.getProfileUrl())
+                            .level(member.getLevel())
+                            .role(null)
+                            .build())
+                    .collect(Collectors.toList());
+
+            return GroupDetailResponse.from(group, members);
+        }
+
         UserGroup userGroup = checkUserInGroup(user, group);
 
         // 그룹 입장 처리: NOT_PARTICIPATING 상태이거나 null인 경우 입장 일시 기록 및 참여 상태를 휴식 중으로 설정
