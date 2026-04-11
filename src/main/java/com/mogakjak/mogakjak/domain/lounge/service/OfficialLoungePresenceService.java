@@ -7,6 +7,8 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,6 +18,7 @@ public class OfficialLoungePresenceService {
 
     private static final String PRESENCE_KEY = "official-lounge:presence";
     private static final String SESSION_COUNT_KEY = "official-lounge:websocket-sessions";
+    private static final String CHEER_COUNT_KEY = "official-lounge:cheer-count";
 
     private final StringRedisTemplate stringRedisTemplate;
     private DefaultRedisScript<Long> enterScript;
@@ -86,7 +89,11 @@ public class OfficialLoungePresenceService {
     }
 
     public boolean leave(UUID userId) {
+        removeCheerCount(userId);
         Long removed = stringRedisTemplate.opsForZSet().remove(PRESENCE_KEY, userId.toString());
+        if (count() == 0L) {
+            clearAllCheerCounts();
+        }
         return removed != null && removed > 0L;
     }
 
@@ -112,7 +119,11 @@ public class OfficialLoungePresenceService {
     }
 
     public void remove(UUID userId) {
+        removeCheerCount(userId);
         stringRedisTemplate.opsForZSet().remove(PRESENCE_KEY, userId.toString());
+        if (count() == 0L) {
+            clearAllCheerCounts();
+        }
     }
 
     public long registerWebSocketSession(UUID userId) {
@@ -139,6 +150,50 @@ public class OfficialLoungePresenceService {
             return false;
         }
 
-        return stringRedisTemplate.opsForZSet().remove(PRESENCE_KEY, userId.toString()) != null;
+        removeCheerCount(userId);
+        boolean removed = stringRedisTemplate.opsForZSet().remove(PRESENCE_KEY, userId.toString()) != null;
+        if (count() == 0L) {
+            clearAllCheerCounts();
+        }
+        return removed;
+    }
+
+    public LocalDateTime getEnteredAt(UUID userId) {
+        Double score = stringRedisTemplate.opsForZSet().score(PRESENCE_KEY, userId.toString());
+        if (score == null) {
+            return null;
+        }
+
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(score.longValue()), ZoneId.systemDefault());
+    }
+
+    public Integer getCheerCount(UUID userId) {
+        Object value = stringRedisTemplate.opsForHash().get(CHEER_COUNT_KEY, userId.toString());
+        if (value == null) {
+            return 0;
+        }
+
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    public Long incrementCheerCount(UUID userId) {
+        Long result = stringRedisTemplate.opsForHash().increment(CHEER_COUNT_KEY, userId.toString(), 1L);
+        return result != null ? result : 0L;
+    }
+
+    public void removeCheerCount(UUID userId) {
+        stringRedisTemplate.opsForHash().delete(CHEER_COUNT_KEY, userId.toString());
+    }
+
+    public void clearAllCheerCounts() {
+        stringRedisTemplate.delete(CHEER_COUNT_KEY);
     }
 }

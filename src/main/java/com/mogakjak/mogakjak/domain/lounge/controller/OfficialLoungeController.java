@@ -2,6 +2,7 @@ package com.mogakjak.mogakjak.domain.lounge.controller;
 
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeSummaryResponse;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeFocusCheckRequest;
+import com.mogakjak.mogakjak.domain.group.controller.dto.CheerRequest;
 import com.mogakjak.mogakjak.domain.lounge.service.OfficialLoungeService;
 import com.mogakjak.mogakjak.global.auth.security.CustomUserDetails;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
@@ -66,6 +67,17 @@ public class OfficialLoungeController {
     ) {
         UUID userId = getUserId(userDetails);
         return ApiResponse.success(SuccessCode.OK, officialLoungeService.updateFocusCheck(userId, request.enabled()));
+    }
+
+    @Operation(summary = "공식 라운지 응원 보내기", description = "공식 라운지에 입실 중인 다른 멤버에게 응원을 보냅니다.")
+    @PostMapping("/cheer")
+    public ApiResponse<Void> sendCheer(
+            @Valid @RequestBody CheerRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        officialLoungeService.sendCheer(userId, request.getTargetUserId());
+        return ApiResponse.success(SuccessCode.CREATED);
     }
 
     private UUID getUserId(CustomUserDetails userDetails) {

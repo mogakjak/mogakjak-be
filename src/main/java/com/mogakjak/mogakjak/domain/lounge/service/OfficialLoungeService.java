@@ -26,6 +26,7 @@ import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.websocket.dto.OfficialLoungePresenceUpdateDto;
+import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.RedisPubSubService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -34,6 +35,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.time.Duration;
@@ -63,6 +66,7 @@ public class OfficialLoungeService {
     private final FocusIntervalRepository focusIntervalRepository;
     private final TodoRepository todoRepository;
     private final OfficialLoungeAccessLogRepository officialLoungeAccessLogRepository;
+    private final CheerNotificationService cheerNotificationService;
     private final RedisPubSubService redisPubSubService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -125,6 +129,39 @@ public class OfficialLoungeService {
         Group lounge = getOfficialLounge();
         List<OfficialLoungeMemberResponse> members = loadMembers(officialLoungePresenceService.findAllUserIds());
         return buildResponse(lounge, userId, members, getTodayQuote());
+    }
+
+    @Transactional
+    public void sendCheer(UUID userId, UUID targetUserId) {
+        if (userId.equals(targetUserId)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        User sender = findUserById(userId);
+        User target = findUserById(targetUserId);
+        Group lounge = getOfficialLounge();
+
+        if (!officialLoungePresenceService.contains(sender.getId())
+                || !officialLoungePresenceService.contains(target.getId())) {
+            throw new CustomException(ErrorCode.OFFICIAL_LOUNGE_MEMBER_NOT_FOUND);
+        }
+
+        officialLoungePresenceService.incrementCheerCount(targetUserId);
+        cheerNotificationService.sendCheerNotification(userId, targetUserId, lounge.getId());
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronizationAdapter() {
+                        @Override
+                        public void afterCommit() {
+                            publishPresenceUpdate(lounge.getId(), targetUserId, "CHEER");
+                        }
+                    }
+            );
+            return;
+        }
+
+        publishPresenceUpdate(lounge.getId(), targetUserId, "CHEER");
     }
 
     public void publishPresenceUpdate(UUID loungeId, UUID changedUserId, String eventType) {
@@ -210,9 +247,12 @@ public class OfficialLoungeService {
                 .profileUrl(getProfileUrlFromUser(user))
                 .level(getLevelFromUser(user))
                 .participationStatus(timerSnapshot.participationStatus().name())
+                .enteredAt(timerSnapshot.enteredAt())
                 .lastActiveAt(timerSnapshot.lastActiveAt())
+                .daysSinceLastParticipation(timerSnapshot.daysSinceLastParticipation())
                 .personalTimerSeconds(timerSnapshot.personalTimerSeconds())
                 .todoTitle(timerSnapshot.todoTitle())
+                .cheerCount(timerSnapshot.cheerCount())
                 .build();
     }
 
@@ -222,7 +262,7 @@ public class OfficialLoungeService {
             ActiveFocusSession activeSession = activeSessionOpt.get();
             Optional<FocusSession> focusSessionOpt = focusSessionRepository.findById(activeSession.getSessionId());
             if (focusSessionOpt.isPresent()) {
-                return buildSnapshotFromActiveSession(focusSessionOpt.get(), now);
+                return buildSnapshotFromActiveSession(userId, focusSessionOpt.get(), now);
             }
         }
 
@@ -230,16 +270,24 @@ public class OfficialLoungeService {
         LocalDateTime lastActiveAt = lastSessionOpt
                 .map(session -> session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt())
                 .orElse(null);
+        LocalDateTime enteredAt = officialLoungePresenceService.getEnteredAt(userId);
+        if (enteredAt == null) {
+            enteredAt = lastActiveAt;
+        }
+        Long daysSinceLastParticipation = enteredAt != null ? Duration.between(enteredAt, now).toDays() : null;
 
         return new MemberTimerSnapshot(
                 GroupParticipationStatus.NOT_PARTICIPATING,
                 lastActiveAt,
+                enteredAt,
+                daysSinceLastParticipation,
                 null,
-                null
+                null,
+                officialLoungePresenceService.getCheerCount(userId)
         );
     }
 
-    private MemberTimerSnapshot buildSnapshotFromActiveSession(FocusSession focusSession, LocalDateTime now) {
+    private MemberTimerSnapshot buildSnapshotFromActiveSession(UUID userId, FocusSession focusSession, LocalDateTime now) {
         GroupParticipationStatus participationStatus =
                 focusSession.getStatus() == TimerStatus.PAUSED
                         ? GroupParticipationStatus.RESTING
@@ -279,20 +327,31 @@ public class OfficialLoungeService {
         LocalDateTime lastActiveAt = focusSession.getEndedAt() != null
                 ? focusSession.getEndedAt()
                 : focusSession.getStartedAt();
+        LocalDateTime enteredAt = officialLoungePresenceService.getEnteredAt(userId);
+        if (enteredAt == null) {
+            enteredAt = focusSession.getStartedAt();
+        }
+        Long daysSinceLastParticipation = enteredAt != null ? Duration.between(enteredAt, now).toDays() : null;
 
         return new MemberTimerSnapshot(
                 participationStatus,
                 lastActiveAt,
+                enteredAt,
+                daysSinceLastParticipation,
                 personalTimerSeconds,
-                todoTitle
+                todoTitle,
+                officialLoungePresenceService.getCheerCount(userId)
         );
     }
 
     private record MemberTimerSnapshot(
             GroupParticipationStatus participationStatus,
             LocalDateTime lastActiveAt,
+            LocalDateTime enteredAt,
+            Long daysSinceLastParticipation,
             Long personalTimerSeconds,
-            String todoTitle
+            String todoTitle,
+            Integer cheerCount
     ) {
     }
 

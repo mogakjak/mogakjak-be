@@ -2,10 +2,12 @@ package com.mogakjak.mogakjak.domain.group.controller.dto;
 
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeMemberResponse;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeSummaryResponse;
+import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
 import java.util.List;
 import java.util.UUID;
 
 import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
+import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -30,6 +32,13 @@ public class MyGroupResponse {
         private String profileUrl;
         private Integer level;
         private GroupRole role;
+        private GroupParticipationStatus participationStatus;
+        private LocalDateTime enteredAt;
+        private LocalDateTime lastActiveAt;
+        private Long daysSinceLastParticipation;
+        private Long personalTimerSeconds;
+        private String todoTitle;
+        private Integer cheerCount;
     }
 
     public static MyGroupResponse fromGroup(UUID groupId, String groupName, String imageUrl, List<GroupMemberDto> members) {
@@ -69,6 +78,15 @@ public class MyGroupResponse {
                 .profileUrl(member.getProfileUrl())
                 .level(member.getLevel())
                 .role(null)
+                .participationStatus(member.getParticipationStatus() == null
+                        ? null
+                        : GroupParticipationStatus.valueOf(member.getParticipationStatus()))
+                .enteredAt(member.getEnteredAt())
+                .lastActiveAt(member.getLastActiveAt())
+                .daysSinceLastParticipation(member.getDaysSinceLastParticipation())
+                .personalTimerSeconds(member.getPersonalTimerSeconds())
+                .todoTitle(member.getTodoTitle())
+                .cheerCount(member.getCheerCount())
                 .build();
     }
 }

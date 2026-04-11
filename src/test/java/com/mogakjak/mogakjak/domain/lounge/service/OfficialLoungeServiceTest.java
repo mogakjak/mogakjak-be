@@ -16,9 +16,11 @@ import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.domain.lounge.repository.OfficialLoungeAccessLogRepository;
 import com.mogakjak.mogakjak.global.websocket.service.RedisPubSubService;
+import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -77,6 +79,9 @@ class OfficialLoungeServiceTest {
     @Mock
     private RedisPubSubService redisPubSubService;
 
+    @Mock
+    private CheerNotificationService cheerNotificationService;
+
     @InjectMocks
     private OfficialLoungeService officialLoungeService;
 
@@ -108,6 +113,8 @@ class OfficialLoungeServiceTest {
         when(groupRepository.findFirstByIsOfficialLoungeTrue()).thenReturn(Optional.of(lounge));
         when(officialLoungePresenceService.findAllUserIds()).thenReturn(List.of(userId));
         when(officialLoungePresenceService.contains(userId)).thenReturn(true);
+        when(officialLoungePresenceService.getEnteredAt(userId)).thenReturn(LocalDateTime.now().minusHours(1));
+        when(officialLoungePresenceService.getCheerCount(userId)).thenReturn(3);
         when(userRepository.findAllById(any(Iterable.class))).thenReturn(List.of(user));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(any()))
@@ -134,6 +141,61 @@ class OfficialLoungeServiceTest {
         assertEquals("https://img.example.com/me.png", memberResponse.getProfileUrl());
         assertEquals(1, memberResponse.getLevel());
         assertEquals("NOT_PARTICIPATING", memberResponse.getParticipationStatus());
+        assertNotNull(memberResponse.getEnteredAt());
+        assertEquals(3, memberResponse.getCheerCount());
+    }
+
+    @Test
+    void sendCheer_updatesTargetCheerCount_andPublishesPresence() {
+        UUID loungeId = UUID.randomUUID();
+        UUID senderId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+
+        Group lounge = Group.builder()
+                .name("모각작 공식 라운지")
+                .imageUrl("https://img.example.com/lounge-room.png")
+                .build();
+        ReflectionTestUtils.setField(lounge, "id", loungeId);
+        lounge.markAsOfficialLounge(20);
+
+        User sender = User.builder()
+                .name("sender")
+                .email("sender@example.com")
+                .imageUrl("https://img.example.com/sender.png")
+                .build();
+        ReflectionTestUtils.setField(sender, "id", senderId);
+
+        User target = User.builder()
+                .name("target")
+                .email("target@example.com")
+                .imageUrl("https://img.example.com/target.png")
+                .build();
+        ReflectionTestUtils.setField(target, "id", targetId);
+
+        when(groupRepository.findFirstByIsOfficialLoungeTrue()).thenReturn(Optional.of(lounge));
+        when(userRepository.findById(senderId)).thenReturn(Optional.of(sender));
+        when(userRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(officialLoungePresenceService.contains(senderId)).thenReturn(true);
+        when(officialLoungePresenceService.contains(targetId)).thenReturn(true);
+        when(officialLoungePresenceService.incrementCheerCount(targetId)).thenReturn(1L);
+        when(officialLoungePresenceService.findAllUserIds()).thenReturn(List.of(senderId, targetId));
+        when(userRepository.findAllById(any(Iterable.class))).thenReturn(List.of(sender, target));
+        when(userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(any()))
+                .thenReturn(Optional.empty());
+        when(activeFocusSessionRepository.findByUserId(senderId)).thenReturn(Optional.empty());
+        when(activeFocusSessionRepository.findByUserId(targetId)).thenReturn(Optional.empty());
+        when(focusSessionRepository.findTopByUserIdOrderByStartedAtDesc(senderId)).thenReturn(Optional.empty());
+        when(focusSessionRepository.findTopByUserIdOrderByStartedAtDesc(targetId)).thenReturn(Optional.empty());
+        when(officialLoungePresenceService.getEnteredAt(senderId)).thenReturn(LocalDateTime.now().minusMinutes(5));
+        when(officialLoungePresenceService.getEnteredAt(targetId)).thenReturn(LocalDateTime.now().minusMinutes(10));
+        when(officialLoungePresenceService.getCheerCount(senderId)).thenReturn(0);
+        when(officialLoungePresenceService.getCheerCount(targetId)).thenReturn(1);
+
+        officialLoungeService.sendCheer(senderId, targetId);
+
+        verify(officialLoungePresenceService).incrementCheerCount(targetId);
+        verify(cheerNotificationService).sendCheerNotification(senderId, targetId, loungeId);
+        verify(redisPubSubService).publish(eq("official-lounge-presence"), anyString());
     }
 
     @Test

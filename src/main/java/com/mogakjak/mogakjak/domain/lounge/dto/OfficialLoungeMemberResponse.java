@@ -20,7 +20,10 @@ public class OfficialLoungeMemberResponse {
     private String profileUrl;
     private Integer level;
     private String participationStatus;
+    private LocalDateTime enteredAt;
     private LocalDateTime lastActiveAt;
+    private Long daysSinceLastParticipation;
     private Long personalTimerSeconds;
     private String todoTitle;
+    private Integer cheerCount;
 }
