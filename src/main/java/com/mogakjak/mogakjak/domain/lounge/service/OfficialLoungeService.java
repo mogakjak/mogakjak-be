@@ -20,6 +20,7 @@ import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
 import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
+import com.mogakjak.mogakjak.domain.user.entity.UserCharacter;
 import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
@@ -41,10 +42,13 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.LocalDateTime;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -221,31 +225,49 @@ public class OfficialLoungeService {
         }
 
         Map<UUID, User> usersById = userRepository.findAllById(memberIds).stream()
-                .collect(Collectors.toMap(User::getId, user -> user));
-        LocalDateTime now = LocalDateTime.now();
-
-        List<OfficialLoungeMemberResponse> members = new ArrayList<>();
+                .filter(user -> !Boolean.TRUE.equals(user.getIsDeleted()))
+                .collect(Collectors.toMap(
+                        User::getId,
+                        user -> user,
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
+        List<UUID> validMemberIds = new ArrayList<>();
         for (UUID memberId : memberIds) {
             User user = usersById.get(memberId);
-            if (user == null || Boolean.TRUE.equals(user.getIsDeleted())) {
+            if (user == null) {
                 officialLoungePresenceService.remove(memberId);
                 continue;
             }
+            validMemberIds.add(memberId);
+        }
 
-            members.add(buildMemberResponse(user, now));
+        if (validMemberIds.isEmpty()) {
+            return List.of();
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        MemberLoadContext context = loadMemberLoadContext(validMemberIds);
+
+        List<OfficialLoungeMemberResponse> members = new ArrayList<>();
+        for (UUID memberId : validMemberIds) {
+            User user = usersById.get(memberId);
+            if (user != null) {
+                members.add(buildMemberResponse(user, now, context));
+            }
         }
 
         return members;
     }
 
-    private OfficialLoungeMemberResponse buildMemberResponse(User user, LocalDateTime now) {
-        MemberTimerSnapshot timerSnapshot = loadMemberTimerSnapshot(user.getId(), now);
+    private OfficialLoungeMemberResponse buildMemberResponse(User user, LocalDateTime now, MemberLoadContext context) {
+        MemberTimerSnapshot timerSnapshot = loadMemberTimerSnapshot(user.getId(), now, context);
 
         return OfficialLoungeMemberResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getName())
-                .profileUrl(getProfileUrlFromUser(user))
-                .level(getLevelFromUser(user))
+                .profileUrl(getProfileUrlFromUser(user, context.topUserCharacterByUserId(), context.defaultImageCharacter()))
+                .level(getLevelFromUser(user, context.topUserCharacterByUserId()))
                 .participationStatus(timerSnapshot.participationStatus().name())
                 .enteredAt(timerSnapshot.enteredAt())
                 .lastActiveAt(timerSnapshot.lastActiveAt())
@@ -256,21 +278,17 @@ public class OfficialLoungeService {
                 .build();
     }
 
-    private MemberTimerSnapshot loadMemberTimerSnapshot(UUID userId, LocalDateTime now) {
-        Optional<ActiveFocusSession> activeSessionOpt = activeFocusSessionRepository.findByUserId(userId);
-        if (activeSessionOpt.isPresent()) {
-            ActiveFocusSession activeSession = activeSessionOpt.get();
-            Optional<FocusSession> focusSessionOpt = focusSessionRepository.findById(activeSession.getSessionId());
-            if (focusSessionOpt.isPresent()) {
-                return buildSnapshotFromActiveSession(userId, focusSessionOpt.get(), now);
-            }
+    private MemberTimerSnapshot loadMemberTimerSnapshot(UUID userId, LocalDateTime now, MemberLoadContext context) {
+        FocusSession latestSession = context.latestSessionByUserId().get(userId);
+        boolean hasActiveSession = context.activeSessionUserIds().contains(userId);
+        if (hasActiveSession && latestSession != null) {
+            return buildSnapshotFromActiveSession(userId, latestSession, now, context);
         }
 
-        Optional<FocusSession> lastSessionOpt = focusSessionRepository.findTopByUserIdOrderByStartedAtDesc(userId);
-        LocalDateTime lastActiveAt = lastSessionOpt
-                .map(session -> session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt())
-                .orElse(null);
-        LocalDateTime enteredAt = officialLoungePresenceService.getEnteredAt(userId);
+        LocalDateTime lastActiveAt = latestSession != null
+                ? latestSession.getEndedAt() != null ? latestSession.getEndedAt() : latestSession.getStartedAt()
+                : null;
+        LocalDateTime enteredAt = context.enteredAtByUserId().get(userId);
         if (enteredAt == null) {
             enteredAt = lastActiveAt;
         }
@@ -283,11 +301,16 @@ public class OfficialLoungeService {
                 daysSinceLastParticipation,
                 null,
                 null,
-                officialLoungePresenceService.getCheerCount(userId)
+                context.cheerCountByUserId().getOrDefault(userId, 0)
         );
     }
 
-    private MemberTimerSnapshot buildSnapshotFromActiveSession(UUID userId, FocusSession focusSession, LocalDateTime now) {
+    private MemberTimerSnapshot buildSnapshotFromActiveSession(
+            UUID userId,
+            FocusSession focusSession,
+            LocalDateTime now,
+            MemberLoadContext context
+    ) {
         GroupParticipationStatus participationStatus =
                 focusSession.getStatus() == TimerStatus.PAUSED
                         ? GroupParticipationStatus.RESTING
@@ -299,10 +322,8 @@ public class OfficialLoungeService {
             if (focusSession.getStatus() == TimerStatus.PAUSED) {
                 personalTimerSeconds = total;
             } else {
-                Optional<FocusInterval> currentIntervalOpt = focusIntervalRepository
-                        .findTopBySessionIdOrderByStartedAtDesc(focusSession.getId());
-                if (currentIntervalOpt.isPresent()) {
-                    FocusInterval currentInterval = currentIntervalOpt.get();
+                FocusInterval currentInterval = context.latestIntervalBySessionId().get(focusSession.getId());
+                if (currentInterval != null) {
                     LocalDateTime intervalStart = currentInterval.getStartedAt();
                     LocalDateTime intervalEnd = currentInterval.getEndedAt() != null
                             ? currentInterval.getEndedAt()
@@ -318,16 +339,16 @@ public class OfficialLoungeService {
         String todoTitle = null;
         if ((focusSession.getIsTaskPublic() == null || focusSession.getIsTaskPublic())
                 && focusSession.getTodoId() != null) {
-            Optional<Todo> todoOpt = todoRepository.findById(focusSession.getTodoId());
-            if (todoOpt.isPresent()) {
-                todoTitle = todoOpt.get().getTask();
+            Todo todo = context.todoById().get(focusSession.getTodoId());
+            if (todo != null) {
+                todoTitle = todo.getTask();
             }
         }
 
         LocalDateTime lastActiveAt = focusSession.getEndedAt() != null
                 ? focusSession.getEndedAt()
                 : focusSession.getStartedAt();
-        LocalDateTime enteredAt = officialLoungePresenceService.getEnteredAt(userId);
+        LocalDateTime enteredAt = context.enteredAtByUserId().get(userId);
         if (enteredAt == null) {
             enteredAt = focusSession.getStartedAt();
         }
@@ -340,8 +361,97 @@ public class OfficialLoungeService {
                 daysSinceLastParticipation,
                 personalTimerSeconds,
                 todoTitle,
-                officialLoungePresenceService.getCheerCount(userId)
+                context.cheerCountByUserId().getOrDefault(userId, 0)
         );
+    }
+
+    private MemberLoadContext loadMemberLoadContext(List<UUID> memberIds) {
+        Map<UUID, LocalDateTime> enteredAtByUserId = officialLoungePresenceService.getEnteredAtMap(memberIds);
+        Map<UUID, Integer> cheerCountByUserId = officialLoungePresenceService.getCheerCountMap(memberIds);
+        Map<UUID, UserCharacter> topUserCharacterByUserId = loadTopUserCharacterByUserId(memberIds);
+        Map<UUID, ActiveFocusSession> activeSessionByUserId = loadActiveSessionByUserId(memberIds);
+        Map<UUID, FocusSession> latestSessionByUserId = loadLatestSessionByUserId(memberIds);
+        Map<UUID, FocusInterval> latestIntervalBySessionId = loadLatestIntervalBySessionId(
+                activeSessionByUserId.values().stream()
+                        .map(ActiveFocusSession::getSessionId)
+                        .distinct()
+                        .toList()
+        );
+        Map<UUID, Todo> todoById = loadTodosById(
+                latestSessionByUserId.values().stream()
+                        .map(FocusSession::getTodoId)
+                        .filter(todoId -> todoId != null)
+                        .distinct()
+                        .toList()
+        );
+        ImageCharacter defaultImageCharacter = imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1)
+                .orElse(null);
+
+        return new MemberLoadContext(
+                topUserCharacterByUserId,
+                Set.copyOf(activeSessionByUserId.keySet()),
+                latestSessionByUserId,
+                latestIntervalBySessionId,
+                todoById,
+                enteredAtByUserId,
+                cheerCountByUserId,
+                defaultImageCharacter
+        );
+    }
+
+    private Map<UUID, UserCharacter> loadTopUserCharacterByUserId(List<UUID> memberIds) {
+        if (memberIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<UUID, UserCharacter> topUserCharacterByUserId = new HashMap<>();
+        userCharacterRepository.findAllByUserIdInOrderByUserIdAscImageCharacter_LevelDescImageCharacter_CreatedAtAsc(memberIds)
+                .forEach(userCharacter -> topUserCharacterByUserId.putIfAbsent(userCharacter.getUser().getId(), userCharacter));
+        return topUserCharacterByUserId;
+    }
+
+    private Map<UUID, ActiveFocusSession> loadActiveSessionByUserId(List<UUID> memberIds) {
+        if (memberIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return activeFocusSessionRepository.findAllByUserIdIn(memberIds).stream()
+                .collect(Collectors.toMap(
+                        ActiveFocusSession::getUserId,
+                        activeSession -> activeSession,
+                        (left, right) -> left
+                ));
+    }
+
+    private Map<UUID, FocusSession> loadLatestSessionByUserId(List<UUID> memberIds) {
+        if (memberIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<UUID, FocusSession> latestSessionByUserId = new HashMap<>();
+        focusSessionRepository.findAllByUserIdInOrderByUserIdAscStartedAtDesc(memberIds)
+                .forEach(session -> latestSessionByUserId.putIfAbsent(session.getUserId(), session));
+        return latestSessionByUserId;
+    }
+
+    private Map<UUID, FocusInterval> loadLatestIntervalBySessionId(List<UUID> sessionIds) {
+        if (sessionIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<UUID, FocusInterval> latestIntervalBySessionId = new HashMap<>();
+        focusIntervalRepository.findAllBySessionIdInOrderBySessionIdAscStartedAtDesc(sessionIds)
+                .forEach(interval -> latestIntervalBySessionId.putIfAbsent(interval.getSessionId(), interval));
+        return latestIntervalBySessionId;
+    }
+
+    private Map<UUID, Todo> loadTodosById(List<UUID> todoIds) {
+        if (todoIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return todoRepository.findAllById(todoIds).stream()
+                .collect(Collectors.toMap(Todo::getId, todo -> todo, (left, right) -> left));
     }
 
     private record MemberTimerSnapshot(
@@ -355,23 +465,39 @@ public class OfficialLoungeService {
     ) {
     }
 
-    private Integer getLevelFromUser(User user) {
-        return userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(user)
+    private Integer getLevelFromUser(User user, Map<UUID, UserCharacter> topUserCharacterByUserId) {
+        return Optional.ofNullable(topUserCharacterByUserId.get(user.getId()))
                 .map(uc -> uc.getImageCharacter().getLevel())
                 .orElse(1);
     }
 
-    private String getProfileUrlFromUser(User user) {
+    private String getProfileUrlFromUser(
+            User user,
+            Map<UUID, UserCharacter> topUserCharacterByUserId,
+            ImageCharacter defaultImageCharacter
+    ) {
         if (user.getImageUrl() != null) {
             return user.getImageUrl();
         }
-        return userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(user)
-                .map(uc -> uc.getImageCharacter().getImageUrl())
-                .orElseGet(() ->
-                        imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1)
-                                .map(ImageCharacter::getImageUrl)
-                                .orElse(null)
-                );
+
+        UserCharacter userCharacter = topUserCharacterByUserId.get(user.getId());
+        if (userCharacter != null) {
+            return userCharacter.getImageCharacter().getImageUrl();
+        }
+
+        return defaultImageCharacter != null ? defaultImageCharacter.getImageUrl() : null;
+    }
+
+    private record MemberLoadContext(
+            Map<UUID, UserCharacter> topUserCharacterByUserId,
+            Set<UUID> activeSessionUserIds,
+            Map<UUID, FocusSession> latestSessionByUserId,
+            Map<UUID, FocusInterval> latestIntervalBySessionId,
+            Map<UUID, Todo> todoById,
+            Map<UUID, LocalDateTime> enteredAtByUserId,
+            Map<UUID, Integer> cheerCountByUserId,
+            ImageCharacter defaultImageCharacter
+    ) {
     }
 
     private void saveAccessLog(UUID loungeId, UUID userId, long currentMemberCount, Integer maxMemberCount) {

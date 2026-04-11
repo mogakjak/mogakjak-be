@@ -10,6 +10,7 @@ import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepositor
 import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
+import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
@@ -18,6 +19,7 @@ import com.mogakjak.mogakjak.domain.lounge.repository.OfficialLoungeAccessLogRep
 import com.mogakjak.mogakjak.global.websocket.service.RedisPubSubService;
 import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.time.LocalDateTime;
@@ -34,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -113,14 +116,24 @@ class OfficialLoungeServiceTest {
         when(groupRepository.findFirstByIsOfficialLoungeTrue()).thenReturn(Optional.of(lounge));
         when(officialLoungePresenceService.findAllUserIds()).thenReturn(List.of(userId));
         when(officialLoungePresenceService.contains(userId)).thenReturn(true);
-        when(officialLoungePresenceService.getEnteredAt(userId)).thenReturn(LocalDateTime.now().minusHours(1));
-        when(officialLoungePresenceService.getCheerCount(userId)).thenReturn(3);
+        when(officialLoungePresenceService.getEnteredAtMap(List.of(userId)))
+                .thenReturn(Map.of(userId, LocalDateTime.now().minusHours(1)));
+        when(officialLoungePresenceService.getCheerCountMap(List.of(userId))).thenReturn(Map.of(userId, 3));
         when(userRepository.findAllById(any(Iterable.class))).thenReturn(List.of(user));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(any()))
-                .thenReturn(Optional.empty());
-        when(activeFocusSessionRepository.findByUserId(userId)).thenReturn(Optional.empty());
-        when(focusSessionRepository.findTopByUserIdOrderByStartedAtDesc(userId)).thenReturn(Optional.empty());
+        when(userCharacterRepository.findAllByUserIdInOrderByUserIdAscImageCharacter_LevelDescImageCharacter_CreatedAtAsc(anyCollection()))
+                .thenReturn(List.of());
+        when(activeFocusSessionRepository.findAllByUserIdIn(anyCollection())).thenReturn(List.of());
+        when(focusSessionRepository.findAllByUserIdInOrderByUserIdAscStartedAtDesc(anyCollection())).thenReturn(List.of());
+        when(focusIntervalRepository.findAllBySessionIdInOrderBySessionIdAscStartedAtDesc(anyCollection())).thenReturn(List.of());
+        when(imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1))
+                .thenReturn(Optional.of(ImageCharacter.builder()
+                        .level(1)
+                        .name("default")
+                        .imageUrl("https://img.example.com/default.png")
+                        .isActive(true)
+                        .unlockTimeInSeconds(0)
+                        .build()));
         when(quoteService.getRandomQuote()).thenReturn(quote);
 
         OfficialLoungeSummaryResponse response = officialLoungeService.getSummary(userId);
@@ -180,16 +193,26 @@ class OfficialLoungeServiceTest {
         when(officialLoungePresenceService.incrementCheerCount(targetId)).thenReturn(1L);
         when(officialLoungePresenceService.findAllUserIds()).thenReturn(List.of(senderId, targetId));
         when(userRepository.findAllById(any(Iterable.class))).thenReturn(List.of(sender, target));
-        when(userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(any()))
-                .thenReturn(Optional.empty());
-        when(activeFocusSessionRepository.findByUserId(senderId)).thenReturn(Optional.empty());
-        when(activeFocusSessionRepository.findByUserId(targetId)).thenReturn(Optional.empty());
-        when(focusSessionRepository.findTopByUserIdOrderByStartedAtDesc(senderId)).thenReturn(Optional.empty());
-        when(focusSessionRepository.findTopByUserIdOrderByStartedAtDesc(targetId)).thenReturn(Optional.empty());
-        when(officialLoungePresenceService.getEnteredAt(senderId)).thenReturn(LocalDateTime.now().minusMinutes(5));
-        when(officialLoungePresenceService.getEnteredAt(targetId)).thenReturn(LocalDateTime.now().minusMinutes(10));
-        when(officialLoungePresenceService.getCheerCount(senderId)).thenReturn(0);
-        when(officialLoungePresenceService.getCheerCount(targetId)).thenReturn(1);
+        when(userCharacterRepository.findAllByUserIdInOrderByUserIdAscImageCharacter_LevelDescImageCharacter_CreatedAtAsc(anyCollection()))
+                .thenReturn(List.of());
+        when(activeFocusSessionRepository.findAllByUserIdIn(anyCollection())).thenReturn(List.of());
+        when(focusSessionRepository.findAllByUserIdInOrderByUserIdAscStartedAtDesc(anyCollection())).thenReturn(List.of());
+        when(focusIntervalRepository.findAllBySessionIdInOrderBySessionIdAscStartedAtDesc(anyCollection())).thenReturn(List.of());
+        when(officialLoungePresenceService.getEnteredAtMap(List.of(senderId, targetId)))
+                .thenReturn(Map.of(
+                        senderId, LocalDateTime.now().minusMinutes(5),
+                        targetId, LocalDateTime.now().minusMinutes(10)
+                ));
+        when(officialLoungePresenceService.getCheerCountMap(List.of(senderId, targetId)))
+                .thenReturn(Map.of(senderId, 0, targetId, 1));
+        when(imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1))
+                .thenReturn(Optional.of(ImageCharacter.builder()
+                        .level(1)
+                        .name("default")
+                        .imageUrl("https://img.example.com/default.png")
+                        .isActive(true)
+                        .unlockTimeInSeconds(0)
+                        .build()));
 
         officialLoungeService.sendCheer(senderId, targetId);
 
@@ -229,10 +252,22 @@ class OfficialLoungeServiceTest {
         when(officialLoungePresenceService.contains(userId)).thenReturn(true);
         when(userRepository.findAllById(any(Iterable.class))).thenReturn(List.of(user));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(any()))
-                .thenReturn(Optional.empty());
-        when(activeFocusSessionRepository.findByUserId(userId)).thenReturn(Optional.empty());
-        when(focusSessionRepository.findTopByUserIdOrderByStartedAtDesc(userId)).thenReturn(Optional.empty());
+        when(userCharacterRepository.findAllByUserIdInOrderByUserIdAscImageCharacter_LevelDescImageCharacter_CreatedAtAsc(anyCollection()))
+                .thenReturn(List.of());
+        when(activeFocusSessionRepository.findAllByUserIdIn(anyCollection())).thenReturn(List.of());
+        when(focusSessionRepository.findAllByUserIdInOrderByUserIdAscStartedAtDesc(anyCollection())).thenReturn(List.of());
+        when(focusIntervalRepository.findAllBySessionIdInOrderBySessionIdAscStartedAtDesc(anyCollection())).thenReturn(List.of());
+        when(officialLoungePresenceService.getEnteredAtMap(List.of(userId)))
+                .thenReturn(Map.of(userId, LocalDateTime.now().minusMinutes(1)));
+        when(officialLoungePresenceService.getCheerCountMap(List.of(userId))).thenReturn(Map.of(userId, 0));
+        when(imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1))
+                .thenReturn(Optional.of(ImageCharacter.builder()
+                        .level(1)
+                        .name("default")
+                        .imageUrl("https://img.example.com/default.png")
+                        .isActive(true)
+                        .unlockTimeInSeconds(0)
+                        .build()));
         when(quoteService.getRandomQuote()).thenReturn(quote);
 
         officialLoungeService.enter(userId);

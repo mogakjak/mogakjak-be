@@ -2,14 +2,18 @@ package com.mogakjak.mogakjak.domain.lounge.service;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -167,6 +171,42 @@ public class OfficialLoungePresenceService {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(score.longValue()), ZoneId.systemDefault());
     }
 
+    public Map<UUID, LocalDateTime> getEnteredAtMap(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Object> scores = stringRedisTemplate.executePipelined(new SessionCallback<>() {
+            @Override
+            @SuppressWarnings({"rawtypes", "unchecked"})
+            public <K, V> Object execute(RedisOperations<K, V> operations) {
+                RedisOperations rawOperations = operations;
+                for (UUID userId : userIds) {
+                    rawOperations.opsForZSet().score(PRESENCE_KEY, userId.toString());
+                }
+                return null;
+            }
+        });
+
+        Map<UUID, LocalDateTime> enteredAtByUserId = new HashMap<>();
+        for (int i = 0; i < userIds.size() && i < scores.size(); i++) {
+            Object rawScore = scores.get(i);
+            if (rawScore == null) {
+                continue;
+            }
+
+            double score = rawScore instanceof Number number
+                    ? number.doubleValue()
+                    : Double.parseDouble(rawScore.toString());
+            enteredAtByUserId.put(
+                    userIds.get(i),
+                    LocalDateTime.ofInstant(Instant.ofEpochMilli((long) score), ZoneId.systemDefault())
+            );
+        }
+
+        return enteredAtByUserId;
+    }
+
     public Integer getCheerCount(UUID userId) {
         Object value = stringRedisTemplate.opsForHash().get(CHEER_COUNT_KEY, userId.toString());
         if (value == null) {
@@ -184,6 +224,36 @@ public class OfficialLoungePresenceService {
         }
     }
 
+    public Map<UUID, Integer> getCheerCountMap(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Object> counts = stringRedisTemplate.executePipelined(new SessionCallback<>() {
+            @Override
+            @SuppressWarnings({"rawtypes", "unchecked"})
+            public <K, V> Object execute(RedisOperations<K, V> operations) {
+                RedisOperations rawOperations = operations;
+                for (UUID userId : userIds) {
+                    rawOperations.opsForHash().get(CHEER_COUNT_KEY, userId.toString());
+                }
+                return null;
+            }
+        });
+
+        Map<UUID, Integer> cheerCountByUserId = new HashMap<>();
+        for (int i = 0; i < userIds.size() && i < counts.size(); i++) {
+            Object rawCount = counts.get(i);
+            if (rawCount == null) {
+                continue;
+            }
+
+            cheerCountByUserId.put(userIds.get(i), parseCheerCount(rawCount));
+        }
+
+        return cheerCountByUserId;
+    }
+
     public Long incrementCheerCount(UUID userId) {
         Long result = stringRedisTemplate.opsForHash().increment(CHEER_COUNT_KEY, userId.toString(), 1L);
         return result != null ? result : 0L;
@@ -195,5 +265,17 @@ public class OfficialLoungePresenceService {
 
     public void clearAllCheerCounts() {
         stringRedisTemplate.delete(CHEER_COUNT_KEY);
+    }
+
+    private Integer parseCheerCount(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }
