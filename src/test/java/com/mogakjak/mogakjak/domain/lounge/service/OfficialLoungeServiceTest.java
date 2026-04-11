@@ -6,6 +6,10 @@ import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeMemberResponse;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeSummaryResponse;
 import com.mogakjak.mogakjak.domain.quote.dto.QuoteResponse;
 import com.mogakjak.mogakjak.domain.quote.service.QuoteService;
+import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
+import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
+import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
+import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
@@ -56,6 +60,18 @@ class OfficialLoungeServiceTest {
     private OfficialLoungePresenceService officialLoungePresenceService;
 
     @Mock
+    private ActiveFocusSessionRepository activeFocusSessionRepository;
+
+    @Mock
+    private FocusSessionRepository focusSessionRepository;
+
+    @Mock
+    private FocusIntervalRepository focusIntervalRepository;
+
+    @Mock
+    private TodoRepository todoRepository;
+
+    @Mock
     private OfficialLoungeAccessLogRepository officialLoungeAccessLogRepository;
 
     @Mock
@@ -96,6 +112,8 @@ class OfficialLoungeServiceTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(any()))
                 .thenReturn(Optional.empty());
+        when(activeFocusSessionRepository.findByUserId(userId)).thenReturn(Optional.empty());
+        when(focusSessionRepository.findTopByUserIdOrderByStartedAtDesc(userId)).thenReturn(Optional.empty());
         when(quoteService.getRandomQuote()).thenReturn(quote);
 
         OfficialLoungeSummaryResponse response = officialLoungeService.getSummary(userId);
@@ -115,6 +133,7 @@ class OfficialLoungeServiceTest {
         assertEquals("kim", memberResponse.getNickname());
         assertEquals("https://img.example.com/me.png", memberResponse.getProfileUrl());
         assertEquals(1, memberResponse.getLevel());
+        assertEquals("NOT_PARTICIPATING", memberResponse.getParticipationStatus());
     }
 
     @Test
@@ -150,6 +169,8 @@ class OfficialLoungeServiceTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(any()))
                 .thenReturn(Optional.empty());
+        when(activeFocusSessionRepository.findByUserId(userId)).thenReturn(Optional.empty());
+        when(focusSessionRepository.findTopByUserIdOrderByStartedAtDesc(userId)).thenReturn(Optional.empty());
         when(quoteService.getRandomQuote()).thenReturn(quote);
 
         officialLoungeService.enter(userId);

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -18,4 +19,8 @@ public class OfficialLoungeMemberResponse {
     private String nickname;
     private String profileUrl;
     private Integer level;
+    private String participationStatus;
+    private LocalDateTime lastActiveAt;
+    private Long personalTimerSeconds;
+    private String todoTitle;
 }

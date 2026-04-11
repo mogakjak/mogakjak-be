@@ -8,6 +8,16 @@ import com.mogakjak.mogakjak.domain.lounge.entity.OfficialLoungeAccessLog;
 import com.mogakjak.mogakjak.domain.lounge.repository.OfficialLoungeAccessLogRepository;
 import com.mogakjak.mogakjak.domain.quote.dto.QuoteResponse;
 import com.mogakjak.mogakjak.domain.quote.service.QuoteService;
+import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
+import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
+import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
+import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
+import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
+import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
+import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
+import com.mogakjak.mogakjak.domain.todo.entity.Todo;
+import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
+import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
 import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
@@ -26,9 +36,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -46,6 +58,10 @@ public class OfficialLoungeService {
     private final ImageCharacterRepository imageCharacterRepository;
     private final QuoteService quoteService;
     private final OfficialLoungePresenceService officialLoungePresenceService;
+    private final ActiveFocusSessionRepository activeFocusSessionRepository;
+    private final FocusSessionRepository focusSessionRepository;
+    private final FocusIntervalRepository focusIntervalRepository;
+    private final TodoRepository todoRepository;
     private final OfficialLoungeAccessLogRepository officialLoungeAccessLogRepository;
     private final RedisPubSubService redisPubSubService;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -169,6 +185,7 @@ public class OfficialLoungeService {
 
         Map<UUID, User> usersById = userRepository.findAllById(memberIds).stream()
                 .collect(Collectors.toMap(User::getId, user -> user));
+        LocalDateTime now = LocalDateTime.now();
 
         List<OfficialLoungeMemberResponse> members = new ArrayList<>();
         for (UUID memberId : memberIds) {
@@ -178,15 +195,105 @@ public class OfficialLoungeService {
                 continue;
             }
 
-            members.add(OfficialLoungeMemberResponse.builder()
-                    .userId(user.getId())
-                    .nickname(user.getName())
-                    .profileUrl(getProfileUrlFromUser(user))
-                    .level(getLevelFromUser(user))
-                    .build());
+            members.add(buildMemberResponse(user, now));
         }
 
         return members;
+    }
+
+    private OfficialLoungeMemberResponse buildMemberResponse(User user, LocalDateTime now) {
+        MemberTimerSnapshot timerSnapshot = loadMemberTimerSnapshot(user.getId(), now);
+
+        return OfficialLoungeMemberResponse.builder()
+                .userId(user.getId())
+                .nickname(user.getName())
+                .profileUrl(getProfileUrlFromUser(user))
+                .level(getLevelFromUser(user))
+                .participationStatus(timerSnapshot.participationStatus().name())
+                .lastActiveAt(timerSnapshot.lastActiveAt())
+                .personalTimerSeconds(timerSnapshot.personalTimerSeconds())
+                .todoTitle(timerSnapshot.todoTitle())
+                .build();
+    }
+
+    private MemberTimerSnapshot loadMemberTimerSnapshot(UUID userId, LocalDateTime now) {
+        Optional<ActiveFocusSession> activeSessionOpt = activeFocusSessionRepository.findByUserId(userId);
+        if (activeSessionOpt.isPresent()) {
+            ActiveFocusSession activeSession = activeSessionOpt.get();
+            Optional<FocusSession> focusSessionOpt = focusSessionRepository.findById(activeSession.getSessionId());
+            if (focusSessionOpt.isPresent()) {
+                return buildSnapshotFromActiveSession(focusSessionOpt.get(), now);
+            }
+        }
+
+        Optional<FocusSession> lastSessionOpt = focusSessionRepository.findTopByUserIdOrderByStartedAtDesc(userId);
+        LocalDateTime lastActiveAt = lastSessionOpt
+                .map(session -> session.getEndedAt() != null ? session.getEndedAt() : session.getStartedAt())
+                .orElse(null);
+
+        return new MemberTimerSnapshot(
+                GroupParticipationStatus.NOT_PARTICIPATING,
+                lastActiveAt,
+                null,
+                null
+        );
+    }
+
+    private MemberTimerSnapshot buildSnapshotFromActiveSession(FocusSession focusSession, LocalDateTime now) {
+        GroupParticipationStatus participationStatus =
+                focusSession.getStatus() == TimerStatus.PAUSED
+                        ? GroupParticipationStatus.RESTING
+                        : GroupParticipationStatus.PARTICIPATING;
+
+        Long personalTimerSeconds = null;
+        if (Boolean.TRUE.equals(focusSession.getIsTimerPublic()) || focusSession.getIsTimerPublic() == null) {
+            long total = focusSession.getTotalDuration() != null ? focusSession.getTotalDuration() : 0L;
+            if (focusSession.getStatus() == TimerStatus.PAUSED) {
+                personalTimerSeconds = total;
+            } else {
+                Optional<FocusInterval> currentIntervalOpt = focusIntervalRepository
+                        .findTopBySessionIdOrderByStartedAtDesc(focusSession.getId());
+                if (currentIntervalOpt.isPresent()) {
+                    FocusInterval currentInterval = currentIntervalOpt.get();
+                    LocalDateTime intervalStart = currentInterval.getStartedAt();
+                    LocalDateTime intervalEnd = currentInterval.getEndedAt() != null
+                            ? currentInterval.getEndedAt()
+                            : now;
+                    long intervalSeconds = Duration.between(intervalStart, intervalEnd).getSeconds();
+                    personalTimerSeconds = total + intervalSeconds;
+                } else {
+                    personalTimerSeconds = total;
+                }
+            }
+        }
+
+        String todoTitle = null;
+        if ((focusSession.getIsTaskPublic() == null || focusSession.getIsTaskPublic())
+                && focusSession.getTodoId() != null) {
+            Optional<Todo> todoOpt = todoRepository.findById(focusSession.getTodoId());
+            if (todoOpt.isPresent()) {
+                todoTitle = todoOpt.get().getTask();
+            }
+        }
+
+        LocalDateTime lastActiveAt = focusSession.getEndedAt() != null
+                ? focusSession.getEndedAt()
+                : focusSession.getStartedAt();
+
+        return new MemberTimerSnapshot(
+                participationStatus,
+                lastActiveAt,
+                personalTimerSeconds,
+                todoTitle
+        );
+    }
+
+    private record MemberTimerSnapshot(
+            GroupParticipationStatus participationStatus,
+            LocalDateTime lastActiveAt,
+            Long personalTimerSeconds,
+            String todoTitle
+    ) {
     }
 
     private Integer getLevelFromUser(User user) {
