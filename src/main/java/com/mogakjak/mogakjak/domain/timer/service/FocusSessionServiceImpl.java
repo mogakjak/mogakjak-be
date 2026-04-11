@@ -29,7 +29,7 @@ import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
 import com.mogakjak.mogakjak.global.websocket.service.TimerCompletionNotificationService;
 import com.mogakjak.mogakjak.domain.lounge.service.OfficialLoungeService;
 import com.mogakjak.mogakjak.global.websocket.service.UserActiveStatusService;
-import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -238,7 +238,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
             if (wasActive) {
                 log.info("타이머 종료: isActive 상태 변경 감지, 브로드캐스트 예약: userId={}, isActive=false", user.getId());
                 TransactionSynchronizationManager.registerSynchronization(
-                    new TransactionSynchronizationAdapter() {
+                    new TransactionSynchronization() {
                         @Override
                         public void afterCommit() {
                             log.info("타이머 종료: 트랜잭션 커밋 완료, 브로드캐스트 실행: userId={}, isActive=false", user.getId());
@@ -335,7 +335,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
                 if (wasActive) {
                     log.info("타이머 종료: isActive 상태 변경 감지, 브로드캐스트 예약: userId={}, isActive=false", user.getId());
                     TransactionSynchronizationManager.registerSynchronization(
-                        new TransactionSynchronizationAdapter() {
+                        new TransactionSynchronization() {
                             @Override
                             public void afterCommit() {
                                 log.info("타이머 종료: 트랜잭션 커밋 완료, 브로드캐스트 실행: userId={}, isActive=false", user.getId());
@@ -391,7 +391,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
             
             // 트랜잭션 커밋 후 브로드캐스트를 위해 TransactionSynchronizationManager 사용
             org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
-                new org.springframework.transaction.support.TransactionSynchronizationAdapter() {
+                new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
                         log.info("트랜잭션 커밋 완료, 그룹 멤버 상태 브로드캐스트 시작 - groupId: {}, userId: {}", groupId, userId);
@@ -455,7 +455,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         }
 
         TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronizationAdapter() {
+                new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
                         officialLoungeService.publishPresenceUpdate(groupId, changedUserId, eventType);
@@ -538,7 +538,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         if (!wasActive) {
             log.info("타이머 시작: isActive 상태 변경 감지, 브로드캐스트 예약: userId={}, isActive=true", userId);
             TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronizationAdapter() {
+                new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
                         log.info("타이머 시작: 트랜잭션 커밋 완료, 브로드캐스트 실행: userId={}, isActive=true", userId);

@@ -13,7 +13,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
@@ -72,7 +72,7 @@ public class StompEventListener {
                     // 항상 브로드캐스트 (상태가 변경되지 않아도 사용자가 들어왔다는 것을 알려야 함)
                     log.info("WebSocket 연결: 브로드캐스트 예약: userId={}, isActive=true (wasActive={})", userId, wasActive);
                     TransactionSynchronizationManager.registerSynchronization(
-                        new TransactionSynchronizationAdapter() {
+                        new TransactionSynchronization() {
                             @Override
                             public void afterCommit() {
                                 log.info("WebSocket 연결: 트랜잭션 커밋 완료, 브로드캐스트 실행: userId={}, isActive=true", userId);
@@ -148,7 +148,7 @@ public class StompEventListener {
                     final UUID finalUserId = userId; // final 변수로 선언
                     log.info("WebSocket 해제: 브로드캐스트 예약: userId={}, isActive={} (wasActive={})", finalUserId, newActiveStatus, wasActive);
                     TransactionSynchronizationManager.registerSynchronization(
-                        new TransactionSynchronizationAdapter() {
+                        new TransactionSynchronization() {
                             @Override
                             public void afterCommit() {
                                 log.info("WebSocket 해제: 트랜잭션 커밋 완료, 브로드캐스트 실행: userId={}, isActive={}", finalUserId, newActiveStatus);
