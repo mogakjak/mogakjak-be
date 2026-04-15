@@ -20,4 +20,6 @@ public interface InvitationRepository extends JpaRepository<Invitation, UUID> {
     // 이미 초대를 보냈는지 확인
     @Query("SELECT i FROM Invitation i WHERE i.group = :group AND i.invitee = :invitee ORDER BY i.createdAt DESC")
     List<Invitation> findAllByGroupAndInvitee(@Param("group") Group group, @Param("invitee") User invitee);
+
+    boolean existsByGroupAndInviteeAndStatus(Group group, User invitee, InvitationStatus status);
 }

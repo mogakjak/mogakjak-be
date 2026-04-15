@@ -428,15 +428,13 @@ public class GroupServiceImpl implements GroupService {
             throw new CustomException(ErrorCode.CANNOT_INVITE_SELF);
         }
 
+        checkUserInGroup(inviter, group);
+
         if (userGroupRepository.findByUserAndGroup(invitee, group).isPresent()) {
             throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
         }
 
-        // 과거에 초대 기록이 여러 개 있을 수 있어(중복 데이터) 목록으로 조회 후 PENDING만 차단
-        List<Invitation> existingInvitations = invitationRepository.findAllByGroupAndInvitee(group, invitee);
-        boolean hasPending = existingInvitations.stream()
-                .anyMatch(inv -> inv.getStatus() == InvitationStatus.PENDING);
-        if (hasPending) {
+        if (invitationRepository.existsByGroupAndInviteeAndStatus(group, invitee, InvitationStatus.PENDING)) {
             throw new CustomException(ErrorCode.ALREADY_INVITED);
         }
 
@@ -477,6 +475,22 @@ public class GroupServiceImpl implements GroupService {
                     return InvitationResponse.from(inv, memberCount, activeMemberCount);
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<InviteMateResponse> getInviteMates(UUID userId, UUID groupId, String search, Pageable pageable) {
+        User user = findUserById(userId);
+        Group group = findGroupById(groupId);
+        checkUserInGroup(user, group);
+
+        Page<User> matePage = userGroupRepository.findTotalMatesByUser(user, search, pageable);
+
+        return matePage.map(mate -> {
+            List<String> sharedGroupNames = userGroupRepository.findSharedGroupNames(user, mate);
+            InviteMateStatus inviteStatus = resolveInviteMateStatus(group, mate);
+            return InviteMateResponse.from(mate, getLevelFromUser(mate), sharedGroupNames, inviteStatus);
+        });
     }
 
     @Override
@@ -689,6 +703,23 @@ public class GroupServiceImpl implements GroupService {
     private Invitation findInvitationById(UUID invitationId) {
         return invitationRepository.findById(invitationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVITATION_NOT_FOUND));
+    }
+
+    private InviteMateStatus resolveInviteMateStatus(Group group, User invitee) {
+        if (userGroupRepository.findByUserAndGroup(invitee, group).isPresent()) {
+            return InviteMateStatus.ALREADY_GROUP_MEMBER;
+        }
+
+        boolean hasPendingInvitation = invitationRepository.existsByGroupAndInviteeAndStatus(
+                group,
+                invitee,
+                InvitationStatus.PENDING
+        );
+        if (hasPendingInvitation) {
+            return InviteMateStatus.ALREADY_INVITED;
+        }
+
+        return InviteMateStatus.CAN_INVITE;
     }
 
     private UserGroup findUserGroup(User user, Group group) {

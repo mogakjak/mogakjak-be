@@ -44,6 +44,9 @@ public interface GroupService {
     // 그룹으로 메이트 초대
     void inviteMate(UUID groupId, InviteMateRequest request, UUID inviterId);
 
+    // 그룹 초대 가능한 메이트 조회
+    Page<InviteMateResponse> getInviteMates(UUID userId, UUID groupId, String search, Pageable pageable);
+
     // 내가 받은 초대 목록 조회
     List<InvitationResponse> getMyInvitations(UUID userId);
 
