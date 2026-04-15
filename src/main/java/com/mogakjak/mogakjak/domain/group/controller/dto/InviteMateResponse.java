@@ -31,11 +31,17 @@ public class InviteMateResponse {
     @Schema(description = "초대 가능 상태", example = "CAN_INVITE")
     private InviteMateStatus inviteStatus;
 
-    public static InviteMateResponse from(User user, Integer level, List<String> groupNames, InviteMateStatus inviteStatus) {
+    public static InviteMateResponse from(
+            User user,
+            String profileUrl,
+            Integer level,
+            List<String> groupNames,
+            InviteMateStatus inviteStatus
+    ) {
         return InviteMateResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getName())
-                .profileUrl(user.getImageUrl())
+                .profileUrl(profileUrl)
                 .level(level)
                 .groupNames(groupNames)
                 .inviteStatus(inviteStatus)

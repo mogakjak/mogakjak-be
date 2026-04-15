@@ -16,6 +16,8 @@ import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
+import com.mogakjak.mogakjak.domain.user.repository.projection.SharedGroupNameProjection;
+import com.mogakjak.mogakjak.domain.user.entity.UserCharacter;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeSummaryResponse;
@@ -36,7 +38,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.UUID;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -489,11 +496,23 @@ public class GroupServiceImpl implements GroupService {
         }
 
         Page<User> matePage = userGroupRepository.findTotalMatesByUser(user, search, pageable);
+        List<User> mates = matePage.getContent();
+        List<UUID> mateIds = mates.stream()
+                .map(User::getId)
+                .toList();
+        Map<UUID, UserCharacter> topUserCharacterByUserId = loadTopUserCharacterByUserId(mateIds);
+        ImageCharacter defaultImageCharacter = imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1)
+                .orElse(null);
+        Map<UUID, List<String>> sharedGroupNamesByMateId = loadSharedGroupNamesByMateId(user, mateIds);
+        Set<UUID> groupMemberIds = loadGroupMemberIds(group);
+        Set<UUID> pendingInviteeIds = loadPendingInviteeIds(group, mateIds);
 
         return matePage.map(mate -> {
-            List<String> sharedGroupNames = userGroupRepository.findSharedGroupNames(user, mate);
-            InviteMateStatus inviteStatus = resolveInviteMateStatus(group, mate);
-            return InviteMateResponse.from(mate, getLevelFromUser(mate), sharedGroupNames, inviteStatus);
+            String profileUrl = getProfileUrlFromUser(mate, topUserCharacterByUserId, defaultImageCharacter);
+            Integer level = getLevelFromUser(mate, topUserCharacterByUserId);
+            List<String> sharedGroupNames = sharedGroupNamesByMateId.getOrDefault(mate.getId(), List.of());
+            InviteMateStatus inviteStatus = resolveInviteMateStatus(mate.getId(), groupMemberIds, pendingInviteeIds);
+            return InviteMateResponse.from(mate, profileUrl, level, sharedGroupNames, inviteStatus);
         });
     }
 
@@ -709,21 +728,82 @@ public class GroupServiceImpl implements GroupService {
                 .orElseThrow(() -> new CustomException(ErrorCode.INVITATION_NOT_FOUND));
     }
 
-    private InviteMateStatus resolveInviteMateStatus(Group group, User invitee) {
-        if (userGroupRepository.findByUserAndGroup(invitee, group).isPresent()) {
+    private Map<UUID, UserCharacter> loadTopUserCharacterByUserId(List<UUID> userIds) {
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<UUID, UserCharacter> topUserCharacterByUserId = new HashMap<>();
+        userCharacterRepository.findAllByUserIdInOrderByUserIdAscImageCharacter_LevelDescImageCharacter_CreatedAtAsc(userIds)
+                .forEach(userCharacter -> topUserCharacterByUserId.putIfAbsent(userCharacter.getUser().getId(), userCharacter));
+        return topUserCharacterByUserId;
+    }
+
+    private Map<UUID, List<String>> loadSharedGroupNamesByMateId(User me, List<UUID> mateIds) {
+        if (mateIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<UUID, List<String>> sharedGroupNamesByMateId = new HashMap<>();
+        userGroupRepository.findSharedGroupNamesByMates(me, mateIds).forEach(sharedGroupName -> {
+            sharedGroupNamesByMateId
+                    .computeIfAbsent(sharedGroupName.getMateId(), key -> new ArrayList<>())
+                    .add(sharedGroupName.getGroupName());
+        });
+        return sharedGroupNamesByMateId;
+    }
+
+    private Set<UUID> loadGroupMemberIds(Group group) {
+        return userGroupRepository.findAllByGroupWithUser(group).stream()
+                .map(userGroup -> userGroup.getUser().getId())
+                .collect(Collectors.toSet());
+    }
+
+    private Set<UUID> loadPendingInviteeIds(Group group, List<UUID> mateIds) {
+        if (mateIds.isEmpty()) {
+            return Set.of();
+        }
+
+        return new HashSet<>(invitationRepository.findInviteeIdsByGroupAndStatusAndInviteeIds(
+                group,
+                mateIds,
+                InvitationStatus.PENDING
+        ));
+    }
+
+    private InviteMateStatus resolveInviteMateStatus(UUID inviteeId, Set<UUID> groupMemberIds, Set<UUID> pendingInviteeIds) {
+        if (groupMemberIds.contains(inviteeId)) {
             return InviteMateStatus.ALREADY_GROUP_MEMBER;
         }
 
-        boolean hasPendingInvitation = invitationRepository.existsByGroupAndInviteeAndStatus(
-                group,
-                invitee,
-                InvitationStatus.PENDING
-        );
-        if (hasPendingInvitation) {
+        if (pendingInviteeIds.contains(inviteeId)) {
             return InviteMateStatus.ALREADY_INVITED;
         }
 
         return InviteMateStatus.CAN_INVITE;
+    }
+
+    private Integer getLevelFromUser(User user, Map<UUID, UserCharacter> topUserCharacterByUserId) {
+        return topUserCharacterByUserId.get(user.getId()) != null
+                ? topUserCharacterByUserId.get(user.getId()).getImageCharacter().getLevel()
+                : 1;
+    }
+
+    private String getProfileUrlFromUser(
+            User user,
+            Map<UUID, UserCharacter> topUserCharacterByUserId,
+            ImageCharacter defaultImageCharacter
+    ) {
+        if (user.getImageUrl() != null) {
+            return user.getImageUrl();
+        }
+
+        UserCharacter userCharacter = topUserCharacterByUserId.get(user.getId());
+        if (userCharacter != null) {
+            return userCharacter.getImageCharacter().getImageUrl();
+        }
+
+        return defaultImageCharacter != null ? defaultImageCharacter.getImageUrl() : null;
     }
 
     private UserGroup findUserGroup(User user, Group group) {

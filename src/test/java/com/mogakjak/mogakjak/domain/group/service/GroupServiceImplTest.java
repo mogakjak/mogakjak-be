@@ -10,12 +10,15 @@ import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeMemberResponse;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeSummaryResponse;
 import com.mogakjak.mogakjak.domain.lounge.service.OfficialLoungeService;
 import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
+import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
+import com.mogakjak.mogakjak.domain.user.entity.UserCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.UserGroup;
 import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
+import com.mogakjak.mogakjak.domain.user.repository.projection.SharedGroupNameProjection;
 import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.FocusNotificationService;
 import com.mogakjak.mogakjak.global.websocket.service.GroupMemberStatusService;
@@ -197,31 +200,50 @@ class GroupServiceImplTest {
         User mateOne = User.builder()
                 .name("mate-one")
                 .email("mate1@example.com")
+                .imageUrl(null)
                 .build();
         ReflectionTestUtils.setField(mateOne, "id", mateOneId);
 
         User mateTwo = User.builder()
                 .name("mate-two")
                 .email("mate2@example.com")
+                .imageUrl("https://img.example.com/mate-two.png")
                 .build();
         ReflectionTestUtils.setField(mateTwo, "id", mateTwoId);
 
         Page<User> matePage = new PageImpl<>(List.of(mateOne, mateTwo), PageRequest.of(0, 10), 2);
+        UserGroup hostUserGroup = UserGroup.builder()
+                .user(user)
+                .group(group)
+                .role(GroupRole.HOST)
+                .build();
+        UserCharacter mateOneCharacter = UserCharacter.builder()
+                .user(mateOne)
+                .imageCharacter(ImageCharacter.builder()
+                        .level(3)
+                        .name("leaf")
+                        .imageUrl("https://img.example.com/fallback.png")
+                        .isActive(true)
+                        .unlockTimeInSeconds(0)
+                        .build())
+                .build();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
-        when(userGroupRepository.findByUserAndGroup(user, group)).thenReturn(Optional.of(UserGroup.builder().user(user).group(group).role(GroupRole.MEMBER).build()));
+        when(userGroupRepository.findByUserAndGroup(user, group)).thenReturn(Optional.of(hostUserGroup));
         when(userGroupRepository.findTotalMatesByUser(user, null, PageRequest.of(0, 10))).thenReturn(matePage);
-        when(userGroupRepository.findSharedGroupNames(user, mateOne)).thenReturn(List.of("shared-a"));
-        when(userGroupRepository.findSharedGroupNames(user, mateTwo)).thenReturn(List.of("shared-a", "shared-b"));
-        when(userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(any()))
+        when(userGroupRepository.findAllByGroupWithUser(group)).thenReturn(List.of(hostUserGroup));
+        when(userGroupRepository.findSharedGroupNamesByMates(user, List.of(mateOneId, mateTwoId))).thenReturn(List.of(
+                sharedGroupName(mateOneId, "shared-a"),
+                sharedGroupName(mateTwoId, "shared-a"),
+                sharedGroupName(mateTwoId, "shared-b")
+        ));
+        when(userCharacterRepository.findAllByUserIdInOrderByUserIdAscImageCharacter_LevelDescImageCharacter_CreatedAtAsc(List.of(mateOneId, mateTwoId)))
+                .thenReturn(List.of(mateOneCharacter));
+        when(imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1))
                 .thenReturn(Optional.empty());
-        when(userGroupRepository.findByUserAndGroup(mateOne, group)).thenReturn(Optional.empty());
-        when(userGroupRepository.findByUserAndGroup(mateTwo, group)).thenReturn(Optional.empty());
-        when(invitationRepository.existsByGroupAndInviteeAndStatus(group, mateOne, com.mogakjak.mogakjak.domain.invitation.entity.InvitationStatus.PENDING))
-                .thenReturn(true);
-        when(invitationRepository.existsByGroupAndInviteeAndStatus(group, mateTwo, com.mogakjak.mogakjak.domain.invitation.entity.InvitationStatus.PENDING))
-                .thenReturn(false);
+        when(invitationRepository.findInviteeIdsByGroupAndStatusAndInviteeIds(group, List.of(mateOneId, mateTwoId), com.mogakjak.mogakjak.domain.invitation.entity.InvitationStatus.PENDING))
+                .thenReturn(List.of(mateOneId));
 
         Page<InviteMateResponse> response = groupService.getInviteMates(userId, groupId, null, PageRequest.of(0, 10));
 
@@ -229,6 +251,9 @@ class GroupServiceImplTest {
         assertEquals(InviteMateStatus.ALREADY_INVITED, response.getContent().get(0).getInviteStatus());
         assertEquals(InviteMateStatus.CAN_INVITE, response.getContent().get(1).getInviteStatus());
         assertEquals(List.of("shared-a"), response.getContent().get(0).getGroupNames());
+        assertEquals("https://img.example.com/fallback.png", response.getContent().get(0).getProfileUrl());
+        assertEquals(Integer.valueOf(3), response.getContent().get(0).getLevel());
+        assertEquals("https://img.example.com/mate-two.png", response.getContent().get(1).getProfileUrl());
     }
 
     @Test
@@ -297,5 +322,19 @@ class GroupServiceImplTest {
         );
         assertEquals(ErrorCode.ONLY_GROUP_MEMBER_CAN_INVITE, ex.getStatusCode());
         assertEquals("그룹 멤버만 초대할 수 있습니다.", ex.getMessage());
+    }
+
+    private static SharedGroupNameProjection sharedGroupName(UUID mateId, String groupName) {
+        return new SharedGroupNameProjection() {
+            @Override
+            public UUID getMateId() {
+                return mateId;
+            }
+
+            @Override
+            public String getGroupName() {
+                return groupName;
+            }
+        };
     }
 }
