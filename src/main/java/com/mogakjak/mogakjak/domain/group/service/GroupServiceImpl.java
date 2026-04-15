@@ -428,7 +428,9 @@ public class GroupServiceImpl implements GroupService {
             throw new CustomException(ErrorCode.CANNOT_INVITE_SELF);
         }
 
-        checkUserInGroup(inviter, group);
+        if (userGroupRepository.findByUserAndGroup(inviter, group).isEmpty()) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER_CAN_INVITE);
+        }
 
         if (userGroupRepository.findByUserAndGroup(invitee, group).isPresent()) {
             throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
@@ -482,7 +484,9 @@ public class GroupServiceImpl implements GroupService {
     public Page<InviteMateResponse> getInviteMates(UUID userId, UUID groupId, String search, Pageable pageable) {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
-        checkUserInGroup(user, group);
+        if (userGroupRepository.findByUserAndGroup(user, group).isEmpty()) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER_CAN_VIEW_INVITE_MATES);
+        }
 
         Page<User> matePage = userGroupRepository.findTotalMatesByUser(user, search, pageable);
 
