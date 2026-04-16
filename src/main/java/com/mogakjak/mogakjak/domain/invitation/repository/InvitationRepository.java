@@ -6,6 +6,7 @@ import com.mogakjak.mogakjak.domain.invitation.entity.InvitationStatus;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.Query;
@@ -20,4 +21,19 @@ public interface InvitationRepository extends JpaRepository<Invitation, UUID> {
     // 이미 초대를 보냈는지 확인
     @Query("SELECT i FROM Invitation i WHERE i.group = :group AND i.invitee = :invitee ORDER BY i.createdAt DESC")
     List<Invitation> findAllByGroupAndInvitee(@Param("group") Group group, @Param("invitee") User invitee);
+
+    boolean existsByGroupAndInviteeAndStatus(Group group, User invitee, InvitationStatus status);
+
+    @Query("""
+            SELECT i.invitee.id
+            FROM Invitation i
+            WHERE i.group = :group
+              AND i.invitee.id IN :inviteeIds
+              AND i.status = :status
+            """)
+    List<UUID> findInviteeIdsByGroupAndStatusAndInviteeIds(
+            @Param("group") Group group,
+            @Param("inviteeIds") Collection<UUID> inviteeIds,
+            @Param("status") InvitationStatus status
+    );
 }

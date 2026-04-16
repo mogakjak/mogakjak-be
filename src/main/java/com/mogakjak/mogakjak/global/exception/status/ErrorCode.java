@@ -56,6 +56,8 @@ public enum ErrorCode implements StatusCode {
     INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "초대를 찾을 수 없습니다."),
     INVALID_INVITATION(HttpStatus.BAD_REQUEST, "유효하지 않은 초대입니다 (예: 만료, 이미 처리됨)."),
     CANNOT_INVITE_SELF(HttpStatus.BAD_REQUEST, "자기 자신을 초대할 수 없습니다."),
+    ONLY_GROUP_MEMBER_CAN_INVITE(HttpStatus.FORBIDDEN, "그룹 멤버만 초대할 수 있습니다."),
+    ONLY_GROUP_MEMBER_CAN_VIEW_INVITE_MATES(HttpStatus.FORBIDDEN, "그룹 멤버만 초대 가능한 메이트를 조회할 수 있습니다."),
     ALREADY_INVITED(HttpStatus.CONFLICT, "이미 초대를 보낸 사용자입니다."),
 
     // Quote Errors

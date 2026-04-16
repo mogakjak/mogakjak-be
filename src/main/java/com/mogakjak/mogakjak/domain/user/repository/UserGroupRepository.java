@@ -5,12 +5,14 @@ import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
 import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserGroup;
+import com.mogakjak.mogakjak.domain.user.repository.projection.SharedGroupNameProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -60,6 +62,20 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
             "WHERE ug.user = :mate " +
             "AND ug.group IN (SELECT myUg.group FROM UserGroup myUg WHERE myUg.user = :me)")
     List<String> findSharedGroupNames(@Param("me") User me, @Param("mate") User mate);
+
+    @Query("""
+            SELECT DISTINCT ug.user.id AS mateId, ug.group.name AS groupName
+            FROM UserGroup ug
+            WHERE ug.user.id IN :mateIds
+              AND ug.group IN (SELECT myUg.group FROM UserGroup myUg WHERE myUg.user = :me)
+              AND ug.user != :me
+              AND ug.user.isDeleted = false
+            ORDER BY ug.user.id ASC, ug.group.createdAt DESC
+            """)
+    List<SharedGroupNameProjection> findSharedGroupNamesByMates(
+            @Param("me") User me,
+            @Param("mateIds") Collection<UUID> mateIds
+    );
 
     // 내 전체 메이트 조회 (UserGroup 객체 반환 - 그룹명 포함용, 탈퇴 사용자 제외)
     @Query("SELECT ug FROM UserGroup ug " +

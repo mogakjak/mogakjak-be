@@ -185,6 +185,22 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
+    @Operation(summary = "초대 가능한 메이트 조회", description = "현재 사용자가 속한 그룹에 초대 가능한 메이트 목록을 조회합니다. 이미 그룹 멤버이거나 이미 초대한 사용자는 상태가 함께 반환됩니다.")
+    @GetMapping("/{groupId}/invite-mates")
+    public ApiResponse<Page<InviteMateResponse>> getInviteMates(
+            @Parameter(description = "초대 대상 그룹 ID (UUID)", required = true)
+            @PathVariable UUID groupId,
+            @Parameter(description = "검색할 메이트 닉네임(이름)")
+            @RequestParam(required = false) String search,
+            @Parameter(hidden = true)
+            @PageableDefault(size = 10) Pageable pageable,
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID userId = getUserId(userDetails);
+        Page<InviteMateResponse> response = groupService.getInviteMates(userId, groupId, search, pageable);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
     @Operation(summary = "그룹 탈퇴", description = "현재 로그인한 사용자가 속해있는 그룹에서 탈퇴합니다. <br> - 멤버가 탈퇴하면: 정상적으로 탈퇴 처리됩니다. <br> - 방장이 탈퇴하면: 그룹에 다른 멤버가 있을 경우 탈퇴가 거부됩니다. (400 Bad Request)")
     @DeleteMapping("/{groupId}/members/me")
     public ApiResponse<Void> leaveGroup(
