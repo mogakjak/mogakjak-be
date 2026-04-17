@@ -23,6 +23,7 @@ import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserCharacter;
 import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
+import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
@@ -72,6 +73,7 @@ public class OfficialLoungeService {
     private final OfficialLoungeAccessLogRepository officialLoungeAccessLogRepository;
     private final CheerNotificationService cheerNotificationService;
     private final RedisPubSubService redisPubSubService;
+    private final UserGroupRepository userGroupRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     {
@@ -82,7 +84,7 @@ public class OfficialLoungeService {
     public OfficialLoungeSummaryResponse getSummary(UUID userId) {
         Group lounge = getOfficialLounge();
         List<UUID> memberIds = officialLoungePresenceService.findAllUserIds();
-        List<OfficialLoungeMemberResponse> members = loadMembers(memberIds);
+        List<OfficialLoungeMemberResponse> members = loadMembers(userId, memberIds);
 
         return buildResponse(lounge, userId, members, getTodayQuote());
     }
@@ -131,7 +133,7 @@ public class OfficialLoungeService {
         userRepository.save(user);
 
         Group lounge = getOfficialLounge();
-        List<OfficialLoungeMemberResponse> members = loadMembers(officialLoungePresenceService.findAllUserIds());
+        List<OfficialLoungeMemberResponse> members = loadMembers(userId, officialLoungePresenceService.findAllUserIds());
         return buildResponse(lounge, userId, members, getTodayQuote());
     }
 
@@ -172,7 +174,7 @@ public class OfficialLoungeService {
         try {
             Group lounge = getOfficialLounge();
             List<UUID> memberIds = officialLoungePresenceService.findAllUserIds();
-            List<OfficialLoungeMemberResponse> members = loadMembers(memberIds);
+            List<OfficialLoungeMemberResponse> members = loadMembers(null, memberIds);
             OfficialLoungePresenceUpdateDto payload = OfficialLoungePresenceUpdateDto.builder()
                     .loungeId(loungeId != null ? loungeId : lounge.getId())
                     .eventType(eventType)
@@ -219,7 +221,7 @@ public class OfficialLoungeService {
                 .build();
     }
 
-    private List<OfficialLoungeMemberResponse> loadMembers(List<UUID> memberIds) {
+    private List<OfficialLoungeMemberResponse> loadMembers(UUID userId, List<UUID> memberIds) {
         if (memberIds.isEmpty()) {
             return List.of();
         }
@@ -246,8 +248,12 @@ public class OfficialLoungeService {
             return List.of();
         }
 
+        Set<UUID> mateIds = userId != null
+                ? userGroupRepository.findMateIdsByUser(userId, validMemberIds)
+                : Set.of();
+
         LocalDateTime now = LocalDateTime.now();
-        MemberLoadContext context = loadMemberLoadContext(validMemberIds);
+        MemberLoadContext context = loadMemberLoadContext(validMemberIds, mateIds);
 
         List<OfficialLoungeMemberResponse> members = new ArrayList<>();
         for (UUID memberId : validMemberIds) {
@@ -275,6 +281,7 @@ public class OfficialLoungeService {
                 .personalTimerSeconds(timerSnapshot.personalTimerSeconds())
                 .todoTitle(timerSnapshot.todoTitle())
                 .cheerCount(timerSnapshot.cheerCount())
+                .isMate(context.mateIds().contains(user.getId()))
                 .build();
     }
 
@@ -365,7 +372,7 @@ public class OfficialLoungeService {
         );
     }
 
-    private MemberLoadContext loadMemberLoadContext(List<UUID> memberIds) {
+    private MemberLoadContext loadMemberLoadContext(List<UUID> memberIds, Set<UUID> mateIds) {
         Map<UUID, LocalDateTime> enteredAtByUserId = officialLoungePresenceService.getEnteredAtMap(memberIds);
         Map<UUID, Integer> cheerCountByUserId = officialLoungePresenceService.getCheerCountMap(memberIds);
         Map<UUID, UserCharacter> topUserCharacterByUserId = loadTopUserCharacterByUserId(memberIds);
@@ -395,7 +402,8 @@ public class OfficialLoungeService {
                 todoById,
                 enteredAtByUserId,
                 cheerCountByUserId,
-                defaultImageCharacter
+                defaultImageCharacter,
+                mateIds
         );
     }
 
@@ -496,7 +504,8 @@ public class OfficialLoungeService {
             Map<UUID, Todo> todoById,
             Map<UUID, LocalDateTime> enteredAtByUserId,
             Map<UUID, Integer> cheerCountByUserId,
-            ImageCharacter defaultImageCharacter
+            ImageCharacter defaultImageCharacter,
+            Set<UUID> mateIds
     ) {
     }
 

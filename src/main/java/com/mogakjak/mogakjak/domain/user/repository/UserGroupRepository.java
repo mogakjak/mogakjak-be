@@ -12,10 +12,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
 
@@ -64,7 +61,7 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
     List<String> findSharedGroupNames(@Param("me") User me, @Param("mate") User mate);
 
     @Query("""
-            SELECT DISTINCT ug.user.id AS mateId, ug.group.name AS groupName
+            SELECT ug.user.id AS mateId, ug.group.name AS groupName
             FROM UserGroup ug
             WHERE ug.user.id IN :mateIds
               AND ug.group IN (SELECT myUg.group FROM UserGroup myUg WHERE myUg.user = :me)
@@ -127,4 +124,18 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
     List<Group> findCommonGroups(@Param("userId1") UUID userId1, @Param("userId2") UUID userId2);
 
     Optional<UserGroup> findTopByGroupAndUserNotOrderByCreatedAtAsc(Group group, User user);
+
+    // 라운지에 있는 멤버들 중에서, 나와 같은 그룹에 속한 메이트들의 ID를 조회
+    @Query("""
+          SELECT DISTINCT ug.user.id
+          FROM UserGroup ug
+          WHERE ug.user.id IN :memberIds
+            AND ug.group IN (SELECT myUg.group FROM UserGroup myUg WHERE myUg.user.id = :myUserId)
+            AND ug.user.id != :myUserId
+            AND ug.user.isDeleted = false
+          """)
+    Set<UUID> findMateIdsByUser(
+            @Param("myUserId") UUID myUserId,
+            @Param("memberIds") Collection<UUID> memberIds
+    );
 }
