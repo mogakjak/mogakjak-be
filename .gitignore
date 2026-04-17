@@ -45,3 +45,4 @@ out/
 terraform.tfvars
 .env
 /src/main/resources/application-dev.yml
+docker-compose.local.yml

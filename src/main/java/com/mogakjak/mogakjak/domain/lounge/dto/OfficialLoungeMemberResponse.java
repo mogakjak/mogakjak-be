@@ -26,4 +26,5 @@ public class OfficialLoungeMemberResponse {
     private Long personalTimerSeconds;
     private String todoTitle;
     private Integer cheerCount;
+    private Boolean isMate;
 }
