@@ -14,6 +14,7 @@ import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
+import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.domain.lounge.repository.OfficialLoungeAccessLogRepository;
 import com.mogakjak.mogakjak.global.websocket.service.RedisPubSubService;
@@ -21,6 +22,7 @@ import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
@@ -85,6 +87,9 @@ class OfficialLoungeServiceTest {
     @Mock
     private CheerNotificationService cheerNotificationService;
 
+    @Mock
+    private UserGroupRepository userGroupRepository;
+
     @InjectMocks
     private OfficialLoungeService officialLoungeService;
 
@@ -135,6 +140,7 @@ class OfficialLoungeServiceTest {
                         .unlockTimeInSeconds(0)
                         .build()));
         when(quoteService.getRandomQuote()).thenReturn(quote);
+        when(userGroupRepository.findMateIdsByUser(any(UUID.class), anyCollection())).thenReturn(Set.of());
 
         OfficialLoungeSummaryResponse response = officialLoungeService.getSummary(userId);
 
@@ -269,6 +275,7 @@ class OfficialLoungeServiceTest {
                         .unlockTimeInSeconds(0)
                         .build()));
         when(quoteService.getRandomQuote()).thenReturn(quote);
+        when(userGroupRepository.findMateIdsByUser(any(UUID.class), anyCollection())).thenReturn(Set.of());
 
         officialLoungeService.enter(userId);
 

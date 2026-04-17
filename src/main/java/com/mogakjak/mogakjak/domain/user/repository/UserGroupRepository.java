@@ -61,13 +61,13 @@ public interface UserGroupRepository extends JpaRepository<UserGroup, UUID> {
     List<String> findSharedGroupNames(@Param("me") User me, @Param("mate") User mate);
 
     @Query("""
-            SELECT ug.user.id AS mateId, ug.group.name AS groupName
+            SELECT DISTINCT ug.user.id AS mateId, ug.group.name AS groupName
             FROM UserGroup ug
             WHERE ug.user.id IN :mateIds
               AND ug.group IN (SELECT myUg.group FROM UserGroup myUg WHERE myUg.user = :me)
               AND ug.user != :me
               AND ug.user.isDeleted = false
-            ORDER BY ug.user.id ASC, ug.group.createdAt DESC
+            ORDER BY ug.user.id ASC
             """)
     List<SharedGroupNameProjection> findSharedGroupNamesByMates(
             @Param("me") User me,
