@@ -39,6 +39,7 @@ public class MyGroupResponse {
         private Long personalTimerSeconds;
         private String todoTitle;
         private Integer cheerCount;
+        private Boolean isMate;
     }
 
     public static MyGroupResponse fromGroup(UUID groupId, String groupName, String imageUrl, List<GroupMemberDto> members) {
@@ -87,6 +88,7 @@ public class MyGroupResponse {
                 .personalTimerSeconds(member.getPersonalTimerSeconds())
                 .todoTitle(member.getTodoTitle())
                 .cheerCount(member.getCheerCount())
+                .isMate(member.getIsMate())
                 .build();
     }
 }
