@@ -143,6 +143,7 @@ class GroupServiceImplTest {
                                 .nickname(loungeMember.getName())
                                 .profileUrl(loungeMember.getImageUrl())
                                 .level(1)
+                                .isMate(true)
                                 .build()
                 ))
                 .build();
@@ -168,6 +169,7 @@ class GroupServiceImplTest {
         assertTrue(Boolean.TRUE.equals(official.getMyFocusCheckEnabled()));
         assertNotNull(official.getMembers());
         assertEquals(1, official.getMembers().size());
+        assertTrue(Boolean.TRUE.equals(official.getMembers().get(0).getIsMate()));
 
         MyGroupResponse privateRoom = response.get(1);
         assertFalse(Boolean.TRUE.equals(privateRoom.getIsOfficialLounge()));
