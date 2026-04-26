@@ -60,6 +60,7 @@ public enum ErrorCode implements StatusCode {
     ONLY_GROUP_MEMBER_CAN_VIEW_INVITE_MATES(HttpStatus.FORBIDDEN, "그룹 멤버만 초대 가능한 메이트를 조회할 수 있습니다."),
     ONLY_OFFICIAL_LOUNGE_MEMBER_CAN_INVITE(HttpStatus.FORBIDDEN, "공식 라운지에 입실한 사람만 초대할 수 있습니다."),
     ONLY_OFFICIAL_LOUNGE_MEMBER_CAN_VIEW_INVITE_MATES(HttpStatus.FORBIDDEN, "공식 라운지에 입실한 사람만 초대 가능한 메이트를 조회할 수 있습니다."),
+    ALREADY_IN_OFFICIAL_LOUNGE(HttpStatus.CONFLICT, "이미 공식 라운지에 입실한 사용자입니다."),
     ALREADY_INVITED(HttpStatus.CONFLICT, "이미 초대를 보낸 사용자입니다."),
 
     // Quote Errors

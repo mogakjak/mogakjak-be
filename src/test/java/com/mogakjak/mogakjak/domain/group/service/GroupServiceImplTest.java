@@ -46,9 +46,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.mogakjak.mogakjak.domain.invitation.controller.dto.InviteMateRequest;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
+import com.mogakjak.mogakjak.domain.invitation.entity.Invitation;
+import com.mogakjak.mogakjak.domain.invitation.entity.InvitationStatus;
 
 @ExtendWith(MockitoExtension.class)
 class GroupServiceImplTest {
@@ -317,6 +321,7 @@ class GroupServiceImplTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(groupRepository.findById(groupId)).thenReturn(Optional.of(lounge));
         when(officialLoungeService.isEntered(userId)).thenReturn(true);
+        when(officialLoungeService.isEntered(mateId)).thenReturn(true);
         when(userGroupRepository.findTotalMatesByUser(user, null, PageRequest.of(0, 10))).thenReturn(matePage);
         when(userGroupRepository.findAllByGroupWithUser(lounge)).thenReturn(List.of());
         when(userGroupRepository.findSharedGroupNamesByMates(user, List.of(mateId))).thenReturn(List.of());
@@ -330,7 +335,7 @@ class GroupServiceImplTest {
         Page<InviteMateResponse> response = groupService.getInviteMates(userId, groupId, null, PageRequest.of(0, 10));
 
         assertEquals(1, response.getTotalElements());
-        assertEquals(InviteMateStatus.CAN_INVITE, response.getContent().get(0).getInviteStatus());
+        assertEquals(InviteMateStatus.ALREADY_IN_OFFICIAL_LOUNGE, response.getContent().get(0).getInviteStatus());
     }
 
     @Test
@@ -430,7 +435,6 @@ class GroupServiceImplTest {
         when(userRepository.findById(inviteeId)).thenReturn(Optional.of(invitee));
         when(groupRepository.findById(groupId)).thenReturn(Optional.of(lounge));
         when(officialLoungeService.isEntered(inviterId)).thenReturn(true);
-        when(userGroupRepository.findByUserAndGroup(invitee, lounge)).thenReturn(Optional.empty());
         when(invitationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(invitationRepository.existsByGroupAndInviteeAndStatus(lounge, invitee, com.mogakjak.mogakjak.domain.invitation.entity.InvitationStatus.PENDING))
                 .thenReturn(false);
@@ -439,6 +443,92 @@ class GroupServiceImplTest {
         ReflectionTestUtils.setField(request, "inviteeId", inviteeId);
 
         assertDoesNotThrow(() -> groupService.inviteMate(groupId, request, inviterId));
+    }
+
+    @Test
+    void inviteMate_rejectsAlreadyEnteredOfficialLoungeMember() {
+        UUID inviterId = UUID.randomUUID();
+        UUID inviteeId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+
+        User inviter = User.builder()
+                .name("inviter")
+                .email("inviter@example.com")
+                .build();
+        ReflectionTestUtils.setField(inviter, "id", inviterId);
+
+        User invitee = User.builder()
+                .name("invitee")
+                .email("invitee@example.com")
+                .build();
+        ReflectionTestUtils.setField(invitee, "id", inviteeId);
+
+        Group lounge = Group.builder()
+                .name("모각작 공식 라운지")
+                .build();
+        ReflectionTestUtils.setField(lounge, "id", groupId);
+        ReflectionTestUtils.setField(lounge, "isOfficialLounge", true);
+
+        when(userRepository.findById(inviterId)).thenReturn(Optional.of(inviter));
+        when(userRepository.findById(inviteeId)).thenReturn(Optional.of(invitee));
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(lounge));
+        when(officialLoungeService.isEntered(inviterId)).thenReturn(true);
+        when(officialLoungeService.isEntered(inviteeId)).thenReturn(true);
+
+        InviteMateRequest request = new InviteMateRequest();
+        ReflectionTestUtils.setField(request, "inviteeId", inviteeId);
+
+        com.mogakjak.mogakjak.global.exception.CustomException ex = assertThrows(
+                com.mogakjak.mogakjak.global.exception.CustomException.class,
+                () -> groupService.inviteMate(groupId, request, inviterId)
+        );
+
+        assertEquals(ErrorCode.ALREADY_IN_OFFICIAL_LOUNGE, ex.getStatusCode());
+        assertEquals("이미 공식 라운지에 입실한 사용자입니다.", ex.getMessage());
+    }
+
+    @Test
+    void acceptInvitation_entersOfficialLoungeWithoutUserGroupMembership() {
+        UUID invitationId = UUID.randomUUID();
+        UUID inviteeId = UUID.randomUUID();
+        UUID inviterId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+
+        User invitee = User.builder()
+                .name("invitee")
+                .email("invitee@example.com")
+                .build();
+        ReflectionTestUtils.setField(invitee, "id", inviteeId);
+
+        User inviter = User.builder()
+                .name("inviter")
+                .email("inviter@example.com")
+                .build();
+        ReflectionTestUtils.setField(inviter, "id", inviterId);
+
+        Group lounge = Group.builder()
+                .name("모각작 공식 라운지")
+                .build();
+        ReflectionTestUtils.setField(lounge, "id", groupId);
+        ReflectionTestUtils.setField(lounge, "isOfficialLounge", true);
+
+        Invitation invitation = Invitation.builder()
+                .group(lounge)
+                .inviter(inviter)
+                .invitee(invitee)
+                .status(InvitationStatus.PENDING)
+                .build();
+        ReflectionTestUtils.setField(invitation, "id", invitationId);
+
+        when(userRepository.findById(inviteeId)).thenReturn(Optional.of(invitee));
+        when(invitationRepository.findById(invitationId)).thenReturn(Optional.of(invitation));
+
+        groupService.acceptInvitation(invitationId, inviteeId);
+
+        verify(officialLoungeService).enter(inviteeId);
+        verify(userGroupRepository, never()).save(any());
+        verify(groupMemberStatusService, never()).broadcastAllMemberStatuses(groupId);
+        assertEquals(InvitationStatus.ACCEPTED, invitation.getStatus());
     }
 
     @Test
