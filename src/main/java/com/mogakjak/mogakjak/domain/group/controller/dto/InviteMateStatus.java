@@ -10,7 +10,8 @@ import lombok.RequiredArgsConstructor;
 public enum InviteMateStatus {
     CAN_INVITE("초대 가능"),
     ALREADY_INVITED("이미 초대함"),
-    ALREADY_GROUP_MEMBER("이미 그룹 멤버");
+    ALREADY_GROUP_MEMBER("이미 그룹 멤버"),
+    ALREADY_IN_OFFICIAL_LOUNGE("이미 공식 라운지 입실 중");
 
     private final String description;
 }

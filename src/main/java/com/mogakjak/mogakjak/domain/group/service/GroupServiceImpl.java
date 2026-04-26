@@ -435,11 +435,13 @@ public class GroupServiceImpl implements GroupService {
             throw new CustomException(ErrorCode.CANNOT_INVITE_SELF);
         }
 
-        if (userGroupRepository.findByUserAndGroup(inviter, group).isEmpty()) {
-            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER_CAN_INVITE);
-        }
+        ensureCanInvite(inviter, group);
 
-        if (userGroupRepository.findByUserAndGroup(invitee, group).isPresent()) {
+        if (Boolean.TRUE.equals(group.getIsOfficialLounge())) {
+            if (officialLoungeService.isEntered(invitee.getId())) {
+                throw new CustomException(ErrorCode.ALREADY_IN_OFFICIAL_LOUNGE);
+            }
+        } else if (userGroupRepository.findByUserAndGroup(invitee, group).isPresent()) {
             throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
         }
 
@@ -491,9 +493,7 @@ public class GroupServiceImpl implements GroupService {
     public Page<InviteMateResponse> getInviteMates(UUID userId, UUID groupId, String search, Pageable pageable) {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
-        if (userGroupRepository.findByUserAndGroup(user, group).isEmpty()) {
-            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER_CAN_VIEW_INVITE_MATES);
-        }
+        ensureCanViewInviteMates(user, group);
 
         Page<User> matePage = userGroupRepository.findTotalMatesByUser(user, search, pageable);
         List<User> mates = matePage.getContent();
@@ -511,7 +511,7 @@ public class GroupServiceImpl implements GroupService {
             String profileUrl = getProfileUrlFromUser(mate, topUserCharacterByUserId, defaultImageCharacter);
             Integer level = getLevelFromUser(mate, topUserCharacterByUserId);
             List<String> sharedGroupNames = sharedGroupNamesByMateId.getOrDefault(mate.getId(), List.of());
-            InviteMateStatus inviteStatus = resolveInviteMateStatus(mate.getId(), groupMemberIds, pendingInviteeIds);
+            InviteMateStatus inviteStatus = resolveInviteMateStatus(group, mate.getId(), groupMemberIds, pendingInviteeIds);
             return InviteMateResponse.from(mate, profileUrl, level, sharedGroupNames, inviteStatus);
         });
     }
@@ -530,18 +530,19 @@ public class GroupServiceImpl implements GroupService {
             throw new CustomException(ErrorCode.INVALID_INVITATION);
         }
 
-        if (userGroupRepository.findByUserAndGroup(user, invitation.getGroup()).isPresent()) {
-            invitation.accept();
-            throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
-        }
-
         invitation.accept();
 
-        UserGroup userGroup = UserGroup.create(user, invitation.getGroup(), GroupRole.MEMBER);
-        userGroupRepository.save(userGroup);
-        
-        // 새 멤버 추가 시 전체 멤버 상태 브로드캐스트 (멤버 목록 변경)
-        groupMemberStatusService.broadcastAllMemberStatuses(invitation.getGroup().getId());
+        if (Boolean.TRUE.equals(invitation.getGroup().getIsOfficialLounge())) {
+            officialLoungeService.enter(user.getId());
+        } else {
+            if (userGroupRepository.findByUserAndGroup(user, invitation.getGroup()).isEmpty()) {
+                UserGroup userGroup = UserGroup.create(user, invitation.getGroup(), GroupRole.MEMBER);
+                userGroupRepository.save(userGroup);
+
+                // 새 멤버 추가 시 전체 멤버 상태 브로드캐스트 (멤버 목록 변경)
+                groupMemberStatusService.broadcastAllMemberStatuses(invitation.getGroup().getId());
+            }
+        }
 
         // 초대한 사람에게 "수락됨" 알림 전송
         invitationResponseNotificationService.sendInvitationResponse(invitation, "ACCEPTED");
@@ -771,8 +772,17 @@ public class GroupServiceImpl implements GroupService {
         ));
     }
 
-    private InviteMateStatus resolveInviteMateStatus(UUID inviteeId, Set<UUID> groupMemberIds, Set<UUID> pendingInviteeIds) {
-        if (groupMemberIds.contains(inviteeId)) {
+    private InviteMateStatus resolveInviteMateStatus(
+            Group group,
+            UUID inviteeId,
+            Set<UUID> groupMemberIds,
+            Set<UUID> pendingInviteeIds
+    ) {
+        if (Boolean.TRUE.equals(group.getIsOfficialLounge())) {
+            if (officialLoungeService.isEntered(inviteeId)) {
+                return InviteMateStatus.ALREADY_IN_OFFICIAL_LOUNGE;
+            }
+        } else if (groupMemberIds.contains(inviteeId)) {
             return InviteMateStatus.ALREADY_GROUP_MEMBER;
         }
 
@@ -809,6 +819,32 @@ public class GroupServiceImpl implements GroupService {
     private UserGroup findUserGroup(User user, Group group) {
         return userGroupRepository.findByUserAndGroup(user, group)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
+    }
+
+    private void ensureCanInvite(User user, Group group) {
+        if (Boolean.TRUE.equals(group.getIsOfficialLounge())) {
+            if (!officialLoungeService.isEntered(user.getId())) {
+                throw new CustomException(ErrorCode.ONLY_OFFICIAL_LOUNGE_MEMBER_CAN_INVITE);
+            }
+            return;
+        }
+
+        if (userGroupRepository.findByUserAndGroup(user, group).isEmpty()) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER_CAN_INVITE);
+        }
+    }
+
+    private void ensureCanViewInviteMates(User user, Group group) {
+        if (Boolean.TRUE.equals(group.getIsOfficialLounge())) {
+            if (!officialLoungeService.isEntered(user.getId())) {
+                throw new CustomException(ErrorCode.ONLY_OFFICIAL_LOUNGE_MEMBER_CAN_VIEW_INVITE_MATES);
+            }
+            return;
+        }
+
+        if (userGroupRepository.findByUserAndGroup(user, group).isEmpty()) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER_CAN_VIEW_INVITE_MATES);
+        }
     }
 
     private UserGroup checkUserInGroup(User user, Group group) {
