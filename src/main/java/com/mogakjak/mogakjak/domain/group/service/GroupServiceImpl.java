@@ -535,15 +535,13 @@ public class GroupServiceImpl implements GroupService {
         if (Boolean.TRUE.equals(invitation.getGroup().getIsOfficialLounge())) {
             officialLoungeService.enter(user.getId());
         } else {
-            if (userGroupRepository.findByUserAndGroup(user, invitation.getGroup()).isPresent()) {
-                throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
+            if (userGroupRepository.findByUserAndGroup(user, invitation.getGroup()).isEmpty()) {
+                UserGroup userGroup = UserGroup.create(user, invitation.getGroup(), GroupRole.MEMBER);
+                userGroupRepository.save(userGroup);
+
+                // 새 멤버 추가 시 전체 멤버 상태 브로드캐스트 (멤버 목록 변경)
+                groupMemberStatusService.broadcastAllMemberStatuses(invitation.getGroup().getId());
             }
-
-            UserGroup userGroup = UserGroup.create(user, invitation.getGroup(), GroupRole.MEMBER);
-            userGroupRepository.save(userGroup);
-
-            // 새 멤버 추가 시 전체 멤버 상태 브로드캐스트 (멤버 목록 변경)
-            groupMemberStatusService.broadcastAllMemberStatuses(invitation.getGroup().getId());
         }
 
         // 초대한 사람에게 "수락됨" 알림 전송

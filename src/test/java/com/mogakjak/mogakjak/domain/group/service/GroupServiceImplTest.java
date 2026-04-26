@@ -532,6 +532,55 @@ class GroupServiceImplTest {
     }
 
     @Test
+    void acceptInvitation_skipsUserGroupCreationWhenAlreadyGroupMember() {
+        UUID invitationId = UUID.randomUUID();
+        UUID inviteeId = UUID.randomUUID();
+        UUID inviterId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+
+        User invitee = User.builder()
+                .name("invitee")
+                .email("invitee@example.com")
+                .build();
+        ReflectionTestUtils.setField(invitee, "id", inviteeId);
+
+        User inviter = User.builder()
+                .name("inviter")
+                .email("inviter@example.com")
+                .build();
+        ReflectionTestUtils.setField(inviter, "id", inviterId);
+
+        Group group = Group.builder()
+                .name("study")
+                .build();
+        ReflectionTestUtils.setField(group, "id", groupId);
+
+        UserGroup existingUserGroup = UserGroup.builder()
+                .user(invitee)
+                .group(group)
+                .role(GroupRole.MEMBER)
+                .build();
+
+        Invitation invitation = Invitation.builder()
+                .group(group)
+                .inviter(inviter)
+                .invitee(invitee)
+                .status(InvitationStatus.PENDING)
+                .build();
+        ReflectionTestUtils.setField(invitation, "id", invitationId);
+
+        when(userRepository.findById(inviteeId)).thenReturn(Optional.of(invitee));
+        when(invitationRepository.findById(invitationId)).thenReturn(Optional.of(invitation));
+        when(userGroupRepository.findByUserAndGroup(invitee, group)).thenReturn(Optional.of(existingUserGroup));
+
+        groupService.acceptInvitation(invitationId, inviteeId);
+
+        verify(userGroupRepository, never()).save(any());
+        verify(groupMemberStatusService, never()).broadcastAllMemberStatuses(groupId);
+        assertEquals(InvitationStatus.ACCEPTED, invitation.getStatus());
+    }
+
+    @Test
     void inviteMate_requiresOfficialLoungeEntry() {
         UUID inviterId = UUID.randomUUID();
         UUID inviteeId = UUID.randomUUID();
