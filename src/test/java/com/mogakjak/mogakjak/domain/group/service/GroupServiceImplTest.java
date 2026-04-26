@@ -40,6 +40,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -288,6 +289,81 @@ class GroupServiceImplTest {
     }
 
     @Test
+    void getInviteMates_allowsOfficialLoungeWhenEntered() {
+        UUID userId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        UUID mateId = UUID.randomUUID();
+
+        User user = User.builder()
+                .name("user")
+                .email("user@example.com")
+                .build();
+        ReflectionTestUtils.setField(user, "id", userId);
+
+        Group lounge = Group.builder()
+                .name("모각작 공식 라운지")
+                .build();
+        ReflectionTestUtils.setField(lounge, "id", groupId);
+        ReflectionTestUtils.setField(lounge, "isOfficialLounge", true);
+
+        User mate = User.builder()
+                .name("mate")
+                .email("mate@example.com")
+                .build();
+        ReflectionTestUtils.setField(mate, "id", mateId);
+
+        Page<User> matePage = new PageImpl<>(List.of(mate), PageRequest.of(0, 10), 1);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(lounge));
+        when(officialLoungeService.isEntered(userId)).thenReturn(true);
+        when(userGroupRepository.findTotalMatesByUser(user, null, PageRequest.of(0, 10))).thenReturn(matePage);
+        when(userGroupRepository.findAllByGroupWithUser(lounge)).thenReturn(List.of());
+        when(userGroupRepository.findSharedGroupNamesByMates(user, List.of(mateId))).thenReturn(List.of());
+        when(userCharacterRepository.findAllByUserIdInOrderByUserIdAscImageCharacter_LevelDescImageCharacter_CreatedAtAsc(List.of(mateId)))
+                .thenReturn(List.of());
+        when(imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1))
+                .thenReturn(Optional.empty());
+        when(invitationRepository.findInviteeIdsByGroupAndStatusAndInviteeIds(lounge, List.of(mateId), com.mogakjak.mogakjak.domain.invitation.entity.InvitationStatus.PENDING))
+                .thenReturn(List.of());
+
+        Page<InviteMateResponse> response = groupService.getInviteMates(userId, groupId, null, PageRequest.of(0, 10));
+
+        assertEquals(1, response.getTotalElements());
+        assertEquals(InviteMateStatus.CAN_INVITE, response.getContent().get(0).getInviteStatus());
+    }
+
+    @Test
+    void getInviteMates_requiresOfficialLoungeEntry() {
+        UUID userId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+
+        User user = User.builder()
+                .name("user")
+                .email("user@example.com")
+                .build();
+        ReflectionTestUtils.setField(user, "id", userId);
+
+        Group lounge = Group.builder()
+                .name("모각작 공식 라운지")
+                .build();
+        ReflectionTestUtils.setField(lounge, "id", groupId);
+        ReflectionTestUtils.setField(lounge, "isOfficialLounge", true);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(lounge));
+        when(officialLoungeService.isEntered(userId)).thenReturn(false);
+
+        com.mogakjak.mogakjak.global.exception.CustomException ex = assertThrows(
+                com.mogakjak.mogakjak.global.exception.CustomException.class,
+                () -> groupService.getInviteMates(userId, groupId, null, PageRequest.of(0, 10))
+        );
+
+        assertEquals(ErrorCode.ONLY_OFFICIAL_LOUNGE_MEMBER_CAN_VIEW_INVITE_MATES, ex.getStatusCode());
+        assertEquals("공식 라운지에 입실한 사람만 초대 가능한 메이트를 조회할 수 있습니다.", ex.getMessage());
+    }
+
+    @Test
     void inviteMate_requiresInviterToBeGroupMember() {
         UUID inviterId = UUID.randomUUID();
         UUID inviteeId = UUID.randomUUID();
@@ -324,6 +400,86 @@ class GroupServiceImplTest {
         );
         assertEquals(ErrorCode.ONLY_GROUP_MEMBER_CAN_INVITE, ex.getStatusCode());
         assertEquals("그룹 멤버만 초대할 수 있습니다.", ex.getMessage());
+    }
+
+    @Test
+    void inviteMate_allowsOfficialLoungeWhenEntered() {
+        UUID inviterId = UUID.randomUUID();
+        UUID inviteeId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+
+        User inviter = User.builder()
+                .name("inviter")
+                .email("inviter@example.com")
+                .build();
+        ReflectionTestUtils.setField(inviter, "id", inviterId);
+
+        User invitee = User.builder()
+                .name("invitee")
+                .email("invitee@example.com")
+                .build();
+        ReflectionTestUtils.setField(invitee, "id", inviteeId);
+
+        Group lounge = Group.builder()
+                .name("모각작 공식 라운지")
+                .build();
+        ReflectionTestUtils.setField(lounge, "id", groupId);
+        ReflectionTestUtils.setField(lounge, "isOfficialLounge", true);
+
+        when(userRepository.findById(inviterId)).thenReturn(Optional.of(inviter));
+        when(userRepository.findById(inviteeId)).thenReturn(Optional.of(invitee));
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(lounge));
+        when(officialLoungeService.isEntered(inviterId)).thenReturn(true);
+        when(userGroupRepository.findByUserAndGroup(invitee, lounge)).thenReturn(Optional.empty());
+        when(invitationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(invitationRepository.existsByGroupAndInviteeAndStatus(lounge, invitee, com.mogakjak.mogakjak.domain.invitation.entity.InvitationStatus.PENDING))
+                .thenReturn(false);
+
+        InviteMateRequest request = new InviteMateRequest();
+        ReflectionTestUtils.setField(request, "inviteeId", inviteeId);
+
+        assertDoesNotThrow(() -> groupService.inviteMate(groupId, request, inviterId));
+    }
+
+    @Test
+    void inviteMate_requiresOfficialLoungeEntry() {
+        UUID inviterId = UUID.randomUUID();
+        UUID inviteeId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+
+        User inviter = User.builder()
+                .name("inviter")
+                .email("inviter@example.com")
+                .build();
+        ReflectionTestUtils.setField(inviter, "id", inviterId);
+
+        User invitee = User.builder()
+                .name("invitee")
+                .email("invitee@example.com")
+                .build();
+        ReflectionTestUtils.setField(invitee, "id", inviteeId);
+
+        Group lounge = Group.builder()
+                .name("모각작 공식 라운지")
+                .build();
+        ReflectionTestUtils.setField(lounge, "id", groupId);
+        ReflectionTestUtils.setField(lounge, "isOfficialLounge", true);
+
+        when(userRepository.findById(inviterId)).thenReturn(Optional.of(inviter));
+        when(userRepository.findById(inviteeId)).thenReturn(Optional.of(invitee));
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(lounge));
+        when(officialLoungeService.isEntered(inviterId)).thenReturn(false);
+
+        InviteMateRequest request = new InviteMateRequest();
+        ReflectionTestUtils.setField(request, "inviteeId", inviteeId);
+
+        com.mogakjak.mogakjak.global.exception.CustomException ex = assertThrows(
+                com.mogakjak.mogakjak.global.exception.CustomException.class,
+                () -> groupService.inviteMate(groupId, request, inviterId)
+        );
+
+        assertEquals(ErrorCode.ONLY_OFFICIAL_LOUNGE_MEMBER_CAN_INVITE, ex.getStatusCode());
+        assertEquals("공식 라운지에 입실한 사람만 초대할 수 있습니다.", ex.getMessage());
     }
 
     private static SharedGroupNameProjection sharedGroupName(UUID mateId, String groupName) {

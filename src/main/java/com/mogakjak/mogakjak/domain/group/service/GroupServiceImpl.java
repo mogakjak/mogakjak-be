@@ -435,9 +435,7 @@ public class GroupServiceImpl implements GroupService {
             throw new CustomException(ErrorCode.CANNOT_INVITE_SELF);
         }
 
-        if (userGroupRepository.findByUserAndGroup(inviter, group).isEmpty()) {
-            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER_CAN_INVITE);
-        }
+        ensureCanInvite(inviter, group);
 
         if (userGroupRepository.findByUserAndGroup(invitee, group).isPresent()) {
             throw new CustomException(ErrorCode.ALREADY_GROUP_MEMBER);
@@ -491,9 +489,7 @@ public class GroupServiceImpl implements GroupService {
     public Page<InviteMateResponse> getInviteMates(UUID userId, UUID groupId, String search, Pageable pageable) {
         User user = findUserById(userId);
         Group group = findGroupById(groupId);
-        if (userGroupRepository.findByUserAndGroup(user, group).isEmpty()) {
-            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER_CAN_VIEW_INVITE_MATES);
-        }
+        ensureCanViewInviteMates(user, group);
 
         Page<User> matePage = userGroupRepository.findTotalMatesByUser(user, search, pageable);
         List<User> mates = matePage.getContent();
@@ -809,6 +805,32 @@ public class GroupServiceImpl implements GroupService {
     private UserGroup findUserGroup(User user, Group group) {
         return userGroupRepository.findByUserAndGroup(user, group)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
+    }
+
+    private void ensureCanInvite(User user, Group group) {
+        if (Boolean.TRUE.equals(group.getIsOfficialLounge())) {
+            if (!officialLoungeService.isEntered(user.getId())) {
+                throw new CustomException(ErrorCode.ONLY_OFFICIAL_LOUNGE_MEMBER_CAN_INVITE);
+            }
+            return;
+        }
+
+        if (userGroupRepository.findByUserAndGroup(user, group).isEmpty()) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER_CAN_INVITE);
+        }
+    }
+
+    private void ensureCanViewInviteMates(User user, Group group) {
+        if (Boolean.TRUE.equals(group.getIsOfficialLounge())) {
+            if (!officialLoungeService.isEntered(user.getId())) {
+                throw new CustomException(ErrorCode.ONLY_OFFICIAL_LOUNGE_MEMBER_CAN_VIEW_INVITE_MATES);
+            }
+            return;
+        }
+
+        if (userGroupRepository.findByUserAndGroup(user, group).isEmpty()) {
+            throw new CustomException(ErrorCode.ONLY_GROUP_MEMBER_CAN_VIEW_INVITE_MATES);
+        }
     }
 
     private UserGroup checkUserInGroup(User user, Group group) {
