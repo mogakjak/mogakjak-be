@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.timer.repository;
 
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
+import com.mogakjak.mogakjak.domain.timer.enumerate.PomodoroPhaseType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +16,8 @@ public interface FocusIntervalRepository extends JpaRepository<FocusInterval, UU
     Optional<FocusInterval> findTopBySessionIdOrderByStartedAtDesc(UUID sessionId);
 
     List<FocusInterval> findAllBySessionId(UUID sessionId);
+
+    List<FocusInterval> findAllBySessionIdAndPhaseTypeAndRound(UUID sessionId, PomodoroPhaseType phaseType, Integer round);
 
     List<FocusInterval> findAllBySessionIdInOrderBySessionIdAscStartedAtDesc(Collection<UUID> sessionIds);
 

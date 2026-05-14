@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
+import com.mogakjak.mogakjak.domain.timer.enumerate.PomodoroPhaseType;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerMode;
 import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
@@ -30,6 +31,12 @@ import java.util.concurrent.*;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class TimerCompletionNotificationService {
+
+    private static final String TIMER_COMPLETION_CHANNEL = "timer-completion";
+    private static final String TIMER_COMPLETION_MESSAGE = "타이머가 완료되었습니다!";
+    private static final String POMODORO_COMPLETION_MESSAGE = "뽀모도로가 완료되었습니다!";
+    private static final String POMODORO_BREAK_START_MESSAGE = "이제 휴식시간입니다!";
+    private static final String POMODORO_FOCUS_START_MESSAGE = "휴식이 끝났어요. 다시 집중할 시간입니다!";
 
     private final FocusSessionRepository focusSessionRepository;
     private final FocusIntervalRepository focusIntervalRepository;
@@ -124,6 +131,21 @@ public class TimerCompletionNotificationService {
                     return;
                 }
 
+                if (currentSession.getStatus() == TimerStatus.PAUSED) {
+                    log.debug("타이머 완료 알림 실행 스킵: 세션이 일시정지 상태입니다. sessionId={}", sessionId);
+                    scheduledNotifications.remove(sessionId);
+                    return;
+                }
+
+                LocalDateTime executionTime = LocalDateTime.now();
+                LocalDateTime currentExpectedEndTime = calculateExpectedEndTime(currentSession, executionTime);
+                if (currentExpectedEndTime == null || currentExpectedEndTime.isAfter(executionTime.plusSeconds(1))) {
+                    log.debug("타이머 완료 알림 실행 스킵: 현재 구간 종료 예정 시간이 아직 지나지 않았습니다. sessionId={}, expectedEndTime={}",
+                            sessionId, currentExpectedEndTime);
+                    scheduledNotifications.remove(sessionId);
+                    return;
+                }
+
                 // 알림 전송
                 sendCompletionNotification(currentSession);
                 scheduledNotifications.remove(sessionId);
@@ -166,8 +188,6 @@ public class TimerCompletionNotificationService {
             return null;
         }
 
-        LocalDateTime startedAt = focusSession.getStartedAt();
-        
         if (focusSession.getMode() == TimerMode.TIMER) {
             // 타이머: targetDuration만큼 실행되어야 함
             if (focusSession.getTargetDuration() == null) {
@@ -179,30 +199,62 @@ public class TimerCompletionNotificationService {
             
             // 종료 예정 시간 = 시작 시간 + targetDuration + pause된 시간
             // (pause된 시간만큼 종료 시간이 늦춰짐)
-            return startedAt.plusSeconds(focusSession.getTargetDuration() + pausedSeconds);
+            return focusSession.getStartedAt().plusSeconds(focusSession.getTargetDuration() + pausedSeconds);
             
         } else if (focusSession.getMode() == TimerMode.POMODORO) {
-            // 뽀모도로: 각 focus phase가 끝날 때마다 알림이 필요할 수 있지만,
-            // 일단 전체 뽀모도로가 끝날 때 알림을 보내도록 구현
-            if (focusSession.getFocusDuration() == null || focusSession.getRepeatCount() == null) {
-                return null;
-            }
-            
-            // 전체 뽀모도로 시간 = focusDuration * repeatCount + breakDuration * (repeatCount - 1)
-            // 마지막 round는 break가 없으므로 breakDuration * (repeatCount - 1)
-            long totalPomodoroSeconds = focusSession.getFocusDuration() * focusSession.getRepeatCount();
-            if (focusSession.getBreakDuration() != null && focusSession.getRepeatCount() > 1) {
-                totalPomodoroSeconds += focusSession.getBreakDuration() * (focusSession.getRepeatCount() - 1);
-            }
-            
-            // pause된 시간 계산
-            long pausedSeconds = calculatePausedSeconds(focusSession, now);
-            
-            // 종료 예정 시간 = 시작 시간 + 전체 뽀모도로 시간 + pause된 시간
-            return startedAt.plusSeconds(totalPomodoroSeconds + pausedSeconds);
+            return calculatePomodoroPhaseEndTime(focusSession, now);
         }
 
         return null;
+    }
+
+    private LocalDateTime calculatePomodoroPhaseEndTime(FocusSession focusSession, LocalDateTime now) {
+        FocusInterval latestInterval = getLatestInterval(focusSession.getId()).orElse(null);
+        if (latestInterval == null || latestInterval.getEndedAt() != null) {
+            return null;
+        }
+
+        Long phaseDuration = resolvePomodoroPhaseDuration(focusSession, latestInterval.getPhaseType());
+        if (phaseDuration == null) {
+            return null;
+        }
+
+        long accumulatedPhaseSeconds = calculateAccumulatedPhaseSeconds(
+                focusSession.getId(),
+                latestInterval.getPhaseType(),
+                latestInterval.getRound(),
+                now
+        );
+        long remainingSeconds = phaseDuration - accumulatedPhaseSeconds;
+        return remainingSeconds <= 0 ? now : now.plusSeconds(remainingSeconds);
+    }
+
+    private Long resolvePomodoroPhaseDuration(FocusSession focusSession, PomodoroPhaseType phaseType) {
+        if (phaseType == PomodoroPhaseType.FOCUS) {
+            return focusSession.getFocusDuration();
+        }
+        if (phaseType == PomodoroPhaseType.BREAK) {
+            return focusSession.getBreakDuration();
+        }
+        return null;
+    }
+
+    private long calculateAccumulatedPhaseSeconds(
+            UUID sessionId,
+            PomodoroPhaseType phaseType,
+            Integer round,
+            LocalDateTime now
+    ) {
+        if (round == null) {
+            return 0L;
+        }
+
+        return focusIntervalRepository.findAllBySessionIdAndPhaseTypeAndRound(sessionId, phaseType, round).stream()
+                .mapToLong(interval -> {
+                    LocalDateTime end = interval.getEndedAt() != null ? interval.getEndedAt() : now;
+                    return Duration.between(interval.getStartedAt(), end).getSeconds();
+                })
+                .sum();
     }
 
     /**
@@ -259,9 +311,7 @@ public class TimerCompletionNotificationService {
                 }
             }
 
-            String message = focusSession.getMode() == TimerMode.POMODORO
-                    ? "뽀모도로가 완료되었습니다!"
-                    : "타이머가 완료되었습니다!";
+            String message = resolveNotificationMessage(focusSession);
 
             TimerCompletionNotificationDto notification = TimerCompletionNotificationDto.builder()
                     .sessionId(focusSession.getId())
@@ -275,7 +325,7 @@ public class TimerCompletionNotificationService {
             String jsonMessage = objectMapper.writeValueAsString(notification);
             
             // 개인 타이머 알림 채널
-            redisPubSubService.publish("timer-completion", jsonMessage);
+            redisPubSubService.publish(TIMER_COMPLETION_CHANNEL, jsonMessage);
             
             log.debug("타이머 완료 알림 전송: sessionId={}, userId={}", 
                     focusSession.getId(), focusSession.getUserId());
@@ -283,5 +333,32 @@ public class TimerCompletionNotificationService {
             log.error("타이머 완료 알림 전송 실패: {}", e.getMessage(), e);
         }
     }
-}
 
+    private String resolveNotificationMessage(FocusSession focusSession) {
+        if (focusSession.getMode() != TimerMode.POMODORO) {
+            return TIMER_COMPLETION_MESSAGE;
+        }
+
+        FocusInterval latestInterval = getLatestInterval(focusSession.getId()).orElse(null);
+        if (latestInterval == null) {
+            return POMODORO_COMPLETION_MESSAGE;
+        }
+
+        if (latestInterval.getPhaseType() == PomodoroPhaseType.BREAK) {
+            return POMODORO_FOCUS_START_MESSAGE;
+        }
+
+        if (latestInterval.getPhaseType() == PomodoroPhaseType.FOCUS
+                && focusSession.getRepeatCount() != null
+                && latestInterval.getRound() != null
+                && latestInterval.getRound() < focusSession.getRepeatCount()) {
+            return POMODORO_BREAK_START_MESSAGE;
+        }
+
+        return POMODORO_COMPLETION_MESSAGE;
+    }
+
+    private Optional<FocusInterval> getLatestInterval(UUID sessionId) {
+        return focusIntervalRepository.findTopBySessionIdOrderByStartedAtDesc(sessionId);
+    }
+}
