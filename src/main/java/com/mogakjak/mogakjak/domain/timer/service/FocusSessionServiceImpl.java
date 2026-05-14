@@ -373,11 +373,18 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         int nextRound = nextPhase == PomodoroPhaseType.FOCUS ? currentRound + 1 : currentRound;
 
         FocusInterval nextPhaseInterval = startPhaseInterval(focusSession, nextPhase, now, nextRound);
-        try {
-            timerCompletionNotificationService.rescheduleCompletionNotification(sessionId);
-        } catch (Exception e) {
-            log.warn("뽀모도로 단계 전환 후 알림 스케줄 재설정 실패 (sessionId: {}): {}", sessionId, e.getMessage());
-        }
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            timerCompletionNotificationService.rescheduleCompletionNotification(sessionId);
+                        } catch (Exception e) {
+                            log.warn("뽀모도로 단계 전환 후 알림 스케줄 재설정 실패 (sessionId: {}): {}", sessionId, e.getMessage());
+                        }
+                    }
+                }
+        );
 
         return TimerResponse.fromPomodoroPhaseChange(focusSession, nextPhaseInterval);
     }

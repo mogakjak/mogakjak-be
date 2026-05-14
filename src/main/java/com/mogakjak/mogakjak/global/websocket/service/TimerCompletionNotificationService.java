@@ -245,9 +245,11 @@ public class TimerCompletionNotificationService {
             Integer round,
             LocalDateTime now
     ) {
-        return focusIntervalRepository.findAllBySessionId(sessionId).stream()
-                .filter(interval -> interval.getPhaseType() == phaseType)
-                .filter(interval -> round != null && round.equals(interval.getRound()))
+        if (round == null) {
+            return 0L;
+        }
+
+        return focusIntervalRepository.findAllBySessionIdAndPhaseTypeAndRound(sessionId, phaseType, round).stream()
                 .mapToLong(interval -> {
                     LocalDateTime end = interval.getEndedAt() != null ? interval.getEndedAt() : now;
                     return Duration.between(interval.getStartedAt(), end).getSeconds();
