@@ -23,7 +23,8 @@ public class UserTimerSettingServiceImpl implements UserTimerSettingService {
 
     @Override
     public TimerTabOrderResponse getTimerTabOrder(User user) {
-        UserTimerSetting setting = findOrCreateSetting(user);
+        UserTimerSetting setting = userTimerSettingRepository.findById(user.getId())
+                .orElseGet(() -> UserTimerSetting.createDefault(user));
         return TimerTabOrderResponse.from(setting);
     }
 
@@ -31,18 +32,13 @@ public class UserTimerSettingServiceImpl implements UserTimerSettingService {
     @Transactional
     public void updateTimerTabOrder(User user, TimerTabOrderRequest request) {
         List<TimerMode> tabOrder = request.getTabOrder();
-        if (!tabOrder.containsAll(List.of(TimerMode.values()))) {
+        if (tabOrder.size() != TimerMode.values().length || !tabOrder.containsAll(List.of(TimerMode.values()))) {
             throw new CustomException(ErrorCode.INVALID_TIMER_TAB_ORDER);
         }
 
-        UserTimerSetting setting = findOrCreateSetting(user);
+        UserTimerSetting setting = userTimerSettingRepository.findById(user.getId())
+                .orElseGet(() -> UserTimerSetting.createDefault(user));
         setting.updateTimerTabOrder(tabOrder);
-    }
-
-    private UserTimerSetting findOrCreateSetting(User user) {
-        return userTimerSettingRepository.findByUser(user)
-                .orElseGet(() -> userTimerSettingRepository.save(
-                        UserTimerSetting.createDefault(user)
-                ));
+        userTimerSettingRepository.save(setting);
     }
 }

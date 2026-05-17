@@ -8,5 +8,4 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface UserTimerSettingRepository extends JpaRepository<UserTimerSetting, UUID> {
-    Optional<UserTimerSetting> findByUser(User user);
 }
