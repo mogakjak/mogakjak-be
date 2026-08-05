@@ -1,6 +1,6 @@
 # 모여서 각자 작업하는 시간 , 모각작🍅
 
-> 🔗 Link : [https://mogakjak-fe.vercel.app](https://mogakjak-fe.vercel.app/)
+> 🔗 Link : [https://www.mogakjak.com](https://www.mogakjak.com)
 
 ![모각작 장표](https://github.com/user-attachments/assets/34debf9e-ca5e-40c8-91d4-be1807d009ee)
 
@@ -47,6 +47,7 @@
 <br>
 <br>
 
+<!--
 # 💼 API 명세서
 [![Swagger](https://img.shields.io/badge/Swagger-UI-85EA2D?logo=swagger&logoColor=white)](https://mogakjak.site/swagger-ui/index.html#/)
 
@@ -64,6 +65,7 @@
 
 <br>
 <br>
+-->
 
 # 🛠️ 개발 환경 및 사용 기술 스택
 
@@ -98,6 +100,7 @@
 
 <br>
 
+<!--
 # 🤖 백엔드 CI/CD 요약
 
 - **CI 자동화**: PR 생성 시 컴파일·테스트·정적 분석을 자동 실행하고, 실패 시 merge 차단  
@@ -135,5 +138,5 @@
 ### 7) 복잡한 대시보드 집계 성능 문제
 - **문제**: 여러 쿼리 + 애플리케이션 집계로 응답 지연  
 - **해결**: Native Query로 **한 번에 집계 조회**
-
+-->
 
