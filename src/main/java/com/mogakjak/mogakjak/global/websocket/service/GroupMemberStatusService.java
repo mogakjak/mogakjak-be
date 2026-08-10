@@ -49,7 +49,7 @@ public class GroupMemberStatusService {
     private final FocusSessionRepository focusSessionRepository;
     private final FocusIntervalRepository focusIntervalRepository;
     private final TodoRepository todoRepository;
-    private final RedisPubSubService redisPubSubService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     private final UserCharacterRepository userCharacterRepository;
     private final ImageCharacterRepository imageCharacterRepository;
     
@@ -106,7 +106,7 @@ public class GroupMemberStatusService {
                     .build();
 
             String message = objectMapper.writeValueAsString(updateDto);
-            redisPubSubService.publish("group-member-status", message);
+            realtimeEventPublisher.publish("group-member-status", message);
             
             log.info("그룹 {} 멤버 {} 상태 브로드캐스트 완료", groupId, userId);
             log.info("그룹 멤버 상태 브로드캐스트 - groupId: {}, userId: {}, personalTimerSeconds: {}, todoTitle: {}", 
@@ -131,7 +131,7 @@ public class GroupMemberStatusService {
                     .build();
 
             String message = objectMapper.writeValueAsString(updateDto);
-            redisPubSubService.publish("group-member-status", message);
+            realtimeEventPublisher.publish("group-member-status", message);
             
             log.debug("그룹 {} 전체 멤버 상태 브로드캐스트 완료", groupId);
         } catch (JsonProcessingException e) {

@@ -40,7 +40,7 @@ class TimerCompletionNotificationServiceTest {
     private TodoRepository todoRepository;
 
     @Mock
-    private RedisPubSubService redisPubSubService;
+    private RealtimeEventPublisher realtimeEventPublisher;
 
     @InjectMocks
     private TimerCompletionNotificationService service;
@@ -102,7 +102,7 @@ class TimerCompletionNotificationServiceTest {
 
     private TimerCompletionNotificationDto captureNotification() throws Exception {
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
-        verify(redisPubSubService).publish(eq("timer-completion"), payloadCaptor.capture());
+        verify(realtimeEventPublisher).publish(eq("timer-completion"), payloadCaptor.capture());
         return objectMapper.readValue(payloadCaptor.getValue(), TimerCompletionNotificationDto.class);
     }
 

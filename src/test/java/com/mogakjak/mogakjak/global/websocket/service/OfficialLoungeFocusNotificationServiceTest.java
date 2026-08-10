@@ -39,7 +39,7 @@ class OfficialLoungeFocusNotificationServiceTest {
     private OfficialLoungePresenceService officialLoungePresenceService;
 
     @Mock
-    private RedisPubSubService redisPubSubService;
+    private RealtimeEventPublisher realtimeEventPublisher;
 
     @InjectMocks
     private OfficialLoungeFocusNotificationService service;
@@ -90,7 +90,7 @@ class OfficialLoungeFocusNotificationServiceTest {
         service.sendHourlyFocusNotification();
 
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
-        verify(redisPubSubService).publish(org.mockito.ArgumentMatchers.eq("focus-notification"), payloadCaptor.capture());
+        verify(realtimeEventPublisher).publish(org.mockito.ArgumentMatchers.eq("focus-notification"), payloadCaptor.capture());
         FocusNotificationPublishDto publishDto = new ObjectMapper().readValue(payloadCaptor.getValue(), FocusNotificationPublishDto.class);
 
         assertNotNull(publishDto.getNotification());
@@ -116,6 +116,6 @@ class OfficialLoungeFocusNotificationServiceTest {
 
         service.sendHourlyFocusNotification();
 
-        verifyNoInteractions(redisPubSubService);
+        verifyNoInteractions(realtimeEventPublisher);
     }
 }

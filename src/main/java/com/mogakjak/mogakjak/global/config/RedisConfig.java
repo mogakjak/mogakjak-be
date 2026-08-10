@@ -3,8 +3,8 @@ package com.mogakjak.mogakjak.global.config;
 import com.mogakjak.mogakjak.global.property.RedisProperty;
 import com.mogakjak.mogakjak.global.websocket.service.RedisPubSubService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -80,6 +80,7 @@ public class RedisConfig {
 
     //    subscribe객체
     @Bean
+    @ConditionalOnProperty(prefix = "app.realtime", name = "transport", havingValue = "redis", matchIfMissing = true)
     public RedisMessageListenerContainer redisMessageListenerContainer(
             @Qualifier("chatPubSub") RedisConnectionFactory redisConnectionFactory,
             MessageListenerAdapter messageListenerAdapter
@@ -102,6 +103,7 @@ public class RedisConfig {
 
     //    redis에서 수신된 메시지를 처리하는 객체 생성
     @Bean
+    @ConditionalOnProperty(prefix = "app.realtime", name = "transport", havingValue = "redis", matchIfMissing = true)
     public MessageListenerAdapter messageListenerAdapter(RedisPubSubService redisPubSubService){
 //        RedisPubSubService의 특정 메서드가 수신된 메시지를 처리할수 있도록 지정
         return new MessageListenerAdapter(redisPubSubService, "onMessage");

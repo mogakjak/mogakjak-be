@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class InvitationNotificationService {
 
     private final UserGroupRepository userGroupRepository;
-    private final RedisPubSubService redisPubSubService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     private ObjectMapper objectMapper;
 
     @PostConstruct
@@ -64,7 +64,7 @@ public class InvitationNotificationService {
 
         try {
             String json = objectMapper.writeValueAsString(dto);
-            redisPubSubService.publish("invitation-notification", json);
+            realtimeEventPublisher.publish("invitation-notification", json);
             log.debug("초대 알림 전송: invitationId={}, inviteeId={}", invitation.getId(), invitee.getId());
         } catch (JsonProcessingException e) {
             log.error("초대 알림 전송 실패: {}", e.getMessage(), e);
@@ -72,4 +72,3 @@ public class InvitationNotificationService {
         }
     }
 }
-

@@ -41,7 +41,7 @@ public class TimerCompletionNotificationService {
     private final FocusSessionRepository focusSessionRepository;
     private final FocusIntervalRepository focusIntervalRepository;
     private final TodoRepository todoRepository;
-    private final RedisPubSubService redisPubSubService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     
     // 각 세션의 스케줄된 알림 작업 추적
     private final ConcurrentHashMap<UUID, ScheduledFuture<?>> scheduledNotifications = new ConcurrentHashMap<>();
@@ -325,7 +325,7 @@ public class TimerCompletionNotificationService {
             String jsonMessage = objectMapper.writeValueAsString(notification);
             
             // 개인 타이머 알림 채널
-            redisPubSubService.publish(TIMER_COMPLETION_CHANNEL, jsonMessage);
+            realtimeEventPublisher.publish(TIMER_COMPLETION_CHANNEL, jsonMessage);
             
             log.debug("타이머 완료 알림 전송: sessionId={}, userId={}", 
                     focusSession.getId(), focusSession.getUserId());

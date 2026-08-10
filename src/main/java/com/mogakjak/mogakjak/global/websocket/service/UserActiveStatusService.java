@@ -20,7 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserActiveStatusService {
 
-    private final RedisPubSubService redisPubSubService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     private final UserRepository userRepository;
     // ObjectMapper는 JavaTimeModule을 등록한 상태로 초기화
     private ObjectMapper objectMapper;
@@ -54,7 +54,7 @@ public class UserActiveStatusService {
             log.info("userId: {}, isActive: {}, lastActivityAt: {}", userId, isActive, statusDto.getLastActivityAt());
             log.info("Redis Pub/Sub 채널: user-active-status");
             log.info("전송할 메시지: {}", message);
-            redisPubSubService.publish("user-active-status", message);
+            realtimeEventPublisher.publish("user-active-status", message);
             log.info("===== Redis Pub/Sub 전송 완료 =====");
         } catch (JsonProcessingException e) {
             log.error("사용자 isActive 상태 브로드캐스트 실패: {}", e.getMessage(), e);
@@ -62,4 +62,3 @@ public class UserActiveStatusService {
         }
     }
 }
-

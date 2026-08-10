@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class InvitationResponseNotificationService {
 
-    private final RedisPubSubService redisPubSubService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     private ObjectMapper objectMapper;
 
     @PostConstruct
@@ -55,7 +55,7 @@ public class InvitationResponseNotificationService {
 
         try {
             String json = objectMapper.writeValueAsString(dto);
-            redisPubSubService.publish("invitation-response", json);
+            realtimeEventPublisher.publish("invitation-response", json);
             log.debug("초대 응답 알림 전송: invitationId={}, inviterId={}, status={}",
                     invitation.getId(), inviter.getId(), status);
         } catch (JsonProcessingException e) {
@@ -64,4 +64,3 @@ public class InvitationResponseNotificationService {
         }
     }
 }
-
