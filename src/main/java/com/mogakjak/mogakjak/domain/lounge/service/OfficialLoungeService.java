@@ -29,19 +29,21 @@ import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import com.mogakjak.mogakjak.global.websocket.dto.OfficialLoungePresenceUpdateDto;
 import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
-import com.mogakjak.mogakjak.global.websocket.service.RedisPubSubService;
+import com.mogakjak.mogakjak.global.websocket.service.RealtimeEventPublisher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -72,9 +74,12 @@ public class OfficialLoungeService {
     private final TodoRepository todoRepository;
     private final OfficialLoungeAccessLogRepository officialLoungeAccessLogRepository;
     private final CheerNotificationService cheerNotificationService;
-    private final RedisPubSubService redisPubSubService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     private final UserGroupRepository userGroupRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${app.realtime.lounge-payload:full}")
+    private String loungePayloadMode = "full";
 
     {
         objectMapper.registerModule(new JavaTimeModule());
@@ -173,23 +178,46 @@ public class OfficialLoungeService {
     public void publishPresenceUpdate(UUID loungeId, UUID changedUserId, String eventType) {
         try {
             Group lounge = getOfficialLounge();
-            List<UUID> memberIds = officialLoungePresenceService.findAllUserIds();
-            List<OfficialLoungeMemberResponse> members = loadMembers(null, memberIds);
+            List<OfficialLoungeMemberResponse> members = null;
+            OfficialLoungeMemberResponse changedMember = null;
+
+            if (isDeltaPayloadEnabled()) {
+                changedMember = loadChangedMember(changedUserId);
+            } else {
+                members = loadMembers(null, officialLoungePresenceService.findAllUserIds());
+            }
+
             OfficialLoungePresenceUpdateDto payload = OfficialLoungePresenceUpdateDto.builder()
                     .loungeId(loungeId != null ? loungeId : lounge.getId())
                     .eventType(eventType)
                     .changedUserId(changedUserId)
-                    .currentMemberCount((long) members.size())
+                    .currentMemberCount(officialLoungePresenceService.count())
                     .maxMemberCount(lounge.getMaxMemberCount())
+                    .publishedAt(Instant.now())
                     .members(members)
+                    .changedMember(changedMember)
                     .build();
 
             String message = objectMapper.writeValueAsString(payload);
-            redisPubSubService.publish(PRESENCE_CHANNEL, message);
+            realtimeEventPublisher.publish(PRESENCE_CHANNEL, message);
         } catch (Exception e) {
             log.error("공식 라운지 presence 브로드캐스트 실패 - loungeId={}, changedUserId={}, eventType={}, error={}",
                     loungeId, changedUserId, eventType, e.getMessage(), e);
         }
+    }
+
+    private OfficialLoungeMemberResponse loadChangedMember(UUID changedUserId) {
+        if (changedUserId == null || !officialLoungePresenceService.contains(changedUserId)) {
+            return null;
+        }
+
+        return loadMembers(null, List.of(changedUserId)).stream()
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean isDeltaPayloadEnabled() {
+        return "delta".equalsIgnoreCase(loungePayloadMode);
     }
 
     private Group getOfficialLounge() {

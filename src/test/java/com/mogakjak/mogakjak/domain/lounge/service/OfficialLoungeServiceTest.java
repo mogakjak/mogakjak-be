@@ -1,5 +1,7 @@
 package com.mogakjak.mogakjak.domain.lounge.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mogakjak.mogakjak.domain.group.entity.Group;
 import com.mogakjak.mogakjak.domain.group.repository.GroupRepository;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeMemberResponse;
@@ -17,7 +19,7 @@ import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.domain.lounge.repository.OfficialLoungeAccessLogRepository;
-import com.mogakjak.mogakjak.global.websocket.service.RedisPubSubService;
+import com.mogakjak.mogakjak.global.websocket.service.RealtimeEventPublisher;
 import com.mogakjak.mogakjak.global.websocket.service.CheerNotificationService;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,7 @@ import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -36,6 +39,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -82,7 +86,7 @@ class OfficialLoungeServiceTest {
     private OfficialLoungeAccessLogRepository officialLoungeAccessLogRepository;
 
     @Mock
-    private RedisPubSubService redisPubSubService;
+    private RealtimeEventPublisher realtimeEventPublisher;
 
     @Mock
     private CheerNotificationService cheerNotificationService;
@@ -224,11 +228,11 @@ class OfficialLoungeServiceTest {
 
         verify(officialLoungePresenceService).incrementCheerCount(targetId);
         verify(cheerNotificationService).sendCheerNotification(senderId, targetId, loungeId);
-        verify(redisPubSubService).publish(eq("official-lounge-presence"), anyString());
+        verify(realtimeEventPublisher).publish(eq("official-lounge-presence"), anyString());
     }
 
     @Test
-    void enter_publishesOfficialLoungePresenceUpdate() {
+    void enter_withDeltaPayload_publishesOnlyChangedMember() throws Exception {
         UUID loungeId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
 
@@ -254,6 +258,7 @@ class OfficialLoungeServiceTest {
 
         when(groupRepository.findFirstByIsOfficialLoungeTrue()).thenReturn(Optional.of(lounge));
         when(officialLoungePresenceService.enter(userId, 20)).thenReturn(true);
+        when(officialLoungePresenceService.count()).thenReturn(1L);
         when(officialLoungePresenceService.findAllUserIds()).thenReturn(List.of(userId));
         when(officialLoungePresenceService.contains(userId)).thenReturn(true);
         when(userRepository.findAllById(any(Iterable.class))).thenReturn(List.of(user));
@@ -276,9 +281,15 @@ class OfficialLoungeServiceTest {
                         .build()));
         when(quoteService.getRandomQuote()).thenReturn(quote);
         when(userGroupRepository.findMateIdsByUser(any(UUID.class), anyCollection())).thenReturn(Set.of());
+        ReflectionTestUtils.setField(officialLoungeService, "loungePayloadMode", "delta");
 
         officialLoungeService.enter(userId);
 
-        verify(redisPubSubService).publish(eq("official-lounge-presence"), anyString());
+        ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
+        verify(realtimeEventPublisher).publish(eq("official-lounge-presence"), payloadCaptor.capture());
+        JsonNode payload = new ObjectMapper().readTree(payloadCaptor.getValue());
+        assertFalse(payload.has("members"));
+        assertEquals(userId.toString(), payload.path("changedMember").path("userId").asText());
+        assertEquals(1L, payload.path("currentMemberCount").asLong());
     }
 }
