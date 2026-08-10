@@ -1,6 +1,8 @@
 package com.mogakjak.mogakjak.domain.lounge.service;
 
 import jakarta.annotation.PostConstruct;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,12 +27,17 @@ public class OfficialLoungePresenceService {
     private static final String CHEER_COUNT_KEY = "official-lounge:cheer-count";
 
     private final StringRedisTemplate stringRedisTemplate;
+    private final MeterRegistry meterRegistry;
     private DefaultRedisScript<Long> enterScript;
     private DefaultRedisScript<Long> incrementSessionScript;
     private DefaultRedisScript<Long> decrementSessionScript;
 
     @PostConstruct
     public void init() {
+        Gauge.builder("mogakjak.lounge.members", this, OfficialLoungePresenceService::count)
+                .description("현재 공식 라운지 입실 인원")
+                .register(meterRegistry);
+
         enterScript = new DefaultRedisScript<>();
         enterScript.setResultType(Long.class);
         enterScript.setScriptText("""

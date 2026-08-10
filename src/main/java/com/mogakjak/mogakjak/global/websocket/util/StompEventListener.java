@@ -7,6 +7,9 @@ import com.mogakjak.mogakjak.global.auth.security.util.JwtUtil;
 import com.mogakjak.mogakjak.domain.lounge.service.OfficialLoungePresenceService;
 import com.mogakjak.mogakjak.domain.lounge.service.OfficialLoungeService;
 import com.mogakjak.mogakjak.global.websocket.service.UserActiveStatusService;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -39,6 +42,14 @@ public class StompEventListener {
     private final UserActiveStatusService userActiveStatusService;
     private final OfficialLoungePresenceService officialLoungePresenceService;
     private final OfficialLoungeService officialLoungeService;
+    private final MeterRegistry meterRegistry;
+
+    @PostConstruct
+    void registerMetrics() {
+        Gauge.builder("mogakjak.websocket.sessions", sessions, Set::size)
+                .description("현재 STOMP WebSocket 세션 수")
+                .register(meterRegistry);
+    }
 
     @EventListener
     @Transactional
