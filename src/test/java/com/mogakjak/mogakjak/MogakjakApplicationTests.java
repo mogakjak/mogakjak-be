@@ -4,12 +4,14 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.BucketCrossOriginConfiguration;
 import com.amazonaws.services.s3.model.CORSRule;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
 
 @SpringBootTest
+@Disabled("실제 Object Storage 버킷 설정을 변경하는 수동 운영 테스트")
 class MogakjakApplicationTests {
 
 	@Autowired
