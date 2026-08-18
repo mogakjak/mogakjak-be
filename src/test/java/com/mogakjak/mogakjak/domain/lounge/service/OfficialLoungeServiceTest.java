@@ -6,10 +6,16 @@ import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeMemberResponse;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeSummaryResponse;
 import com.mogakjak.mogakjak.domain.quote.dto.QuoteResponse;
 import com.mogakjak.mogakjak.domain.quote.service.QuoteService;
+import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
+import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
+import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
+import com.mogakjak.mogakjak.domain.timer.enumerate.PomodoroPhaseType;
+import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
+import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
@@ -43,6 +49,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -280,5 +287,66 @@ class OfficialLoungeServiceTest {
         officialLoungeService.enter(userId);
 
         verify(redisPubSubService).publish(eq("official-lounge-presence"), anyString());
+    }
+
+    @Test
+    void getSummary_returnsTodoAccumulatedTimeForOfficialLoungeMember() {
+        UUID loungeId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        UUID todoId = UUID.randomUUID();
+
+        Group lounge = Group.builder().name("모각작 공식 라운지").build();
+        ReflectionTestUtils.setField(lounge, "id", loungeId);
+        lounge.markAsOfficialLounge(20);
+
+        User user = User.builder().name("member").email("member@example.com").build();
+        ReflectionTestUtils.setField(user, "id", userId);
+
+        ActiveFocusSession activeSession = mock(ActiveFocusSession.class);
+        FocusSession focusSession = mock(FocusSession.class);
+        FocusInterval interval = mock(FocusInterval.class);
+        Todo todo = mock(Todo.class);
+
+        when(groupRepository.findFirstByIsOfficialLoungeTrue()).thenReturn(Optional.of(lounge));
+        when(officialLoungePresenceService.findAllUserIds()).thenReturn(List.of(userId));
+        when(officialLoungePresenceService.getEnteredAtMap(List.of(userId)))
+                .thenReturn(Map.of(userId, LocalDateTime.now().minusMinutes(1)));
+        when(officialLoungePresenceService.getCheerCountMap(List.of(userId))).thenReturn(Map.of(userId, 0));
+        when(userRepository.findAllById(any(Iterable.class))).thenReturn(List.of(user));
+        when(userCharacterRepository.findAllByUserIdInOrderByUserIdAscImageCharacter_LevelDescImageCharacter_CreatedAtAsc(anyCollection()))
+                .thenReturn(List.of());
+        when(imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1))
+                .thenReturn(Optional.empty());
+        when(userGroupRepository.findMateIdsByUser(any(UUID.class), anyCollection())).thenReturn(Set.of());
+
+        when(activeSession.getUserId()).thenReturn(userId);
+        when(activeSession.getSessionId()).thenReturn(sessionId);
+        when(activeFocusSessionRepository.findAllByUserIdIn(anyCollection())).thenReturn(List.of(activeSession));
+        when(focusSession.getUserId()).thenReturn(userId);
+        when(focusSession.getId()).thenReturn(sessionId);
+        when(focusSession.getTodoId()).thenReturn(todoId);
+        when(focusSession.getStatus()).thenReturn(TimerStatus.RUNNING);
+        when(focusSession.getIsTimerPublic()).thenReturn(true);
+        when(focusSession.getIsTaskPublic()).thenReturn(true);
+        when(focusSession.getStartedAt()).thenReturn(LocalDateTime.now().minusMinutes(1));
+        when(focusSessionRepository.findAllByUserIdInOrderByUserIdAscStartedAtDesc(anyCollection()))
+                .thenReturn(List.of(focusSession));
+        when(interval.getSessionId()).thenReturn(sessionId);
+        when(interval.getPhaseType()).thenReturn(PomodoroPhaseType.NORMAL);
+        when(interval.getStartedAt()).thenReturn(LocalDateTime.now().minusSeconds(15));
+        when(focusIntervalRepository.findAllBySessionIdInOrderBySessionIdAscStartedAtDesc(anyCollection()))
+                .thenReturn(List.of(interval));
+        when(todo.getId()).thenReturn(todoId);
+        when(todo.getActualTimeInSeconds()).thenReturn(7_200);
+        when(todo.getTask()).thenReturn("누적할 작업");
+        when(todoRepository.findAllById(any(Iterable.class))).thenReturn(List.of(todo));
+
+        OfficialLoungeSummaryResponse response = officialLoungeService.getSummary(null);
+
+        OfficialLoungeMemberResponse member = response.getMembers().get(0);
+        assertTrue(member.getPersonalTimerSeconds() >= 7_214L);
+        assertTrue(member.getPersonalTimerSeconds() <= 7_217L);
+        assertEquals("누적할 작업", member.getTodoTitle());
     }
 }
