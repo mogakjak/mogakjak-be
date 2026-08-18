@@ -23,7 +23,7 @@ public class OfficialLoungeMemberResponse {
     private LocalDateTime enteredAt;
     private LocalDateTime lastActiveAt;
     private Long daysSinceLastParticipation;
-    private Long personalTimerSeconds;
+    private Long personalTimerSeconds; // 현재 Todo의 누적 몰입 시간 (실행 중 구간 포함, 비공개면 null)
     private String todoTitle;
     private Integer cheerCount;
     private Boolean isMate;

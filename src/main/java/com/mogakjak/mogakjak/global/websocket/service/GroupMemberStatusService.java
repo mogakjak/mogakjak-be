@@ -9,10 +9,10 @@ import com.mogakjak.mogakjak.domain.group.repository.GroupRepository;
 import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
-import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
+import com.mogakjak.mogakjak.domain.timer.service.TodoAccumulatedTimeCalculator;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
@@ -160,39 +160,27 @@ public class GroupMemberStatusService {
             if (focusSessionOpt.isPresent()) {
                 FocusSession focusSession = focusSessionOpt.get();
                 
-                // 타이머 누적 시간 공개 여부 확인
+                Optional<Todo> todoOpt = focusSession.getTodoId() != null
+                        ? todoRepository.findById(focusSession.getTodoId())
+                        : Optional.empty();
+                Optional<FocusInterval> currentIntervalOpt = focusIntervalRepository
+                        .findTopBySessionIdOrderByStartedAtDesc(focusSession.getId());
+
+                // 타이머 공개 시 Todo의 기존 누적 시간과 현재 실행 구간을 함께 노출한다.
                 Boolean isTimerPublic = focusSession.getIsTimerPublic();
-                if (isTimerPublic == null || isTimerPublic) {
-                    long total = focusSession.getTotalDuration() != null ? focusSession.getTotalDuration() : 0L;
-                    // PAUSED면 pause 시점에 이미 마지막 interval이 totalDuration에 반영되어 있음 → 중복 가산 방지
-                    if (focusSession.getStatus() == TimerStatus.PAUSED) {
-                        personalTimerSeconds = total;
-                    } else {
-                        // RUNNING 등: 현재 구간 경과 시간을 더해서 실시간 표시
-                        Optional<FocusInterval> currentIntervalOpt = focusIntervalRepository
-                                .findTopBySessionIdOrderByStartedAtDesc(focusSession.getId());
-                        if (currentIntervalOpt.isPresent()) {
-                            FocusInterval currentInterval = currentIntervalOpt.get();
-                            LocalDateTime intervalStart = currentInterval.getStartedAt();
-                            LocalDateTime intervalEnd = currentInterval.getEndedAt() != null
-                                    ? currentInterval.getEndedAt()
-                                    : now;
-                            long intervalSeconds = Duration.between(intervalStart, intervalEnd).getSeconds();
-                            personalTimerSeconds = total + intervalSeconds;
-                        } else {
-                            personalTimerSeconds = total;
-                        }
-                    }
+                if ((isTimerPublic == null || isTimerPublic) && todoOpt.isPresent()) {
+                    personalTimerSeconds = TodoAccumulatedTimeCalculator.calculate(
+                            todoOpt.get(),
+                            focusSession,
+                            currentIntervalOpt.orElse(null),
+                            now
+                    );
                 }
-                // isTimerPublic이 false이면 personalTimerSeconds는 null로 유지됨
 
                 // 할일 제목 공개 여부 확인
                 Boolean isTaskPublic = focusSession.getIsTaskPublic();
-                if ((isTaskPublic == null || isTaskPublic) && focusSession.getTodoId() != null) {
-                    Optional<Todo> todoOpt = todoRepository.findById(focusSession.getTodoId());
-                    if (todoOpt.isPresent()) {
-                        todoTitle = todoOpt.get().getTask();
-                    }
+                if ((isTaskPublic == null || isTaskPublic) && todoOpt.isPresent()) {
+                    todoTitle = todoOpt.get().getTask();
                 }
                 // isTaskPublic이 false이면 todoTitle은 null로 유지됨
             }
