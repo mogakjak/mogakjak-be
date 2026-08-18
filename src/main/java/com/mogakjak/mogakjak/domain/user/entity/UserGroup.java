@@ -44,6 +44,10 @@ public class UserGroup extends BaseSchema {
     @Builder.Default
     private Integer hostAckState = -1;
 
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    @Builder.Default
+    private Boolean isFocusCheckEnabled = true;
+
     public static UserGroup create(User user, Group group, GroupRole role) {
         return UserGroup.builder()
                 .user(user)
@@ -52,6 +56,7 @@ public class UserGroup extends BaseSchema {
                 .participationStatus(GroupParticipationStatus.NOT_PARTICIPATING)
                 .cheerCount(0)
                 .hostAckState(role == GroupRole.HOST ? 1 : -1)
+                .isFocusCheckEnabled(true)
                 .build();
     }
 
@@ -94,5 +99,9 @@ public class UserGroup extends BaseSchema {
 
     public void resetCheerCount() {
         this.cheerCount = 0;
+    }
+
+    public void updateFocusCheckEnabled(Boolean enabled) {
+        this.isFocusCheckEnabled = enabled;
     }
 }

@@ -115,6 +115,27 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
+    @Operation(summary = "내 그룹 집중 체크 알림 수신 설정 조회", description = "현재 사용자의 그룹 집중 체크 알림 수신 여부를 조회합니다.")
+    @GetMapping("/{groupId}/notifications/me")
+    public ApiResponse<GroupFocusCheckResponse> getMyFocusCheck(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID groupId
+    ) {
+        GroupFocusCheckResponse response = groupService.getMyFocusCheck(user, groupId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "내 그룹 집중 체크 알림 수신 설정 변경", description = "현재 사용자의 그룹 집중 체크 알림 수신 여부를 변경합니다.")
+    @PutMapping("/{groupId}/notifications/me")
+    public ApiResponse<GroupFocusCheckResponse> updateMyFocusCheck(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID groupId,
+            @Valid @RequestBody GroupFocusCheckRequest request
+    ) {
+        GroupFocusCheckResponse response = groupService.updateMyFocusCheck(user, groupId, request);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
     @Operation(summary = "[테스트용] 집중 체크 알림 수동 전송", description = "특정 그룹에 집중 체크 알림을 즉시 전송합니다. (테스트/디버깅용)")
     @PostMapping("/{groupId}/notifications/test")
     public ApiResponse<String> testSendNotification(

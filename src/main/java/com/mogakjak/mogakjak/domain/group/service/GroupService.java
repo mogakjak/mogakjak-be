@@ -62,6 +62,12 @@ public interface GroupService {
     // 그룹 집중 체크 알림 설정
     FocusNotificationResponse modifyFocusNotification(User user, UUID groupId, FocusNotificationRequest request);
 
+    // 내 그룹 집중 체크 알림 수신 설정 조회
+    GroupFocusCheckResponse getMyFocusCheck(User user, UUID groupId);
+
+    // 내 그룹 집중 체크 알림 수신 설정 변경
+    GroupFocusCheckResponse updateMyFocusCheck(User user, UUID groupId, GroupFocusCheckRequest request);
+
     // 그룹 공동 목표 설정
     GroupGoalResponse setGroupGoal(User user, UUID groupId, GroupGoalRequest request);
 

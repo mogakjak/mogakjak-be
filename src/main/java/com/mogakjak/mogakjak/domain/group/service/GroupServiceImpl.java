@@ -599,6 +599,23 @@ public class GroupServiceImpl implements GroupService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public GroupFocusCheckResponse getMyFocusCheck(User user, UUID groupId) {
+        Group group = findGroupById(groupId);
+        UserGroup userGroup = findUserGroup(user, group);
+        return GroupFocusCheckResponse.from(userGroup);
+    }
+
+    @Override
+    @Transactional
+    public GroupFocusCheckResponse updateMyFocusCheck(User user, UUID groupId, GroupFocusCheckRequest request) {
+        Group group = findGroupById(groupId);
+        UserGroup userGroup = findUserGroup(user, group);
+        userGroup.updateFocusCheckEnabled(request.enabled());
+        return GroupFocusCheckResponse.from(userGroup);
+    }
+
+    @Override
     @Transactional
     public GroupGoalResponse setGroupGoal(User user, UUID groupId, GroupGoalRequest request) {
         Group group = findGroupById(groupId);
