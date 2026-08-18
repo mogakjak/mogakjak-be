@@ -1,3 +1,25 @@
 spring:
+  application:
+    name: mogakjak-be
   profiles:
     active: dev
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:health,info}
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+app:
+  realtime:
+    transport: ${APP_REALTIME_TRANSPORT:redis}
+    lounge-payload: ${APP_REALTIME_LOUNGE_PAYLOAD:full}

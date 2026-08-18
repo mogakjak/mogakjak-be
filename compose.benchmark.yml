@@ -1,0 +1,25 @@
+services:
+  app:
+    environment:
+      APP_REALTIME_TRANSPORT: ${APP_REALTIME_TRANSPORT:-redis}
+      APP_REALTIME_LOUNGE_PAYLOAD: ${APP_REALTIME_LOUNGE_PAYLOAD:-full}
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus
+
+  k6:
+    image: grafana/k6:2.1.0
+    profiles:
+      - load-test
+    depends_on:
+      - app
+    environment:
+      BASE_URL: ${K6_BASE_URL:-http://app:8080}
+      WS_URL: ${K6_WS_URL:-ws://app:8080}
+      ACCESS_TOKEN: ${K6_ACCESS_TOKEN:-}
+      ACCESS_TOKENS: ${K6_ACCESS_TOKENS:-}
+      CONNECTIONS: ${K6_CONNECTIONS:-20}
+      DURATION: ${K6_DURATION:-2m}
+      EVENT_INTERVAL: ${K6_EVENT_INTERVAL:-1}
+    volumes:
+      - ./load-tests:/scripts:ro
+    networks:
+      - monitoring

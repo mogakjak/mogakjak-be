@@ -34,7 +34,7 @@ public class OfficialLoungeFocusNotificationService {
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
     private final OfficialLoungePresenceService officialLoungePresenceService;
-    private final RedisPubSubService redisPubSubService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     {
@@ -83,7 +83,7 @@ public class OfficialLoungeFocusNotificationService {
                     .recipientUserIds(List.copyOf(recipientUserIds))
                     .build();
             String payload = objectMapper.writeValueAsString(publishDto);
-            redisPubSubService.publish(FOCUS_NOTIFICATION_CHANNEL, payload);
+            realtimeEventPublisher.publish(FOCUS_NOTIFICATION_CHANNEL, payload);
             log.info("공식 라운지 집중 체크 발송 완료: loungeId={}, recipientCount={}",
                     lounge.getId(), recipientUserIds.size());
         } catch (JsonProcessingException e) {

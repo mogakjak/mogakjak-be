@@ -27,7 +27,7 @@ public class CheerNotificationService {
 
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
-    private final RedisPubSubService redisPubSubService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     private ObjectMapper objectMapper;
 
     @PostConstruct
@@ -65,7 +65,7 @@ public class CheerNotificationService {
 
         try {
             String jsonMessage = objectMapper.writeValueAsString(notification);
-            redisPubSubService.publish("cheer-notification", jsonMessage);
+            realtimeEventPublisher.publish("cheer-notification", jsonMessage);
             log.debug("응원 알림 전송: fromUserId={}, targetUserId={}, groupId={}", 
                     fromUserId, targetUserId, groupId);
         } catch (JsonProcessingException e) {
@@ -74,4 +74,3 @@ public class CheerNotificationService {
         }
     }
 }
-

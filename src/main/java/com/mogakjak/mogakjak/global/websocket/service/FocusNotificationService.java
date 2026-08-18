@@ -32,7 +32,7 @@ public class FocusNotificationService {
     private final ActiveFocusSessionRepository activeFocusSessionRepository;
     private final FocusSessionRepository focusSessionRepository;
     private final UserRepository userRepository;
-    private final RedisPubSubService redisPubSubService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -65,7 +65,7 @@ public class FocusNotificationService {
                     .recipientUserIds(List.copyOf(activeUserIds))
                     .build();
             String message = objectMapper.writeValueAsString(publishDto);
-            redisPubSubService.publish("focus-notification", message);
+            realtimeEventPublisher.publish("focus-notification", message);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize focus notification", e);
         }
@@ -123,10 +123,9 @@ public class FocusNotificationService {
                     .recipientUserIds(List.copyOf(activeUserIds))
                     .build();
             String message = objectMapper.writeValueAsString(publishDto);
-            redisPubSubService.publish("focus-notification", message);
+            realtimeEventPublisher.publish("focus-notification", message);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize focus notification", e);
         }
     }
 }
-

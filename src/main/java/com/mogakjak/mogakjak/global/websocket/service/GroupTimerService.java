@@ -27,7 +27,7 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class GroupTimerService {
 
-    private final RedisPubSubService redisPubSubService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     private final GroupRepository groupRepository;
     private ObjectMapper objectMapper;
 
@@ -66,7 +66,7 @@ public class GroupTimerService {
                     .build();
 
             String message = objectMapper.writeValueAsString(eventDto);
-            redisPubSubService.publish("group-timer-event", message);
+            realtimeEventPublisher.publish("group-timer-event", message);
             
             log.debug("그룹 타이머 이벤트 브로드캐스트: groupId={}, eventType={}", groupId, eventType);
         } catch (JsonProcessingException e) {
@@ -111,7 +111,7 @@ public class GroupTimerService {
                     .build();
 
             String message = objectMapper.writeValueAsString(eventDto);
-            redisPubSubService.publish("group-timer-event", message);
+            realtimeEventPublisher.publish("group-timer-event", message);
             
             log.debug("그룹 타이머 동기화 브로드캐스트: groupId={}", groupId);
         } catch (JsonProcessingException e) {
@@ -120,4 +120,3 @@ public class GroupTimerService {
     }
 
 }
-

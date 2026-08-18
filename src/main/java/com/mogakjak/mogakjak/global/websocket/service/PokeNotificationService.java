@@ -27,7 +27,7 @@ public class PokeNotificationService {
 
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
-    private final RedisPubSubService redisPubSubService;
+    private final RealtimeEventPublisher realtimeEventPublisher;
     private ObjectMapper objectMapper;
 
     @PostConstruct
@@ -65,7 +65,7 @@ public class PokeNotificationService {
 
         try {
             String jsonMessage = objectMapper.writeValueAsString(notification);
-            redisPubSubService.publish("poke-notification", jsonMessage);
+            realtimeEventPublisher.publish("poke-notification", jsonMessage);
             
             log.debug("콕 찌르기 알림 전송: fromUserId={}, targetUserId={}, groupId={}", 
                     fromUserId, targetUserId, groupId);
@@ -75,4 +75,3 @@ public class PokeNotificationService {
         }
     }
 }
-
