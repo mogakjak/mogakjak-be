@@ -24,8 +24,7 @@ public class GroupMemberStatusDto {
     private GroupParticipationStatus participationStatus;
     private LocalDateTime enteredAt;
     private Long daysSinceLastParticipation; // 최근 참여 며칠 전 (null이면 참여한 적 없음)
-    private Long personalTimerSeconds; // 개인 타이머 경과 시간 (초 단위, null이면 타이머 실행 중이 아님)
+    private Long personalTimerSeconds; // 현재 Todo의 누적 몰입 시간 (실행 중 구간 포함, 비공개면 null)
     private String todoTitle; // 현재 실행 중인 할 일 제목 (null이면 타이머 실행 중이 아님)
     private Integer cheerCount; // 응원 수
 }
-

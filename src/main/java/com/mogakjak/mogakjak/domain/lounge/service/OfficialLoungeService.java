@@ -15,6 +15,7 @@ import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
+import com.mogakjak.mogakjak.domain.timer.service.TodoAccumulatedTimeCalculator;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
@@ -325,21 +326,14 @@ public class OfficialLoungeService {
 
         Long personalTimerSeconds = null;
         if (Boolean.TRUE.equals(focusSession.getIsTimerPublic()) || focusSession.getIsTimerPublic() == null) {
-            long total = focusSession.getTotalDuration() != null ? focusSession.getTotalDuration() : 0L;
-            if (focusSession.getStatus() == TimerStatus.PAUSED) {
-                personalTimerSeconds = total;
-            } else {
-                FocusInterval currentInterval = context.latestIntervalBySessionId().get(focusSession.getId());
-                if (currentInterval != null) {
-                    LocalDateTime intervalStart = currentInterval.getStartedAt();
-                    LocalDateTime intervalEnd = currentInterval.getEndedAt() != null
-                            ? currentInterval.getEndedAt()
-                            : now;
-                    long intervalSeconds = Duration.between(intervalStart, intervalEnd).getSeconds();
-                    personalTimerSeconds = total + intervalSeconds;
-                } else {
-                    personalTimerSeconds = total;
-                }
+            Todo todo = context.todoById().get(focusSession.getTodoId());
+            if (todo != null) {
+                personalTimerSeconds = TodoAccumulatedTimeCalculator.calculate(
+                        todo,
+                        focusSession,
+                        context.latestIntervalBySessionId().get(focusSession.getId()),
+                        now
+                );
             }
         }
 
