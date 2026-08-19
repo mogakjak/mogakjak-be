@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,19 +30,26 @@ class FocusNotificationSchedulerTest {
     private FocusNotificationScheduler scheduler;
 
     @Test
-    void sendFocusNotifications_sendsOnlyForEnabledGroup() {
+    void sendFocusNotifications_ignoresLegacyGroupToggleAndSkipsOfficialLounge() {
         Group enabled = Group.builder().name("enabled").isNotificationAgreed(true).build();
         Group disabled = Group.builder().name("disabled").isNotificationAgreed(false).build();
+        Group officialLounge = Group.builder().name("official").build();
+        officialLounge.markAsOfficialLounge(20);
         ReflectionTestUtils.setField(enabled, "id", UUID.randomUUID());
         ReflectionTestUtils.setField(disabled, "id", UUID.randomUUID());
-        when(groupRepository.findAll()).thenReturn(List.of(enabled, disabled));
+        ReflectionTestUtils.setField(officialLounge, "id", UUID.randomUUID());
+        when(groupRepository.findAll()).thenReturn(List.of(enabled, disabled, officialLounge));
 
         scheduler.sendFocusNotifications();
 
         verify(focusNotificationService).sendFocusNotificationToGroup(enabled.getId());
-        verify(focusNotificationService, never()).sendFocusNotificationToGroup(disabled.getId());
+        verify(focusNotificationService).sendFocusNotificationToGroup(disabled.getId());
         verify(groupRepository).save(enabled);
-        verify(groupRepository, never()).save(disabled);
+        verify(groupRepository).save(disabled);
+        verify(focusNotificationService, org.mockito.Mockito.never())
+                .sendFocusNotificationToGroup(officialLounge.getId());
+        verify(groupRepository, org.mockito.Mockito.never()).save(officialLounge);
         assertNotNull(enabled.getLastNotificationSentAt());
+        assertNotNull(disabled.getLastNotificationSentAt());
     }
 }

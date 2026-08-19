@@ -36,10 +36,6 @@ public class FocusNotificationService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found: " + groupId));
 
-        if (!group.getIsNotificationAgreed()) {
-            return;
-        }
-
         Set<UUID> recipientUserIds = getRecipientUserIdsInGroup(group);
         if (recipientUserIds.isEmpty()) {
             return;

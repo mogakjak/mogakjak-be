@@ -32,8 +32,8 @@ public class FocusNotificationScheduler {
         LocalDateTime now = LocalDateTime.now();
 
         for (Group group : groups) {
-            // 알림 동의 여부 확인
-            if (!group.getIsNotificationAgreed()) {
+            // 공식 라운지는 별도 정각 스케줄러에서 처리
+            if (Boolean.TRUE.equals(group.getIsOfficialLounge())) {
                 continue;
             }
 
@@ -59,4 +59,3 @@ public class FocusNotificationScheduler {
         }
     }
 }
-

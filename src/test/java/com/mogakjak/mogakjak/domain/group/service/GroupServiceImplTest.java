@@ -225,11 +225,33 @@ class GroupServiceImplTest {
                 () -> groupService.modifyFocusNotification(
                         user,
                         groupId,
-                        new FocusNotificationRequest(true, 2, "집중")
+                        new FocusNotificationRequest(2)
                 )
         );
 
         assertEquals(ErrorCode.FORBIDDEN, exception.getStatusCode());
+    }
+
+    @Test
+    void modifyFocusNotification_hostUpdatesOnlyCycle() {
+        UUID groupId = UUID.randomUUID();
+        User host = User.builder().name("host").email("host@example.com").build();
+        Group group = Group.builder()
+                .name("study")
+                .isNotificationAgreed(false)
+                .notificationCycle(1)
+                .notificationMessage("기존 메시지")
+                .build();
+        ReflectionTestUtils.setField(group, "id", groupId);
+        UserGroup userGroup = UserGroup.create(host, group, GroupRole.HOST);
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userGroupRepository.findByUserAndGroup(host, group)).thenReturn(Optional.of(userGroup));
+
+        groupService.modifyFocusNotification(host, groupId, new FocusNotificationRequest(3));
+
+        assertEquals(3, group.getNotificationCycle());
+        assertFalse(Boolean.TRUE.equals(group.getIsNotificationAgreed()));
+        assertEquals("기존 메시지", group.getNotificationMessage());
     }
 
     @Test

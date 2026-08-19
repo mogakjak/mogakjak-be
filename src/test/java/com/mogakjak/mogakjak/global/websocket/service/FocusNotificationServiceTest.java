@@ -25,7 +25,6 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -79,14 +78,22 @@ class FocusNotificationServiceTest {
     }
 
     @Test
-    void sendFocusNotificationToGroup_doesNotPublishWhenGroupNotificationIsDisabled() {
+    void sendFocusNotificationToGroup_ignoresLegacyGroupToggleAndUsesPersonalOptIn() throws Exception {
         UUID groupId = UUID.randomUUID();
         Group group = group(groupId, false);
+        UserGroup restingEnabled = membership(group, GroupParticipationStatus.RESTING, true, false);
         when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userGroupRepository.findAllByGroupWithUser(group)).thenReturn(List.of(restingEnabled));
 
         service.sendFocusNotificationToGroup(groupId);
 
-        verifyNoInteractions(userGroupRepository, redisPubSubService);
+        ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
+        verify(redisPubSubService).publish(eq("focus-notification"), payloadCaptor.capture());
+        FocusNotificationPublishDto payload = new ObjectMapper().readValue(
+                payloadCaptor.getValue(),
+                FocusNotificationPublishDto.class
+        );
+        assertEquals(List.of(restingEnabled.getUser().getId()), payload.getRecipientUserIds());
     }
 
     private Group group(UUID groupId, boolean agreed) {

@@ -589,11 +589,7 @@ public class GroupServiceImpl implements GroupService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        group.updateFocusNotificationInfo(
-                request.isNotificationAgreed(),
-                request.notificationCycle(),
-                request.notificationMessage()
-        );
+        group.updateFocusNotificationCycle(request.notificationCycle());
 
         return FocusNotificationResponse.from(group);
     }
