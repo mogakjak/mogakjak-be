@@ -1,6 +1,9 @@
 package com.mogakjak.mogakjak.domain.group.service;
 
 import com.mogakjak.mogakjak.domain.group.controller.dto.MyGroupResponse;
+import com.mogakjak.mogakjak.domain.group.controller.dto.FocusNotificationRequest;
+import com.mogakjak.mogakjak.domain.group.controller.dto.GroupFocusCheckRequest;
+import com.mogakjak.mogakjak.domain.group.controller.dto.GroupFocusCheckResponse;
 import com.mogakjak.mogakjak.domain.group.controller.dto.InviteMateResponse;
 import com.mogakjak.mogakjak.domain.group.controller.dto.InviteMateStatus;
 import com.mogakjak.mogakjak.domain.group.entity.Group;
@@ -183,6 +186,72 @@ class GroupServiceImplTest {
         assertNotNull(privateRoom.getMembers());
         assertEquals(1, privateRoom.getMembers().size());
         assertEquals(GroupRole.MEMBER, privateRoom.getMembers().get(0).getRole());
+    }
+
+    @Test
+    void updateMyFocusCheck_updatesOnlyCurrentMembershipSetting() {
+        UUID groupId = UUID.randomUUID();
+        User user = User.builder().name("member").email("member@example.com").build();
+        Group group = Group.builder().name("study").build();
+        ReflectionTestUtils.setField(group, "id", groupId);
+        UserGroup userGroup = UserGroup.create(user, group, GroupRole.MEMBER);
+        assertTrue(Boolean.TRUE.equals(userGroup.getIsFocusCheckEnabled()));
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userGroupRepository.findByUserAndGroup(user, group)).thenReturn(Optional.of(userGroup));
+
+        GroupFocusCheckResponse response = groupService.updateMyFocusCheck(
+                user,
+                groupId,
+                new GroupFocusCheckRequest(false)
+        );
+
+        assertFalse(Boolean.TRUE.equals(response.myFocusCheckEnabled()));
+        assertFalse(Boolean.TRUE.equals(userGroup.getIsFocusCheckEnabled()));
+        assertTrue(group.getIsNotificationAgreed());
+    }
+
+    @Test
+    void modifyFocusNotification_rejectsNonHostMember() {
+        UUID groupId = UUID.randomUUID();
+        User user = User.builder().name("member").email("member@example.com").build();
+        Group group = Group.builder().name("study").build();
+        ReflectionTestUtils.setField(group, "id", groupId);
+        UserGroup userGroup = UserGroup.create(user, group, GroupRole.MEMBER);
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userGroupRepository.findByUserAndGroup(user, group)).thenReturn(Optional.of(userGroup));
+
+        com.mogakjak.mogakjak.global.exception.CustomException exception = assertThrows(
+                com.mogakjak.mogakjak.global.exception.CustomException.class,
+                () -> groupService.modifyFocusNotification(
+                        user,
+                        groupId,
+                        new FocusNotificationRequest(2)
+                )
+        );
+
+        assertEquals(ErrorCode.FORBIDDEN, exception.getStatusCode());
+    }
+
+    @Test
+    void modifyFocusNotification_hostUpdatesOnlyCycle() {
+        UUID groupId = UUID.randomUUID();
+        User host = User.builder().name("host").email("host@example.com").build();
+        Group group = Group.builder()
+                .name("study")
+                .isNotificationAgreed(false)
+                .notificationCycle(1)
+                .notificationMessage("기존 메시지")
+                .build();
+        ReflectionTestUtils.setField(group, "id", groupId);
+        UserGroup userGroup = UserGroup.create(host, group, GroupRole.HOST);
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userGroupRepository.findByUserAndGroup(host, group)).thenReturn(Optional.of(userGroup));
+
+        groupService.modifyFocusNotification(host, groupId, new FocusNotificationRequest(3));
+
+        assertEquals(3, group.getNotificationCycle());
+        assertFalse(Boolean.TRUE.equals(group.getIsNotificationAgreed()));
+        assertEquals("기존 메시지", group.getNotificationMessage());
     }
 
     @Test

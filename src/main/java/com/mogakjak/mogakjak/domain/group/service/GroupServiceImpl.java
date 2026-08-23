@@ -589,13 +589,26 @@ public class GroupServiceImpl implements GroupService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        group.updateFocusNotificationInfo(
-                request.isNotificationAgreed(),
-                request.notificationCycle(),
-                request.notificationMessage()
-        );
+        group.updateFocusNotificationCycle(request.notificationCycle());
 
         return FocusNotificationResponse.from(group);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GroupFocusCheckResponse getMyFocusCheck(User user, UUID groupId) {
+        Group group = findGroupById(groupId);
+        UserGroup userGroup = findUserGroup(user, group);
+        return GroupFocusCheckResponse.from(userGroup);
+    }
+
+    @Override
+    @Transactional
+    public GroupFocusCheckResponse updateMyFocusCheck(User user, UUID groupId, GroupFocusCheckRequest request) {
+        Group group = findGroupById(groupId);
+        UserGroup userGroup = findUserGroup(user, group);
+        userGroup.updateFocusCheckEnabled(request.enabled());
+        return GroupFocusCheckResponse.from(userGroup);
     }
 
     @Override

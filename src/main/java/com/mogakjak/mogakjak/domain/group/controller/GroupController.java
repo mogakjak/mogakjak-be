@@ -93,7 +93,7 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @Operation(summary = "그룹 집중 체크 알림 설정", description = "그룹의 집중 체크 알림 동의 여부 / 알림 주기 / 알림 메시지를 설정합니다.")
+    @Operation(summary = "그룹 집중 체크 알림 설정 조회", description = "그룹의 집중 체크 알림 주기를 조회합니다.")
     @GetMapping("/{groupId}/notifications")
     public ApiResponse<FocusNotificationResponse> getFocusNotification(
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -104,7 +104,7 @@ public class GroupController {
         return ApiResponse.success(SuccessCode.OK, response);
     }
 
-    @Operation(summary = "그룹 집중 체크 알림 설정", description = "그룹의 집중 체크 알림 동의 여부 / 알림 주기 / 알림 메시지를 설정합니다.")
+    @Operation(summary = "그룹 집중 체크 알림 주기 설정", description = "방장이 그룹의 집중 체크 알림 주기를 설정합니다.")
     @PutMapping("/{groupId}/notifications")
     public ApiResponse<FocusNotificationResponse> modifyFocusNotification(
             @Valid @RequestBody FocusNotificationRequest request,
@@ -112,6 +112,27 @@ public class GroupController {
             @PathVariable UUID groupId
     ) {
         FocusNotificationResponse response = groupService.modifyFocusNotification(user, groupId, request);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "내 그룹 집중 체크 알림 수신 설정 조회", description = "현재 사용자의 그룹 집중 체크 알림 수신 여부를 조회합니다.")
+    @GetMapping("/{groupId}/notifications/me")
+    public ApiResponse<GroupFocusCheckResponse> getMyFocusCheck(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID groupId
+    ) {
+        GroupFocusCheckResponse response = groupService.getMyFocusCheck(user, groupId);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
+    @Operation(summary = "내 그룹 집중 체크 알림 수신 설정 변경", description = "현재 사용자의 그룹 집중 체크 알림 수신 여부를 변경합니다.")
+    @PutMapping("/{groupId}/notifications/me")
+    public ApiResponse<GroupFocusCheckResponse> updateMyFocusCheck(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @PathVariable UUID groupId,
+            @Valid @RequestBody GroupFocusCheckRequest request
+    ) {
+        GroupFocusCheckResponse response = groupService.updateMyFocusCheck(user, groupId, request);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 

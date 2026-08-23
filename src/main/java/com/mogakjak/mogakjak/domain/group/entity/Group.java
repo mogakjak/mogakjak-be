@@ -84,10 +84,8 @@ public class Group extends BaseSchema {
         this.password = password;
     }
 
-    public void updateFocusNotificationInfo(Boolean isNotificationAgreed, Integer notificationCycle, String notificationMessage) {
-        this.isNotificationAgreed = isNotificationAgreed;
+    public void updateFocusNotificationCycle(Integer notificationCycle) {
         this.notificationCycle = notificationCycle;
-        this.notificationMessage = notificationMessage;
     }
 
     public void updateGoalSeconds(Integer goalSeconds) {

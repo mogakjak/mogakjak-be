@@ -32,8 +32,8 @@ public class FocusNotificationScheduler {
         LocalDateTime now = LocalDateTime.now();
 
         for (Group group : groups) {
-            // 알림 동의 여부 확인
-            if (!group.getIsNotificationAgreed()) {
+            // 공식 라운지는 별도 정각 스케줄러에서 처리
+            if (Boolean.TRUE.equals(group.getIsOfficialLounge())) {
                 continue;
             }
 
@@ -49,7 +49,10 @@ public class FocusNotificationScheduler {
 
             // 알림 전송
             try {
-                focusNotificationService.sendFocusNotificationToGroup(group.getId());
+                boolean sent = focusNotificationService.sendFocusNotificationToGroup(group.getId());
+                if (!sent) {
+                    continue;
+                }
                 group.updateLastNotificationSentAt(now);
                 groupRepository.save(group);
                 log.debug("그룹 {}에 집중 체크 알림 전송 완료", group.getId());
@@ -59,4 +62,3 @@ public class FocusNotificationScheduler {
         }
     }
 }
-
