@@ -34,6 +34,12 @@ public class GroupDetailResponse {
 
     private Long progressRate;
 
+    @Schema(description = "현재 그룹 세션 참여 인원", example = "3")
+    private Long participatingMemberCount;
+
+    @Schema(description = "탈퇴·삭제 사용자를 제외한 전체 메이트 수", example = "8")
+    private Long totalMemberCount;
+
     @Schema(description = "그룹 멤버 목록")
     private List<MemberInfo> members;
 
@@ -53,7 +59,12 @@ public class GroupDetailResponse {
         private GroupRole role;
     }
 
-    public static GroupDetailResponse from(Group group, List<MemberInfo> members) {
+    public static GroupDetailResponse from(
+            Group group,
+            List<MemberInfo> members,
+            long participatingMemberCount,
+            long totalMemberCount
+    ) {
         long accumulated = group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L;
         long goalSeconds = group.getGoalSeconds() != null ? group.getGoalSeconds() : 0L;
 
@@ -70,6 +81,8 @@ public class GroupDetailResponse {
                 .accumulatedDuration(group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L)
                 .groupGoal(GroupGoalResponse.from(group))
                 .progressRate(progressRate)
+                .participatingMemberCount(participatingMemberCount)
+                .totalMemberCount(totalMemberCount)
                 .members(members)
                 .build();
     }
