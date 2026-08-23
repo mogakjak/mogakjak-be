@@ -5,7 +5,6 @@ import com.mogakjak.mogakjak.domain.timer.dto.response.DashboardResponse;
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.enumerate.DashboardRangeType;
 import com.mogakjak.mogakjak.domain.timer.repository.FocusIntervalRepository;
-import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
 import com.mogakjak.mogakjak.domain.timer.util.DashboardRange;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.entity.User;
@@ -29,7 +28,7 @@ import java.util.stream.IntStream;
 @Transactional(readOnly = true)
 public class FocusRecordServiceImpl implements FocusRecordService {
 
-    private final FocusSessionRepository focusSessionRepository;
+    private final FocusTimeAggregationService focusTimeAggregationService;
     private final FocusIntervalRepository focusIntervalRepository;
     private final TodoRepository todoRepository;
     private final CategoryRepository categoryRepository;
@@ -70,17 +69,15 @@ public class FocusRecordServiceImpl implements FocusRecordService {
         LocalDateTime end = range.end();
 
         /* --- SUMMARY 계산 --- */
-        Long personalSeconds = focusSessionRepository.sumPersonalSeconds(userId, start, end);
-        Long groupSeconds = focusSessionRepository.sumGroupSeconds(userId, start, end);
-        Long totalSeconds = focusSessionRepository.sumTotalSeconds(userId, start, end);
+        FocusTimeMetrics metrics = focusTimeAggregationService.getMetrics(userId, start, end);
 
         LocalDate rangeStartDate = start.toLocalDate();
         Integer completedTodoCount = todoRepository.countCompletedByUserBetween(userId, rangeStartDate, end.toLocalDate());
 
         DashboardResponse.Summary summary = new DashboardResponse.Summary(
-                totalSeconds,
-                groupSeconds,
-                personalSeconds,
+                metrics.totalSeconds(),
+                metrics.groupSeconds(),
+                metrics.personalSeconds(),
                 completedTodoCount
         );
 

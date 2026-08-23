@@ -1,6 +1,5 @@
 package com.mogakjak.mogakjak.domain.user.controller;
 
-import com.mogakjak.mogakjak.domain.user.controller.dto.CheckAwardRequest;
 import com.mogakjak.mogakjak.domain.user.controller.dto.ImageCharacterRequest;
 import com.mogakjak.mogakjak.domain.user.controller.dto.ImageCharacterResponse;
 import com.mogakjak.mogakjak.domain.user.entity.User;
@@ -39,14 +38,13 @@ public class ImageCharacterController {
         return ApiResponse.success(SuccessCode.OK, service.createCharacters(requests));
     }
 
-    @Operation(summary = "누적 시간에 따른 캐릭터 획득 확인")
+    @Operation(summary = "서버 누적 몰입 시간에 따른 캐릭터 획득 확인")
     @PostMapping("/check-award")
     public ApiResponse<List<ImageCharacterResponse>> checkAndAwardCharacters(
-            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody @Valid CheckAwardRequest request
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         User user = userDetails.getUser();
-        return ApiResponse.success(SuccessCode.OK, service.checkAndAwardCharacters(user, request.getTotalStudyTimeInSeconds()));
+        return ApiResponse.success(SuccessCode.OK, service.checkAndAwardCharacters(user));
     }
 
     @Operation(summary = "전체 캐릭터 조회")

@@ -31,22 +31,6 @@ public interface TodoRepository extends JpaRepository<Todo, UUID> {
     Long countByUserAndIsCompletedAndIsDeletedFalse(User user, boolean isCompleted);
 
     @Query("""
-        SELECT SUM(t.actualTimeInSeconds)
-        FROM Todo t
-        WHERE t.user = :user
-        AND t.isCompleted = true
-        AND t.isDeleted = false
-    """)
-    Optional<Long> sumCompletedWorksTimeByUser(@Param("user") User user);
-
-    @Query("""
-        SELECT SUM(t.actualTimeInSeconds)
-        FROM Todo t
-        WHERE t.user = :user
-    """)
-    Optional<Long> sumActualTimeByUser(@Param("user") User user);
-
-    @Query("""
         SELECT COUNT(t)
         FROM Todo t
         WHERE t.user.id = :userId
