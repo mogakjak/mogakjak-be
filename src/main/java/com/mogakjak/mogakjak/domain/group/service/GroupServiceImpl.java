@@ -127,7 +127,7 @@ public class GroupServiceImpl implements GroupService {
                 .role(userGroup.getRole())
                 .build();
 
-        return GroupDetailResponse.from(group, List.of(hostInfo));
+        return GroupDetailResponse.from(group, List.of(hostInfo), 0L, 1L);
     }
 
     @Override
@@ -148,7 +148,10 @@ public class GroupServiceImpl implements GroupService {
                             .build())
                     .collect(Collectors.toList());
 
-            return GroupDetailResponse.from(group, members);
+            long currentMemberCount = officialLoungeSummary.getCurrentMemberCount() != null
+                    ? officialLoungeSummary.getCurrentMemberCount()
+                    : 0L;
+            return GroupDetailResponse.from(group, members, currentMemberCount, currentMemberCount);
         }
 
         UserGroup userGroup = checkUserInGroup(user, group);
@@ -177,7 +180,7 @@ public class GroupServiceImpl implements GroupService {
                                     .build();
                         }).collect(Collectors.toList());
 
-        return GroupDetailResponse.from(group, members);
+        return buildGroupDetailResponse(group, members);
     }
 
     @Override
@@ -211,7 +214,7 @@ public class GroupServiceImpl implements GroupService {
                                     .build();
                         }).collect(Collectors.toList());
 
-        return GroupDetailResponse.from(group, members);
+        return buildGroupDetailResponse(group, members);
     }
 
     @Override
@@ -832,6 +835,18 @@ public class GroupServiceImpl implements GroupService {
     private UserGroup findUserGroup(User user, Group group) {
         return userGroupRepository.findByUserAndGroup(user, group)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_GROUP_MEMBER));
+    }
+
+    private GroupDetailResponse buildGroupDetailResponse(
+            Group group,
+            List<GroupDetailResponse.MemberInfo> members
+    ) {
+        long participatingMemberCount = userGroupRepository.countActiveByGroup(
+                group,
+                GroupParticipationStatus.NOT_PARTICIPATING
+        );
+        long totalMemberCount = userGroupRepository.countByGroup(group);
+        return GroupDetailResponse.from(group, members, participatingMemberCount, totalMemberCount);
     }
 
     private void ensureCanInvite(User user, Group group) {

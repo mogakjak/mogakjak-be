@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.group.service;
 
 import com.mogakjak.mogakjak.domain.group.controller.dto.MyGroupResponse;
+import com.mogakjak.mogakjak.domain.group.controller.dto.GroupDetailResponse;
 import com.mogakjak.mogakjak.domain.group.controller.dto.FocusNotificationRequest;
 import com.mogakjak.mogakjak.domain.group.controller.dto.GroupFocusCheckRequest;
 import com.mogakjak.mogakjak.domain.group.controller.dto.GroupFocusCheckResponse;
@@ -13,6 +14,7 @@ import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeMemberResponse;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeSummaryResponse;
 import com.mogakjak.mogakjak.domain.lounge.service.OfficialLoungeService;
 import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
+import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
 import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserCharacter;
@@ -104,6 +106,58 @@ class GroupServiceImplTest {
 
     @InjectMocks
     private GroupServiceImpl groupService;
+
+    @Test
+    void getGroupDetail_returnsSessionParticipationAndTotalMemberCountsAfterEntry() {
+        UUID userId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        User user = User.builder().name("member").email("member@example.com").build();
+        ReflectionTestUtils.setField(user, "id", userId);
+        Group group = Group.builder().name("study").build();
+        ReflectionTestUtils.setField(group, "id", groupId);
+        UserGroup userGroup = UserGroup.create(user, group, GroupRole.MEMBER);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userGroupRepository.findByUserAndGroup(user, group)).thenReturn(Optional.of(userGroup));
+        when(userGroupRepository.findByGroupIdWithUserAndProfile(groupId)).thenReturn(List.of(userGroup));
+        when(userGroupRepository.countActiveByGroup(group, GroupParticipationStatus.NOT_PARTICIPATING))
+                .thenReturn(4L);
+        when(userGroupRepository.countByGroup(group)).thenReturn(12L);
+        when(userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(user))
+                .thenReturn(Optional.empty());
+
+        GroupDetailResponse response = groupService.getGroupDetail(groupId, userId);
+
+        assertEquals(GroupParticipationStatus.RESTING, userGroup.getParticipationStatus());
+        assertEquals(4L, response.getParticipatingMemberCount());
+        assertEquals(12L, response.getTotalMemberCount());
+        verify(userGroupRepository).save(userGroup);
+        verify(groupMemberStatusService).broadcastMemberStatusUpdate(groupId, userId);
+    }
+
+    @Test
+    void leaveGroupSession_marksMemberAsNotParticipatingAndBroadcastsStatus() {
+        UUID userId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        User user = User.builder().name("member").email("member@example.com").build();
+        ReflectionTestUtils.setField(user, "id", userId);
+        Group group = Group.builder().name("study").build();
+        ReflectionTestUtils.setField(group, "id", groupId);
+        UserGroup userGroup = UserGroup.create(user, group, GroupRole.MEMBER);
+        userGroup.enterGroup(java.time.LocalDateTime.now());
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userGroupRepository.findByUserAndGroup(user, group)).thenReturn(Optional.of(userGroup));
+        when(userGroupRepository.findAllByGroupWithUser(group)).thenReturn(List.of(userGroup));
+
+        groupService.leaveGroupSession(groupId, userId);
+
+        assertEquals(GroupParticipationStatus.NOT_PARTICIPATING, userGroup.getParticipationStatus());
+        verify(userGroupRepository).save(userGroup);
+        verify(groupMemberStatusService).broadcastMemberStatusUpdate(groupId, userId);
+    }
 
     @Test
     void getMyGroups_prependsOfficialLoungeAndPreservesPrivateGroupShape() {

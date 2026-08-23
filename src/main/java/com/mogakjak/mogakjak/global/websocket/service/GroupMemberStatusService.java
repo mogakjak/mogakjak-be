@@ -99,10 +99,13 @@ public class GroupMemberStatusService {
     public void broadcastMemberStatusUpdate(UUID groupId, UUID userId) {
         try {
             GroupMemberStatusDto memberStatus = getMemberStatus(groupId, userId);
+            Group group = getGroup(groupId);
             
             GroupMemberStatusUpdateDto updateDto = GroupMemberStatusUpdateDto.builder()
                     .groupId(groupId)
                     .updatedMember(memberStatus)
+                    .participatingMemberCount(countParticipatingMembers(group))
+                    .totalMemberCount(userGroupRepository.countByGroup(group))
                     .build();
 
             String message = objectMapper.writeValueAsString(updateDto);
@@ -124,10 +127,13 @@ public class GroupMemberStatusService {
     public void broadcastAllMemberStatuses(UUID groupId) {
         try {
             List<GroupMemberStatusDto> memberStatuses = getGroupMemberStatuses(groupId);
+            Group group = getGroup(groupId);
             
             GroupMemberStatusUpdateDto updateDto = GroupMemberStatusUpdateDto.builder()
                     .groupId(groupId)
                     .members(memberStatuses)
+                    .participatingMemberCount(countParticipatingMembers(group))
+                    .totalMemberCount(userGroupRepository.countByGroup(group))
                     .build();
 
             String message = objectMapper.writeValueAsString(updateDto);
@@ -209,6 +215,15 @@ public class GroupMemberStatusService {
                 .todoTitle(todoTitle)
                 .cheerCount(userGroup.getCheerCount() != null ? userGroup.getCheerCount() : 0)
                 .build();
+    }
+
+    private long countParticipatingMembers(Group group) {
+        return userGroupRepository.countActiveByGroup(group, GroupParticipationStatus.NOT_PARTICIPATING);
+    }
+
+    private Group getGroup(UUID groupId) {
+        return groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found: " + groupId));
     }
 
     private Integer getLevelFromUser(User user) {

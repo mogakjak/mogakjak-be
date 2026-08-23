@@ -1,5 +1,6 @@
 package com.mogakjak.mogakjak.global.websocket.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mogakjak.mogakjak.domain.group.entity.Group;
 import com.mogakjak.mogakjak.domain.group.repository.GroupRepository;
 import com.mogakjak.mogakjak.domain.timer.entity.ActiveFocusSession;
@@ -20,6 +21,7 @@ import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserGroupRepository;
 import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusDto;
+import com.mogakjak.mogakjak.global.websocket.dto.GroupMemberStatusUpdateDto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,8 +32,11 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +54,47 @@ class GroupMemberStatusServiceTest {
 
     @InjectMocks
     private GroupMemberStatusService groupMemberStatusService;
+
+    @Test
+    void broadcastMemberStatusUpdate_includesLatestMemberCounts() throws Exception {
+        UUID groupId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        User user = org.mockito.Mockito.mock(User.class);
+        Group group = org.mockito.Mockito.mock(Group.class);
+        UserGroup userGroup = org.mockito.Mockito.mock(UserGroup.class);
+
+        groupMemberStatusService.init();
+        when(userGroupRepository.findByUser_IdAndGroup_Id(userId, groupId)).thenReturn(Optional.of(userGroup));
+        when(userGroup.getUser()).thenReturn(user);
+        when(userGroup.getGroup()).thenReturn(group);
+        when(userGroup.getRole()).thenReturn(GroupRole.MEMBER);
+        when(userGroup.getParticipationStatus()).thenReturn(GroupParticipationStatus.RESTING);
+        when(group.getId()).thenReturn(groupId);
+        when(user.getId()).thenReturn(userId);
+        when(user.getName()).thenReturn("member");
+        when(user.getIsDeleted()).thenReturn(false);
+        when(activeFocusSessionRepository.findByUserId(userId)).thenReturn(Optional.empty());
+        when(userCharacterRepository.findTopByUserOrderByImageCharacter_LevelDescImageCharacter_CreatedAtAsc(user))
+                .thenReturn(Optional.empty());
+        when(imageCharacterRepository.findFirstByLevelAndIsActiveTrueOrderByCreatedAtAsc(1))
+                .thenReturn(Optional.empty());
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userGroupRepository.countActiveByGroup(group, GroupParticipationStatus.NOT_PARTICIPATING))
+                .thenReturn(3L);
+        when(userGroupRepository.countByGroup(group)).thenReturn(10L);
+
+        groupMemberStatusService.broadcastMemberStatusUpdate(groupId, userId);
+
+        org.mockito.ArgumentCaptor<String> payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(redisPubSubService).publish(eq("group-member-status"), payloadCaptor.capture());
+        GroupMemberStatusUpdateDto payload = new ObjectMapper().readValue(
+                payloadCaptor.getValue(),
+                GroupMemberStatusUpdateDto.class
+        );
+        assertEquals(3L, payload.getParticipatingMemberCount());
+        assertEquals(10L, payload.getTotalMemberCount());
+        assertEquals(userId, payload.getUpdatedMember().getUserId());
+    }
 
     @Test
     void getMemberStatus_keepsExistingFieldAndReturnsTodoAccumulatedTimeInRealTime() {
