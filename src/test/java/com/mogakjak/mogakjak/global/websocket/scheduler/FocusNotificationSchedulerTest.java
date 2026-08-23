@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,6 +40,8 @@ class FocusNotificationSchedulerTest {
         ReflectionTestUtils.setField(disabled, "id", UUID.randomUUID());
         ReflectionTestUtils.setField(officialLounge, "id", UUID.randomUUID());
         when(groupRepository.findAll()).thenReturn(List.of(enabled, disabled, officialLounge));
+        when(focusNotificationService.sendFocusNotificationToGroup(enabled.getId())).thenReturn(true);
+        when(focusNotificationService.sendFocusNotificationToGroup(disabled.getId())).thenReturn(true);
 
         scheduler.sendFocusNotifications();
 
@@ -51,5 +54,19 @@ class FocusNotificationSchedulerTest {
         verify(groupRepository, org.mockito.Mockito.never()).save(officialLounge);
         assertNotNull(enabled.getLastNotificationSentAt());
         assertNotNull(disabled.getLastNotificationSentAt());
+    }
+
+    @Test
+    void sendFocusNotifications_doesNotAdvanceCycleWhenNoNotificationWasSent() {
+        Group group = Group.builder().name("empty").build();
+        ReflectionTestUtils.setField(group, "id", UUID.randomUUID());
+        when(groupRepository.findAll()).thenReturn(List.of(group));
+        when(focusNotificationService.sendFocusNotificationToGroup(group.getId())).thenReturn(false);
+
+        scheduler.sendFocusNotifications();
+
+        verify(focusNotificationService).sendFocusNotificationToGroup(group.getId());
+        verify(groupRepository, org.mockito.Mockito.never()).save(group);
+        assertNull(group.getLastNotificationSentAt());
     }
 }

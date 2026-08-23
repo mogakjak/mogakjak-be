@@ -23,6 +23,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,7 +63,7 @@ class FocusNotificationServiceTest {
                 deleted
         ));
 
-        service.sendFocusNotificationToGroup(groupId);
+        boolean sent = service.sendFocusNotificationToGroup(groupId);
 
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(redisPubSubService).publish(eq("focus-notification"), payloadCaptor.capture());
@@ -75,6 +77,7 @@ class FocusNotificationServiceTest {
                 Set.copyOf(payload.getRecipientUserIds())
         );
         assertEquals(groupId, payload.getNotification().getGroupId());
+        assertTrue(sent);
     }
 
     @Test
@@ -85,7 +88,7 @@ class FocusNotificationServiceTest {
         when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
         when(userGroupRepository.findAllByGroupWithUser(group)).thenReturn(List.of(restingEnabled));
 
-        service.sendFocusNotificationToGroup(groupId);
+        boolean sent = service.sendFocusNotificationToGroup(groupId);
 
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(redisPubSubService).publish(eq("focus-notification"), payloadCaptor.capture());
@@ -94,6 +97,21 @@ class FocusNotificationServiceTest {
                 FocusNotificationPublishDto.class
         );
         assertEquals(List.of(restingEnabled.getUser().getId()), payload.getRecipientUserIds());
+        assertTrue(sent);
+    }
+
+    @Test
+    void sendFocusNotificationToGroup_returnsFalseWhenThereAreNoRecipients() {
+        UUID groupId = UUID.randomUUID();
+        Group group = group(groupId, true);
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(userGroupRepository.findAllByGroupWithUser(group)).thenReturn(List.of());
+
+        boolean sent = service.sendFocusNotificationToGroup(groupId);
+
+        assertFalse(sent);
+        verify(redisPubSubService, org.mockito.Mockito.never())
+                .publish(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
     }
 
     private Group group(UUID groupId, boolean agreed) {

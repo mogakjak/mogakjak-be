@@ -49,7 +49,10 @@ public class FocusNotificationScheduler {
 
             // 알림 전송
             try {
-                focusNotificationService.sendFocusNotificationToGroup(group.getId());
+                boolean sent = focusNotificationService.sendFocusNotificationToGroup(group.getId());
+                if (!sent) {
+                    continue;
+                }
                 group.updateLastNotificationSentAt(now);
                 groupRepository.save(group);
                 log.debug("그룹 {}에 집중 체크 알림 전송 완료", group.getId());

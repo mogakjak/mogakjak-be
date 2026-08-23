@@ -32,13 +32,13 @@ public class FocusNotificationService {
      * 특정 그룹에 대해 집중 체크 알림을 전송
      */
     @Transactional
-    public void sendFocusNotificationToGroup(UUID groupId) {
+    public boolean sendFocusNotificationToGroup(UUID groupId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found: " + groupId));
 
         Set<UUID> recipientUserIds = getRecipientUserIdsInGroup(group);
         if (recipientUserIds.isEmpty()) {
-            return;
+            return false;
         }
 
         // 알림 메시지 생성
@@ -55,6 +55,7 @@ public class FocusNotificationService {
                     .build();
             String message = objectMapper.writeValueAsString(publishDto);
             redisPubSubService.publish("focus-notification", message);
+            return true;
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize focus notification", e);
         }
