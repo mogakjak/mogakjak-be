@@ -36,6 +36,7 @@ public class MyPageServiceImpl implements MyPageService {
     private final UserProfileRepository userProfileRepository;
     private final TodoRepository todoRepository;
     private final FocusTimeAggregationService focusTimeAggregationService;
+    private final CharacterGrowthService characterGrowthService;
     private final ImageCharacterRepository imageCharacterRepository;
     private final UserCharacterRepository userCharacterRepository;
     private final QuoteRepository quoteRepository;
@@ -50,7 +51,8 @@ public class MyPageServiceImpl implements MyPageService {
 
         Long totalTaskCount = todoRepository.countByUserAndIsCompletedAndIsDeletedFalse(user, true);
 
-        Long totalSeconds = focusTimeAggregationService.getLifetimeSeconds(userId);
+        CharacterGrowthStatus growthStatus = characterGrowthService.getStatus(userId);
+        Long totalSeconds = growthStatus.totalFocusSeconds();
         String formattedTotalTime = formatSecondsToHoursMinutes(totalSeconds);
 
         List<ImageCharacter> allImageCharacters = imageCharacterRepository.findAll();
@@ -60,19 +62,19 @@ public class MyPageServiceImpl implements MyPageService {
                 .map(userCharacter -> userCharacter.getImageCharacter().getId())
                 .collect(Collectors.toSet());
 
-        // 기본 캐릭터(해금 시간 0초) ID를 보유 목록에 추가합니다.
+        // 정책상 레벨 1 캐릭터는 가입 즉시 보유합니다.
         allImageCharacters.stream()
-                .filter(c -> c.getUnlockTimeInSeconds() == 0)
+                .filter(c -> c.getLevel() == 1)
                 .forEach(defaultChar -> ownedCharacterIds.add(defaultChar.getId()));
 
         List<CharacterBasketResponse.CharacterDto> ownedDtos = allImageCharacters.stream()
                 .filter(c -> ownedCharacterIds.contains(c.getId()))
-                .map(this::toCharacterDto)
+                .map(character -> toCharacterDto(character, growthStatus))
                 .collect(Collectors.toList());
 
         List<CharacterBasketResponse.CharacterDto> lockedDtos = allImageCharacters.stream()
                 .filter(c -> !ownedCharacterIds.contains(c.getId()))
-                .map(this::toCharacterDto)
+                .map(character -> toCharacterDto(character, growthStatus))
                 .collect(Collectors.toList());
 
 //        ImageCharacter mainCharacterEntity = userProfile.getMainImageCharacter();
@@ -80,16 +82,22 @@ public class MyPageServiceImpl implements MyPageService {
         ImageCharacter mainCharacterEntity = getHighestLevelCharacter(user);
         CharacterBasketResponse.CharacterDto mainCharacterDto = null;
         ImageCharacter defaultCharacter = allImageCharacters.stream()
-                .filter(c -> c.getUnlockTimeInSeconds() == 0)
+                .filter(c -> c.getLevel() == 1)
                 .findFirst()
                 .orElse(null);
 
         if (mainCharacterEntity != null) {
-            mainCharacterDto = toCharacterDto(mainCharacterEntity);
+            mainCharacterDto = toCharacterDto(mainCharacterEntity, growthStatus);
         } else if (defaultCharacter != null) {
             // 설정된 대표 캐릭터가 없으면 기본 캐릭터(Lv 1)로 설정
-            mainCharacterDto = toCharacterDto(defaultCharacter);
+            mainCharacterDto = toCharacterDto(defaultCharacter, growthStatus);
         }
+
+        int currentLevel = allImageCharacters.stream()
+                .filter(character -> ownedCharacterIds.contains(character.getId()))
+                .mapToInt(ImageCharacter::getLevel)
+                .max()
+                .orElse(1);
 
         return CharacterBasketResponse.builder()
                 .nickname(user.getName())
@@ -98,6 +106,7 @@ public class MyPageServiceImpl implements MyPageService {
                 .mainCharacter(mainCharacterDto)
                 .totalTaskCount(totalTaskCount)
                 .totalFocusTime(formattedTotalTime)
+                .growthProgress(CharacterGrowthProgressResponse.from(growthStatus, currentLevel))
                 .collectedCharacterCount(ownedDtos.size())
                 .ownedCharacters(ownedDtos)
                 .lockedCharacters(lockedDtos)
@@ -150,9 +159,13 @@ public class MyPageServiceImpl implements MyPageService {
 
     // 채소 도감 조회
     @Override
-    public List<CharacterGuideResponse> getCharacterGuide() {
+    public List<CharacterGuideResponse> getCharacterGuide(User user) {
+        CharacterGrowthStatus growthStatus = characterGrowthService.getStatus(user.getId());
+        Set<UUID> ownedCharacterIds = userCharacterRepository.findAllByUser(user).stream()
+                .map(userCharacter -> userCharacter.getImageCharacter().getId())
+                .collect(Collectors.toSet());
         return imageCharacterRepository.findAllByOrderByLevelAsc().stream()
-                .map(this::toCharacterGuideDto)
+                .map(character -> toCharacterGuideDto(character, growthStatus, ownedCharacterIds))
                 .collect(Collectors.toList());
     }
 
@@ -216,29 +229,58 @@ public class MyPageServiceImpl implements MyPageService {
         return String.format("%d시간 %d분", hours, minutes);
     }
 
-    private String formatSecondsToUnlockCondition(Integer totalSeconds) {
-        long hours = totalSeconds / 3600;
-        return String.format("누적 %d시간", hours);
-    }
-
-    private CharacterBasketResponse.CharacterDto toCharacterDto(ImageCharacter imageCharacter) {
+    private CharacterBasketResponse.CharacterDto toCharacterDto(
+            ImageCharacter imageCharacter,
+            CharacterGrowthStatus growthStatus
+    ) {
+        CharacterGrowthPolicy policy = CharacterGrowthPolicy.forLevel(imageCharacter.getLevel())
+                .orElse(CharacterGrowthPolicy.LEVEL_12);
         return CharacterBasketResponse.CharacterDto.builder()
                 .characterId(imageCharacter.getId())
                 .name(imageCharacter.getName())
                 .imageUrl(imageCharacter.getImageUrl())
                 .level(imageCharacter.getLevel())
-                .unlockCondition(formatSecondsToUnlockCondition(imageCharacter.getUnlockTimeInSeconds()))
+                .unlockCondition(formatUnlockCondition(policy))
+                .requiredAttendanceDays(policy.requiredAttendanceDays())
+                .requiredFocusTimeInSeconds(policy.requiredFocusSeconds())
+                .attendanceProgressRate(policy.attendanceProgressRate(growthStatus))
+                .focusTimeProgressRate(policy.focusTimeProgressRate(growthStatus))
                 .build();
     }
 
-    private CharacterGuideResponse toCharacterGuideDto(ImageCharacter imageCharacter) {
+    private CharacterGuideResponse toCharacterGuideDto(
+            ImageCharacter imageCharacter,
+            CharacterGrowthStatus growthStatus,
+            Set<UUID> ownedCharacterIds
+    ) {
+        CharacterGrowthPolicy policy = CharacterGrowthPolicy.forLevel(imageCharacter.getLevel())
+                .orElse(CharacterGrowthPolicy.LEVEL_12);
         return CharacterGuideResponse.builder()
                 .id(imageCharacter.getId())
                 .level(imageCharacter.getLevel())
                 .name(imageCharacter.getName())
                 .imageUrl(imageCharacter.getImageUrl())
-                .unlockTime(formatSecondsToUnlockCondition(imageCharacter.getUnlockTimeInSeconds()))
+                .unlockTime(formatUnlockCondition(policy))
+                .currentAttendanceDays(growthStatus.attendanceDays())
+                .currentFocusTimeInSeconds(growthStatus.totalFocusSeconds())
+                .requiredAttendanceDays(policy.requiredAttendanceDays())
+                .requiredFocusTimeInSeconds(policy.requiredFocusSeconds())
+                .unlocked(imageCharacter.getLevel() == 1 || ownedCharacterIds.contains(imageCharacter.getId()))
+                .requirementsSatisfied(policy.isSatisfiedBy(growthStatus))
+                .attendanceProgressRate(policy.attendanceProgressRate(growthStatus))
+                .focusTimeProgressRate(policy.focusTimeProgressRate(growthStatus))
                 .build();
+    }
+
+    private String formatUnlockCondition(CharacterGrowthPolicy policy) {
+        if (policy.level() == 1) {
+            return "가입 시 해금";
+        }
+        return String.format(
+                "누적 출석 %d일 · 몰입 %d시간",
+                policy.requiredAttendanceDays(),
+                policy.requiredFocusSeconds() / 3600
+        );
     }
 
     private ImageCharacter getHighestLevelCharacter(User user) {

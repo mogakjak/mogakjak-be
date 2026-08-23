@@ -1,6 +1,5 @@
 package com.mogakjak.mogakjak.domain.user.service;
 
-import com.mogakjak.mogakjak.domain.timer.service.FocusTimeAggregationService;
 import com.mogakjak.mogakjak.domain.user.controller.dto.ImageCharacterResponse;
 import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
@@ -25,7 +24,7 @@ class ImageCharacterServiceImplTest {
 
     @Mock private ImageCharacterRepository repository;
     @Mock private UserCharacterRepository userCharacterRepository;
-    @Mock private FocusTimeAggregationService focusTimeAggregationService;
+    @Mock private CharacterGrowthService characterGrowthService;
 
     @InjectMocks
     private ImageCharacterServiceImpl service;
@@ -42,8 +41,9 @@ class ImageCharacterServiceImplTest {
                 .isActive(true)
                 .unlockTimeInSeconds(7_200)
                 .build();
-        when(focusTimeAggregationService.getLifetimeSeconds(userId)).thenReturn(7_200L);
-        when(repository.findAllByUnlockTimeInSecondsLessThanEqual(7_200)).thenReturn(List.of(character));
+        when(characterGrowthService.getStatus(userId))
+                .thenReturn(new CharacterGrowthStatus(15, 20L * 3600));
+        when(repository.findAllByOrderByLevelAsc()).thenReturn(List.of(character));
         when(userCharacterRepository.findAllByUser(user)).thenReturn(List.of());
 
         List<ImageCharacterResponse> response = service.checkAndAwardCharacters(user);
@@ -51,5 +51,29 @@ class ImageCharacterServiceImplTest {
         assertEquals(1, response.size());
         assertEquals("level-2", response.get(0).getName());
         verify(userCharacterRepository).saveAll(org.mockito.ArgumentMatchers.anyList());
+    }
+
+    @Test
+    void checkAndAwardCharacters_doesNotAwardWhenAttendanceIsMissing() {
+        UUID userId = UUID.randomUUID();
+        User user = User.builder().name("user").email("user@example.com").build();
+        ReflectionTestUtils.setField(user, "id", userId);
+        ImageCharacter character = ImageCharacter.builder()
+                .level(2)
+                .name("level-2")
+                .imageUrl("https://example.com/2.png")
+                .isActive(true)
+                .unlockTimeInSeconds(20 * 3600)
+                .build();
+        when(characterGrowthService.getStatus(userId))
+                .thenReturn(new CharacterGrowthStatus(14, 100L * 3600));
+        when(repository.findAllByOrderByLevelAsc()).thenReturn(List.of(character));
+        when(userCharacterRepository.findAllByUser(user)).thenReturn(List.of());
+
+        List<ImageCharacterResponse> response = service.checkAndAwardCharacters(user);
+
+        assertEquals(0, response.size());
+        verify(userCharacterRepository, org.mockito.Mockito.never())
+                .saveAll(org.mockito.ArgumentMatchers.anyList());
     }
 }

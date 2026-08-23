@@ -14,6 +14,7 @@ public class CharacterBasketResponse {
     private Long totalTaskCount;
     private String totalFocusTime;
     private String imageUrl;
+    private CharacterGrowthProgressResponse growthProgress;
 
     private CharacterDto mainCharacter;
 
@@ -34,5 +35,9 @@ public class CharacterBasketResponse {
         private String imageUrl;
         private int level;
         private String unlockCondition; // e.g., "누적 200시간"
+        private long requiredAttendanceDays;
+        private long requiredFocusTimeInSeconds;
+        private int attendanceProgressRate;
+        private int focusTimeProgressRate;
     }
 }
