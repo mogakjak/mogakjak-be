@@ -4,6 +4,7 @@ import com.mogakjak.mogakjak.domain.quote.dto.QuoteResponse;
 import com.mogakjak.mogakjak.domain.quote.entity.Quote;
 import com.mogakjak.mogakjak.domain.quote.repository.QuoteRepository;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
+import com.mogakjak.mogakjak.domain.timer.service.FocusTimeAggregationService;
 import com.mogakjak.mogakjak.domain.user.controller.dto.*;
 import com.mogakjak.mogakjak.domain.user.dto.response.TotalStudyTimeResponse;
 import com.mogakjak.mogakjak.domain.user.entity.UserCharacter;
@@ -34,6 +35,7 @@ public class MyPageServiceImpl implements MyPageService {
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final TodoRepository todoRepository;
+    private final FocusTimeAggregationService focusTimeAggregationService;
     private final ImageCharacterRepository imageCharacterRepository;
     private final UserCharacterRepository userCharacterRepository;
     private final QuoteRepository quoteRepository;
@@ -48,7 +50,7 @@ public class MyPageServiceImpl implements MyPageService {
 
         Long totalTaskCount = todoRepository.countByUserAndIsCompletedAndIsDeletedFalse(user, true);
 
-        Long totalSeconds = todoRepository.sumCompletedWorksTimeByUser(user).orElse(0L);
+        Long totalSeconds = focusTimeAggregationService.getLifetimeSeconds(userId);
         String formattedTotalTime = formatSecondsToHoursMinutes(totalSeconds);
 
         List<ImageCharacter> allImageCharacters = imageCharacterRepository.findAll();
@@ -176,7 +178,7 @@ public class MyPageServiceImpl implements MyPageService {
 
     @Override
     public TotalStudyTimeResponse getTotalStudyTime(User user) {
-        Long totalSeconds = todoRepository.sumActualTimeByUser(user).orElse(0L);
+        Long totalSeconds = focusTimeAggregationService.getLifetimeSeconds(user.getId());
         return new TotalStudyTimeResponse(totalSeconds);
     }
 

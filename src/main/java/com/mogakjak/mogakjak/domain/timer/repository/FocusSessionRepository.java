@@ -40,7 +40,7 @@ public interface FocusSessionRepository extends JpaRepository<FocusSession, UUID
     SELECT COALESCE(SUM(s.totalDuration), 0)
     FROM FocusSession s
     WHERE s.userId = :userId
-      AND s.participationType = 'INDIVIDUAL'
+      AND s.groupId IS NULL
       AND s.startedAt BETWEEN :start AND :end
     """)
     Long sumPersonalSeconds(
@@ -53,7 +53,7 @@ public interface FocusSessionRepository extends JpaRepository<FocusSession, UUID
     SELECT COALESCE(SUM(s.totalDuration), 0)
     FROM FocusSession s
     WHERE s.userId = :userId
-      AND s.participationType = 'GROUP'
+      AND s.groupId IS NOT NULL
       AND s.startedAt BETWEEN :start AND :end
     """)
     Long sumGroupSeconds(
@@ -73,6 +73,13 @@ public interface FocusSessionRepository extends JpaRepository<FocusSession, UUID
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
+
+    @Query("""
+    SELECT COALESCE(SUM(s.totalDuration), 0)
+    FROM FocusSession s
+    WHERE s.userId = :userId
+    """)
+    Long sumLifetimeSeconds(@Param("userId") UUID userId);
 
     Optional<FocusSession> findTopByUserIdOrderByStartedAtDesc(UUID userId);
 

@@ -21,5 +21,5 @@ public interface ImageCharacterService {
 
     void deleteCharacter(UUID id);
 
-    List<ImageCharacterResponse> checkAndAwardCharacters(User user, Long totalStudyTimeInSeconds);
+    List<ImageCharacterResponse> checkAndAwardCharacters(User user);
 }
