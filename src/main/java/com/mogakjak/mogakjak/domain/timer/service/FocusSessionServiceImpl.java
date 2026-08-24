@@ -306,8 +306,14 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         }
 
         // 다음 단계로 전환
-        if (focusSession.getStatus() != TimerStatus.PAUSED) latestInterval.end(now);
-        focusSession.addDuration(accumulatedSeconds);
+        // pause 시에는 이미 해당 interval의 시간을 totalDuration에 반영했으므로,
+        // phase 전체 누적값을 다시 더하면 pause/resume 구간이 중복 집계됩니다.
+        long completedIntervalSeconds = 0L;
+        if (focusSession.getStatus() != TimerStatus.PAUSED) {
+            latestInterval.end(now);
+            completedIntervalSeconds = calculateIntervalDurationSeconds(latestInterval);
+        }
+        focusSession.addDuration(completedIntervalSeconds);
         boolean officialLoungeGroup = isOfficialLoungeGroup(focusSession.getGroupId());
         publishOfficialLoungePresenceUpdateAfterCommit(focusSession.getGroupId(), user.getId(), "POMODORO_PHASE", officialLoungeGroup);
 

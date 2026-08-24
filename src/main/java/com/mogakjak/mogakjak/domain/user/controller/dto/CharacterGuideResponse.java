@@ -12,4 +12,12 @@ public class CharacterGuideResponse {
     private String name;
     private String imageUrl;
     private String unlockTime; // e.g., "5시간"
+    private long currentAttendanceDays;
+    private long currentFocusTimeInSeconds;
+    private long requiredAttendanceDays;
+    private long requiredFocusTimeInSeconds;
+    private boolean unlocked;
+    private boolean requirementsSatisfied;
+    private int attendanceProgressRate;
+    private int focusTimeProgressRate;
 }

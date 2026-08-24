@@ -19,7 +19,7 @@ public interface MyPageService {
     void updateMainCharacter(UUID userId, UUID characterId);
 
     // 채소 도감 조회
-    List<CharacterGuideResponse> getCharacterGuide();
+    List<CharacterGuideResponse> getCharacterGuide(User user);
 
     // 내 프로필 조회 (홈 용)
     MyProfileResponse getProfile(User user);

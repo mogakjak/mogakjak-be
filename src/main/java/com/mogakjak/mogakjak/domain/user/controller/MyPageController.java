@@ -81,8 +81,10 @@ public class MyPageController {
 
     @Operation(summary = "채소 도감 조회", description = "전체 캐릭터 도감 목록과 해금 조건을 조회합니다.")
     @GetMapping("/characters/guide")
-    public ApiResponse<List<CharacterGuideResponse>> getCharacterGuide() {
-        List<CharacterGuideResponse> response = myPageService.getCharacterGuide();
+    public ApiResponse<List<CharacterGuideResponse>> getCharacterGuide(
+            @Parameter(hidden = true) @CurrentUser User user
+    ) {
+        List<CharacterGuideResponse> response = myPageService.getCharacterGuide(user);
         return ApiResponse.success(SuccessCode.OK, response);
     }
 

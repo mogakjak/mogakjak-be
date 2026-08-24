@@ -2,7 +2,6 @@ package com.mogakjak.mogakjak.domain.user.service;
 
 import com.mogakjak.mogakjak.domain.user.controller.dto.ImageCharacterRequest;
 import com.mogakjak.mogakjak.domain.user.controller.dto.ImageCharacterResponse;
-import com.mogakjak.mogakjak.domain.timer.service.FocusTimeAggregationService;
 import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.entity.UserCharacter;
@@ -26,7 +25,7 @@ public class ImageCharacterServiceImpl implements ImageCharacterService {
 
     private final ImageCharacterRepository repository;
     private final UserCharacterRepository userCharacterRepository;
-    private final FocusTimeAggregationService focusTimeAggregationService;
+    private final CharacterGrowthService characterGrowthService;
 
     @Override
     @Transactional
@@ -93,17 +92,22 @@ public class ImageCharacterServiceImpl implements ImageCharacterService {
     @Override
     @Transactional
     public List<ImageCharacterResponse> checkAndAwardCharacters(User user) {
-        long totalStudyTimeInSeconds = focusTimeAggregationService.getLifetimeSeconds(user.getId());
-        int unlockThreshold = (int) Math.min(totalStudyTimeInSeconds, Integer.MAX_VALUE);
-        List<ImageCharacter> unlockableCharacters = repository.findAllByUnlockTimeInSecondsLessThanEqual(unlockThreshold);
+        CharacterGrowthStatus growthStatus = characterGrowthService.getStatus(user.getId());
+        List<ImageCharacter> unlockableCharacters = repository.findAllByOrderByLevelAsc().stream()
+                .filter(character -> Boolean.TRUE.equals(character.getIsActive()))
+                .filter(character -> CharacterGrowthPolicy.forLevel(character.getLevel())
+                        .map(policy -> policy.isSatisfiedBy(growthStatus))
+                        .orElse(false))
+                .toList();
 
         List<UserCharacter> userCharacters = userCharacterRepository.findAllByUser(user);
-        Set<ImageCharacter> ownedCharacters = userCharacters.stream()
+        Set<UUID> ownedCharacterIds = userCharacters.stream()
                 .map(UserCharacter::getImageCharacter)
+                .map(ImageCharacter::getId)
                 .collect(Collectors.toSet());
 
         List<ImageCharacter> newlyAwardedCharacters = unlockableCharacters.stream()
-                .filter(character -> !ownedCharacters.contains(character))
+                .filter(character -> !ownedCharacterIds.contains(character.getId()))
                 .toList();
 
         if (!newlyAwardedCharacters.isEmpty()) {

@@ -21,6 +21,20 @@ public interface FocusIntervalRepository extends JpaRepository<FocusInterval, UU
 
     List<FocusInterval> findAllBySessionIdInOrderBySessionIdAscStartedAtDesc(Collection<UUID> sessionIds);
 
+    @Query("""
+    SELECT i
+    FROM FocusInterval i
+    JOIN FocusSession s ON i.sessionId = s.id
+    WHERE s.userId = :userId
+      AND i.endedAt IS NOT NULL
+      AND i.phaseType IN :focusPhaseTypes
+    ORDER BY i.startedAt ASC
+    """)
+    List<FocusInterval> findCompletedFocusIntervalsByUser(
+            @Param("userId") UUID userId,
+            @Param("focusPhaseTypes") Collection<PomodoroPhaseType> focusPhaseTypes
+    );
+
     @Query(value = """
     SELECT 
         DATE(i.started_at) AS date,
