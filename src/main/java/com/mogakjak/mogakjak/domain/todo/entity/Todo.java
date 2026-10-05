@@ -74,14 +74,18 @@ public class Todo extends BaseSchema {
     }
 
     public Integer calculateProgressRate() {
+        return calculateProgressRate(actualTimeInSeconds == null ? 0L : actualTimeInSeconds.longValue());
+    }
+
+    public Integer calculateProgressRate(long accumulatedSeconds) {
         if (targetTimeInSeconds == null || targetTimeInSeconds <= 0) {
             return null;
         }
-        if (actualTimeInSeconds == null || actualTimeInSeconds <= 0) {
+        if (accumulatedSeconds <= 0) {
             return 0;
         }
 
-        double rate = (double) actualTimeInSeconds / targetTimeInSeconds * 100;
+        double rate = (double) accumulatedSeconds / targetTimeInSeconds * 100;
         return (int) Math.min(100, Math.floor(rate));
     }
 }
