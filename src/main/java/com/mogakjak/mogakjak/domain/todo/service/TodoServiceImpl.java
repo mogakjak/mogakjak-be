@@ -3,6 +3,9 @@ package com.mogakjak.mogakjak.domain.todo.service;
 import com.mogakjak.mogakjak.domain.todo.controller.dto.*;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
+import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
+import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
+import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
 import com.mogakjak.mogakjak.domain.user.entity.Category;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.CategoryRepository;
@@ -27,6 +30,8 @@ public class TodoServiceImpl implements TodoService {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final TodoRepository todoRepository;
+    private final ActiveFocusSessionRepository activeFocusSessionRepository;
+    private final FocusSessionRepository focusSessionRepository;
 
     /**
      * 카테고리 생성
@@ -202,8 +207,28 @@ public class TodoServiceImpl implements TodoService {
                 req.getDate(),
                 req.getTargetTimeInSeconds()
         );
+        updateActiveSessionProgress(userId, todo);
 
         return TodoResponse.from(todo);
+    }
+
+    @Override
+    public TodoResponse updateTodoTargetTime(UUID userId, UUID todoId, UpdateTodoTargetTimeRequest req) {
+        User user = findUserById(userId);
+        Todo todo = findTodoByIdAndUser(todoId, user);
+        todo.updateTargetTime(req.getTargetTimeInSeconds());
+        updateActiveSessionProgress(userId, todo);
+        return TodoResponse.from(todo);
+    }
+
+    private void updateActiveSessionProgress(UUID userId, Todo todo) {
+        activeFocusSessionRepository.findByUserId(userId)
+                .flatMap(active -> focusSessionRepository.findById(active.getSessionId()))
+                .filter(session -> userId.equals(session.getUserId()) && todo.getId().equals(session.getTodoId()))
+                .filter(session -> session.getStatus() == TimerStatus.RUNNING || session.getStatus() == TimerStatus.PAUSED)
+                .ifPresent(session -> focusSessionRepository.updateActiveTodoProgressRate(
+                        session.getId(), userId, todo.getId(), todo.calculateProgressRate(),
+                        List.of(TimerStatus.RUNNING, TimerStatus.PAUSED)));
     }
 
     /**

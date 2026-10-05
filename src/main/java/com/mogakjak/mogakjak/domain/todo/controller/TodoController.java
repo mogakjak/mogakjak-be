@@ -137,6 +137,16 @@ public class TodoController {
         return ApiResponse.success(SuccessCode.OK, updatedTodo);
     }
 
+    @Operation(summary = "할 일 목표시간 단독 변경", description = "목표시간만 설정·변경합니다. targetTimeInSeconds 필드는 필수이고, null은 목표시간을 해제합니다. 변경한 값은 기존 할 일 목록 API로 다시 조회할 수 있습니다.")
+    @PatchMapping("/{todoId}/target-time")
+    public ApiResponse<TodoResponse> updateTodoTargetTime(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID todoId,
+            @Valid @RequestBody UpdateTodoTargetTimeRequest request) {
+        TodoResponse response = todoService.updateTodoTargetTime(getUserId(userDetails), todoId, request);
+        return ApiResponse.success(SuccessCode.OK, response);
+    }
+
     @Operation(summary = "할 일(Todo) 완료/미완료 토글", description = "할 일의 완료 상태를 토글합니다.")
     @PatchMapping("/{todoId}/complete")
     public ApiResponse<TodoResponse> toggleTodoComplete(

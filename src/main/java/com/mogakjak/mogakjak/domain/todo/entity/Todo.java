@@ -57,6 +57,10 @@ public class Todo extends BaseSchema {
         this.isCompleted = !this.isCompleted;
     }
 
+    public void updateTargetTime(Integer targetTimeInSeconds) {
+        this.targetTimeInSeconds = targetTimeInSeconds;
+    }
+
     public void softDelete() { this.isDeleted = true; }
 
     public void addActualTime(Long seconds) {
