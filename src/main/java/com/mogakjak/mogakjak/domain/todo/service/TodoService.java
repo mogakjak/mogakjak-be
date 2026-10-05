@@ -50,6 +50,8 @@ public interface TodoService {
      */
     TodoResponse updateTodo(UUID userId, UUID todoId, UpdateTodoRequest req);
 
+    TodoResponse updateTodoTargetTime(UUID userId, UUID todoId, UpdateTodoTargetTimeRequest req);
+
     /**
      * 할 일(Todo) 완료/미완료 토글
      */

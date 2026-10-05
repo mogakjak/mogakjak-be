@@ -5,6 +5,8 @@ import com.mogakjak.mogakjak.domain.todo.controller.dto.TodoResponse;
 import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateTodoRequest;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
+import com.mogakjak.mogakjak.domain.timer.repository.ActiveFocusSessionRepository;
+import com.mogakjak.mogakjak.domain.timer.repository.FocusSessionRepository;
 import com.mogakjak.mogakjak.domain.user.entity.Category;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.CategoryRepository;
@@ -31,6 +33,8 @@ class TodoServiceImplTest {
     @Mock private UserRepository userRepository;
     @Mock private CategoryRepository categoryRepository;
     @Mock private TodoRepository todoRepository;
+    @Mock private ActiveFocusSessionRepository activeFocusSessionRepository;
+    @Mock private FocusSessionRepository focusSessionRepository;
     @InjectMocks private TodoServiceImpl service;
 
     private final UUID userId = UUID.randomUUID();

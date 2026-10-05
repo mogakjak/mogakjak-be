@@ -1,6 +1,8 @@
 package com.mogakjak.mogakjak.domain.timer.repository;
 
 import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
+import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +14,20 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface FocusSessionRepository extends JpaRepository<FocusSession, UUID> {
+
+    @Modifying(flushAutomatically = true)
+    @Query("""
+        UPDATE FocusSession s SET s.progressRate = :progressRate
+        WHERE s.id = :sessionId AND s.userId = :userId AND s.todoId = :todoId
+          AND s.status IN :activeStatuses
+        """)
+    int updateActiveTodoProgressRate(
+            @Param("sessionId") UUID sessionId,
+            @Param("userId") UUID userId,
+            @Param("todoId") UUID todoId,
+            @Param("progressRate") Integer progressRate,
+            @Param("activeStatuses") Collection<TimerStatus> activeStatuses
+    );
 
     @Query(value = """
     SELECT 
