@@ -9,6 +9,7 @@ import com.mogakjak.mogakjak.domain.todo.controller.dto.TodoResponse;
 import com.mogakjak.mogakjak.domain.todo.controller.dto.UpdateTodoTargetTimeRequest;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.todo.service.TodoServiceImpl;
+import com.mogakjak.mogakjak.domain.todo.service.TodoLastWorkedAtService;
 import com.mogakjak.mogakjak.domain.user.entity.Category;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import com.mogakjak.mogakjak.domain.user.repository.CategoryRepository;
@@ -35,7 +36,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest(showSql = false)
-@Import(TodoServiceImpl.class)
+@Import({TodoServiceImpl.class, TodoLastWorkedAtService.class})
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @TestPropertySource(properties = {

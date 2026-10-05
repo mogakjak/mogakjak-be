@@ -13,6 +13,7 @@ import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.global.exception.CustomException;
 import com.mogakjak.mogakjak.global.exception.status.ErrorCode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +33,7 @@ public class TodoServiceImpl implements TodoService {
     private final TodoRepository todoRepository;
     private final ActiveFocusSessionRepository activeFocusSessionRepository;
     private final FocusSessionRepository focusSessionRepository;
+    private final TodoLastWorkedAtService todoLastWorkedAtService;
 
     /**
      * 카테고리 생성
@@ -130,11 +132,10 @@ public class TodoServiceImpl implements TodoService {
      * 로그인 한 유저의 전체 할 일 목록 조회
      */
     @Override
+    @Transactional(readOnly = true)
     public List<TodoResponse> getUserTodos(User user) {
-        return todoRepository.findAllByUserAndIsDeletedFalseOrderByCreatedAtDesc(user)
-                .stream()
-                .map(TodoResponse::from)
-                .toList();
+        List<Todo> todos = todoRepository.findAllByUserAndIsDeletedFalseOrderByCreatedAtDesc(user);
+        return toResponses(user.getId(), todos);
     }
 
     /**
@@ -150,13 +151,11 @@ public class TodoServiceImpl implements TodoService {
 
         // 2. 유저의 해당 날짜 To-do 목록을 조회
         List<Todo> todos = todoRepository.findAllByUserAndDateAndIsDeletedFalseOrderByCreatedAtAsc(user, date);
+        List<TodoResponse> responses = toResponses(userId, todos);
 
         // 3. To-do들을 카테고리 ID별로 그룹화
-        Map<UUID, List<TodoResponse>> todosByCategoryId = todos.stream()
-                .collect(Collectors.groupingBy(
-                        todo -> todo.getCategory().getId(),
-                        Collectors.mapping(TodoResponse::from, Collectors.toList())
-                ));
+        Map<UUID, List<TodoResponse>> todosByCategoryId = responses.stream()
+                .collect(Collectors.groupingBy(TodoResponse::getCategoryId));
 
         // 4. 카테고리 목록을 순회하며 DTO 조립
         return categories.stream()
@@ -209,7 +208,7 @@ public class TodoServiceImpl implements TodoService {
         );
         updateActiveSessionProgress(userId, todo);
 
-        return TodoResponse.from(todo);
+        return toResponse(userId, todo);
     }
 
     @Override
@@ -218,7 +217,7 @@ public class TodoServiceImpl implements TodoService {
         Todo todo = findTodoByIdAndUser(todoId, user);
         todo.updateTargetTime(req.getTargetTimeInSeconds());
         updateActiveSessionProgress(userId, todo);
-        return TodoResponse.from(todo);
+        return toResponse(userId, todo);
     }
 
     private void updateActiveSessionProgress(UUID userId, Todo todo) {
@@ -241,7 +240,7 @@ public class TodoServiceImpl implements TodoService {
 
         todo.toggleComplete();
 
-        return TodoResponse.from(todo);
+        return toResponse(userId, todo);
     }
 
     /**
@@ -253,6 +252,16 @@ public class TodoServiceImpl implements TodoService {
         Todo todo = findTodoByIdAndUser(todoId, user);
 
         todo.softDelete();
+    }
+
+    private List<TodoResponse> toResponses(UUID userId, List<Todo> todos) {
+        Map<UUID, LocalDateTime> lastWorkedAt = todoLastWorkedAtService.getLastWorkedAt(
+                userId, todos.stream().map(Todo::getId).toList());
+        return todos.stream().map(todo -> TodoResponse.from(todo, lastWorkedAt.get(todo.getId()))).toList();
+    }
+
+    private TodoResponse toResponse(UUID userId, Todo todo) {
+        return toResponses(userId, List.of(todo)).getFirst();
     }
 
     private User findUserById(UUID userId) {

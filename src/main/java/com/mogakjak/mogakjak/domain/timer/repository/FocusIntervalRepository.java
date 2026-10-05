@@ -2,6 +2,7 @@ package com.mogakjak.mogakjak.domain.timer.repository;
 
 import com.mogakjak.mogakjak.domain.timer.entity.FocusInterval;
 import com.mogakjak.mogakjak.domain.timer.enumerate.PomodoroPhaseType;
+import com.mogakjak.mogakjak.domain.timer.enumerate.TimerStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +14,40 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface FocusIntervalRepository extends JpaRepository<FocusInterval, UUID> {
+
+    @Query("""
+        SELECT s.todoId AS todoId, MAX(i.endedAt) AS lastWorkedAt
+        FROM FocusInterval i JOIN FocusSession s ON i.sessionId = s.id
+        WHERE s.userId = :userId AND s.todoId IN :todoIds
+          AND i.phaseType IN :focusPhaseTypes
+          AND i.endedAt > i.startedAt AND i.endedAt <= :now
+        GROUP BY s.todoId
+        """)
+    List<TodoLastWorkedAtProjection> findLastCompletedWorkByTodos(
+            @Param("userId") UUID userId,
+            @Param("todoIds") Collection<UUID> todoIds,
+            @Param("focusPhaseTypes") Collection<PomodoroPhaseType> focusPhaseTypes,
+            @Param("now") LocalDateTime now
+    );
+
+    @Query("""
+        SELECT DISTINCT s.todoId
+        FROM FocusInterval i JOIN FocusSession s ON i.sessionId = s.id
+        JOIN ActiveFocusSession a ON a.sessionId = s.id AND a.userId = s.userId
+        WHERE s.userId = :userId AND s.todoId IN :todoIds AND s.status = :runningStatus
+          AND i.phaseType IN :focusPhaseTypes AND i.endedAt IS NULL AND i.startedAt < :now
+          AND NOT EXISTS (
+              SELECT newer.id FROM FocusInterval newer
+              WHERE newer.sessionId = i.sessionId AND newer.startedAt > i.startedAt
+          )
+        """)
+    List<UUID> findCurrentlyWorkingTodoIds(
+            @Param("userId") UUID userId,
+            @Param("todoIds") Collection<UUID> todoIds,
+            @Param("focusPhaseTypes") Collection<PomodoroPhaseType> focusPhaseTypes,
+            @Param("runningStatus") TimerStatus runningStatus,
+            @Param("now") LocalDateTime now
+    );
     Optional<FocusInterval> findTopBySessionIdOrderByStartedAtDesc(UUID sessionId);
 
     List<FocusInterval> findAllBySessionId(UUID sessionId);

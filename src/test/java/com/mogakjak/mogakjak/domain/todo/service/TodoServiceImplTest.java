@@ -35,6 +35,7 @@ class TodoServiceImplTest {
     @Mock private TodoRepository todoRepository;
     @Mock private ActiveFocusSessionRepository activeFocusSessionRepository;
     @Mock private FocusSessionRepository focusSessionRepository;
+    @Mock private TodoLastWorkedAtService todoLastWorkedAtService;
     @InjectMocks private TodoServiceImpl service;
 
     private final UUID userId = UUID.randomUUID();
