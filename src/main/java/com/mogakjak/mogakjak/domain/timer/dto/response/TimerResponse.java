@@ -32,13 +32,13 @@ public record TimerResponse(
         @Schema(description = "종료 시각")
         LocalDateTime endedAt,
 
-        @Schema(description = "목표 시간(초 단위)", example = "")
+        @Schema(description = "카운트다운 실행시간(초). 할 일 목표시간과 별개이며 스톱워치·뽀모도로에서는 null", example = "1800", nullable = true)
         Long targetDuration,
 
         @Schema(description = "총 집중 시간(초 단위)", example = "")
         Long totalDuration,
 
-        @Schema(description = "달성률(0~100)", example = "0")
+        @Schema(description = "달성률(0~100). 개인 및 그룹 내 개인 세션의 할 일 목표시간이 미설정이면 null", example = "0", nullable = true)
         Integer progressRate,
 
         @Schema(description = "할 일(todo) 관련 dto")

@@ -19,7 +19,7 @@ public class SimpleTodoResponse {
     @Schema(description = "할 일 명", example = "모각작 앤 몰딥브")
     private String task;
 
-    @Schema(description = "목표 시간", example = "")
+    @Schema(description = "할 일의 누적 목표시간(초). 미설정이면 null", example = "3600", nullable = true)
     private Integer targetTimeInSeconds;
 
     public static SimpleTodoResponse from(Todo todo) {
