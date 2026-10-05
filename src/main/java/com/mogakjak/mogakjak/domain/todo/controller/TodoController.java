@@ -7,6 +7,9 @@ import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import com.mogakjak.mogakjak.domain.todo.service.TodoService;
+import com.mogakjak.mogakjak.domain.todo.service.TodoSidebarService;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +28,20 @@ import java.util.UUID;
 public class TodoController {
 
     private final TodoService todoService;
+    private final TodoSidebarService todoSidebarService;
+
+    @Operation(summary = "선택한 할 일의 사이드바 상세 조회",
+            description = "본인 소유·미삭제 할 일과 동일 할 일의 활성 RUNNING/PAUSED 세션을 조회합니다. 저장 누적시간과 진행 중 집중시간을 구분하며 휴식은 집중시간에서 제외합니다. 세션 없으면 activeSession은 null, 공개 기본값은 true입니다. 조회는 저장하지 않습니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "선택한 할 일 상세",
+            content = @Content(examples = @ExampleObject(name = "목표시간·활성 세션 없음", value = """
+                    {"statusCode":200,"data":{"todo":{"id":"7f000001-9a3d-1f34-819a-3d92e3800001","task":"독서","targetTimeInSeconds":null,"actualTimeInSeconds":600,"progressRate":null,"lastWorkedAt":null},"category":{"name":"기본"},"accumulatedTimeInSeconds":600,"progressRate":null,"isTaskPublic":true,"isTimerPublic":true,"activeSession":null,"serverTime":"2026-10-05T12:34:56+09:00"}}
+                    """)))
+    @GetMapping("/{todoId}")
+    public ApiResponse<TodoDetailResponse> getTodoDetail(
+            @AuthenticationPrincipal CustomUserDetails userDetails, @PathVariable UUID todoId) {
+        return ApiResponse.success(SuccessCode.OK,
+                todoSidebarService.getTodoDetail(getUserId(userDetails), todoId));
+    }
 
     @Operation(summary = "카테고리 생성", description = "새로운 카테고리를 생성합니다.")
     @PostMapping("/categories")

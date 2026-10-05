@@ -44,7 +44,8 @@ class TodoTargetTimeControllerTest {
         CustomUserDetails details = CustomUserDetails.of(user);
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated(details, "", details.getAuthorities()));
-        mvc = MockMvcBuilders.standaloneSetup(new TodoController(service))
+        mvc = MockMvcBuilders.standaloneSetup(new TodoController(service,
+                        mock(com.mogakjak.mogakjak.domain.todo.service.TodoSidebarService.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();

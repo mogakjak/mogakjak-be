@@ -84,6 +84,8 @@ class FocusSessionServiceImplTest {
         when(focusIntervalRepository.findTopBySessionIdOrderByStartedAtDesc(sessionId))
                 .thenReturn(Optional.of(pausedFocusInterval));
         when(focusIntervalRepository.findAllBySessionId(sessionId)).thenReturn(List.of(pausedFocusInterval));
+        when(todoRepository.findById(session.getTodoId())).thenReturn(Optional.of(Todo.builder()
+                .category(Category.builder().user(user).build()).actualTimeInSeconds(10).build()));
         when(focusIntervalRepository.save(any(FocusInterval.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 

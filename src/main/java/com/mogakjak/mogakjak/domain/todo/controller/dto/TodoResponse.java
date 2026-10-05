@@ -2,6 +2,7 @@ package com.mogakjak.mogakjak.domain.todo.controller.dto;
 
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -27,6 +28,7 @@ public class TodoResponse {
     private Integer progressRate;
 
     @Schema(description = "최근 실제 집중 시각. Asia/Seoul(+09:00) 기준이며 작업 이력 없으면 null", example = "2026-10-05T12:34:56+09:00", nullable = true)
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private OffsetDateTime lastWorkedAt;
 
     public static TodoResponse from(Todo todo) {

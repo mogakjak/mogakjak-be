@@ -38,6 +38,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -153,18 +154,77 @@ class FocusSessionOptionalTargetTest {
         TimerResponse breakPhase = service.nextPomodoroPhase(user, session.getId());
         assertEquals(PomodoroPhaseType.BREAK, breakPhase.pomodoroInfo().phaseType());
         assertNull(breakPhase.progressRate());
+        int firstFocusTime = todo.getActualTimeInSeconds();
+        assertEquals(600 + focusSeconds(), firstFocusTime);
 
         moveCurrentIntervalBack(31);
         TimerResponse focusPhase = service.nextPomodoroPhase(user, session.getId());
         assertEquals(PomodoroPhaseType.FOCUS, focusPhase.pomodoroInfo().phaseType());
         assertNull(focusPhase.progressRate());
+        assertEquals(firstFocusTime, todo.getActualTimeInSeconds());
 
         moveCurrentIntervalBack(61);
         TimerResponse finished = service.nextPomodoroPhase(user, session.getId());
         assertEquals(TimerStatus.FINISHED, finished.status());
         assertNull(finished.progressRate());
-        assertTrue(todo.getActualTimeInSeconds() > 600);
+        assertEquals(600 + focusSeconds(), todo.getActualTimeInSeconds().longValue());
         assertNull(active);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void pomodoroBreakPauseOrFinishNeverAddsRestToTodo(boolean pauseFirst) {
+        prepareStart();
+        start(TimerMode.POMODORO, ParticipationType.INDIVIDUAL);
+        prepareLifecycle();
+        when(focusIntervalRepository.findAllBySessionId(session.getId())).thenReturn(intervals);
+        moveCurrentIntervalBack(61);
+        service.nextPomodoroPhase(user, session.getId());
+        int afterFocus = todo.getActualTimeInSeconds();
+        moveCurrentIntervalBack(20);
+        if (pauseFirst) service.pauseSession(user, session.getId());
+        service.finishSession(user, session.getId());
+        assertEquals(afterFocus, todo.getActualTimeInSeconds());
+    }
+
+    @Test
+    void finalPausedFocusIsNotCreditedTwiceWhenCompletingPomodoro() {
+        prepareStart();
+        start(TimerMode.POMODORO, ParticipationType.INDIVIDUAL);
+        ReflectionTestUtils.setField(session, "repeatCount", 1);
+        prepareLifecycle();
+        when(focusIntervalRepository.findAllBySessionId(session.getId())).thenReturn(intervals);
+        moveCurrentIntervalBack(61);
+        service.pauseSession(user, session.getId());
+        int afterPause = todo.getActualTimeInSeconds();
+        service.nextPomodoroPhase(user, session.getId());
+        assertEquals(afterPause, todo.getActualTimeInSeconds());
+        assertEquals(600 + focusSeconds(), todo.getActualTimeInSeconds().longValue());
+        assertEquals(TimerStatus.FINISHED, session.getStatus());
+    }
+
+    @Test
+    void resumedFocusAddsOnlyUncreditedSegmentWhenSwitchingToBreak() {
+        prepareStart();
+        start(TimerMode.POMODORO, ParticipationType.INDIVIDUAL);
+        prepareLifecycle();
+        when(focusIntervalRepository.findAllBySessionId(session.getId())).thenReturn(intervals);
+        moveCurrentIntervalBack(30);
+        service.pauseSession(user, session.getId());
+        service.resumeSession(user, session.getId());
+        moveCurrentIntervalBack(31);
+        service.nextPomodoroPhase(user, session.getId());
+        assertEquals(600 + focusSeconds(), todo.getActualTimeInSeconds().longValue());
+        int beforeFinish = todo.getActualTimeInSeconds();
+        service.finishSession(user, session.getId());
+        assertEquals(beforeFinish, todo.getActualTimeInSeconds());
+    }
+
+    private long focusSeconds() {
+        return intervals.stream().filter(interval -> interval.getPhaseType() == PomodoroPhaseType.FOCUS)
+                .filter(interval -> interval.getEndedAt() != null)
+                .mapToLong(interval -> java.time.Duration.between(interval.getStartedAt(), interval.getEndedAt()).getSeconds())
+                .sum();
     }
 
     @Test

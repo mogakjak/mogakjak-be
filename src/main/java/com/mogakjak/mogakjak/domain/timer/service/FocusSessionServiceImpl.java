@@ -133,7 +133,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         currentFocusSession.addDuration(intervalDurationSeconds);
         
         // Todo의 actualTimeInSeconds 누적 업데이트 (이번 intervalDurationSeconds만 추가)
-        if (intervalDurationSeconds > 0) {
+        if (intervalDurationSeconds > 0 && currentInterval.getPhaseType() != PomodoroPhaseType.BREAK) {
             todo.addActualTime(intervalDurationSeconds);
             todoRepository.save(todo);
         }
@@ -265,7 +265,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
         currentFocusSession.addDuration(intervalDurationSeconds);
         
         // Todo의 actualTimeInSeconds 누적 업데이트 (마지막 intervalDurationSeconds만 추가)
-        if (intervalDurationSeconds > 0) {
+        if (intervalDurationSeconds > 0 && currentInterval.getPhaseType() != PomodoroPhaseType.BREAK) {
             todo.addActualTime(intervalDurationSeconds);
             todoRepository.save(todo);
         }
@@ -314,21 +314,20 @@ public class FocusSessionServiceImpl implements FocusSessionService {
             completedIntervalSeconds = calculateIntervalDurationSeconds(latestInterval);
         }
         focusSession.addDuration(completedIntervalSeconds);
+        // Credit only this newly closed focus interval. Paused intervals were already saved.
+        Todo todo = getValidatedTodo(user.getId(), focusSession.getTodoId());
+        if (currentPhase == PomodoroPhaseType.FOCUS && completedIntervalSeconds > 0) {
+            todo.addActualTime(completedIntervalSeconds);
+            todoRepository.save(todo);
+        }
+        Integer progressRate = calculateProgressRateFromTodo(todo);
+        focusSession.setProgressRate(progressRate);
         boolean officialLoungeGroup = isOfficialLoungeGroup(focusSession.getGroupId());
         publishOfficialLoungePresenceUpdateAfterCommit(focusSession.getGroupId(), user.getId(), "POMODORO_PHASE", officialLoungeGroup);
 
         if (currentPhase == PomodoroPhaseType.FOCUS && isPomodoroFinished(focusSession, intervals)) {
             activeFocusSessionRepository.deleteById(currentActiveSession.getId());
 
-            // Todo의 actualTimeInSeconds 누적 업데이트 (이번 accumulatedSeconds만 추가)
-            Todo todo = getValidatedTodo(user.getId(), focusSession.getTodoId());
-            if (accumulatedSeconds > 0) {
-                todo.addActualTime(accumulatedSeconds);
-                todoRepository.save(todo);
-            }
-            
-            // Todo의 누적 actualTimeInSeconds를 기준으로 progressRate 계산
-            Integer progressRate = calculateProgressRateFromTodo(todo);
             focusSession.end(now, progressRate);
 
             // 타이머 종료 시 스케줄된 알림 취소 (실패해도 기존 로직에는 영향 없음)
