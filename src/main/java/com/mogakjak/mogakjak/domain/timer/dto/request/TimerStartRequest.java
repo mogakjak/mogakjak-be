@@ -15,7 +15,7 @@ public record TimerStartRequest (
         UUID todoId,
 
         @NotNull
-        @Schema(description = "목표 시간(초 단위)", example = "1800")
+        @Schema(description = "카운트다운 실행시간(초). 할 일 목표시간과 별개인 필수 실행 설정", example = "1800")
         Long targetSeconds,
 
         @NotNull

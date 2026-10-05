@@ -31,7 +31,7 @@ public class Todo extends BaseSchema {
     @Column(nullable = false)
     private LocalDate date;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Integer targetTimeInSeconds;
 
     @Column(nullable = false)
@@ -67,5 +67,17 @@ public class Todo extends BaseSchema {
 
     public void updateActualTime(Integer actualTimeInSeconds) {
         this.actualTimeInSeconds = actualTimeInSeconds != null ? actualTimeInSeconds : 0;
+    }
+
+    public Integer calculateProgressRate() {
+        if (targetTimeInSeconds == null || targetTimeInSeconds <= 0) {
+            return null;
+        }
+        if (actualTimeInSeconds == null || actualTimeInSeconds <= 0) {
+            return 0;
+        }
+
+        double rate = (double) actualTimeInSeconds / targetTimeInSeconds * 100;
+        return (int) Math.min(100, Math.floor(rate));
     }
 }

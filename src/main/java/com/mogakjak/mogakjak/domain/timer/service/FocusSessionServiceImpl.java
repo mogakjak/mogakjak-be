@@ -528,18 +528,7 @@ public class FocusSessionServiceImpl implements FocusSessionService {
     }
 
     private Integer calculateProgressRateFromTodo(Todo todo) {
-        Integer targetTime = todo.getTargetTimeInSeconds();
-        Integer actualTime = todo.getActualTimeInSeconds();
-
-        if (targetTime == null || targetTime <= 0) {
-            return 0;
-        }
-        if (actualTime == null || actualTime <= 0) {
-            return 0;
-        }
-
-        double rate = (double) actualTime / targetTime * 100;
-        return (int) Math.min(100, Math.floor(rate));
+        return todo.calculateProgressRate();
     }
 
     private FocusSession createFocusSession(TimerMode mode, User user, Todo todo, LocalDateTime now, Long targetSeconds, Long focusDuration, Long breakDuration, Integer repeatCount, ParticipationType participationType, UUID groupId, Boolean isTaskPublic, Boolean isTimerPublic) {
