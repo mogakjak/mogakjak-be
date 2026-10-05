@@ -32,7 +32,7 @@ class TodoDetailControllerTest {
         var details = CustomUserDetails.of(user);
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated(details, "", details.getAuthorities()));
-        mvc = MockMvcBuilders.standaloneSetup(new TodoController(todos, sidebar))
+        mvc = MockMvcBuilders.standaloneSetup(new TodoController(todos, sidebar, mock(TodoSearchService.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver()).build();
     }

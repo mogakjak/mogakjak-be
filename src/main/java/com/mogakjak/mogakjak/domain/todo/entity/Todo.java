@@ -10,6 +10,7 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Entity
+@Table(indexes = @Index(name = "idx_todo_user_deleted_created", columnList = "user_id,is_deleted,created_at,id"))
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

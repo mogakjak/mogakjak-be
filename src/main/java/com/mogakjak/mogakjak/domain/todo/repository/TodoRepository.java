@@ -1,12 +1,12 @@
 package com.mogakjak.mogakjak.domain.todo.repository;
 
-import com.mogakjak.mogakjak.domain.todo.controller.dto.TodoResponse;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Pageable;
+import java.time.LocalDateTime;
 
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +14,26 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface TodoRepository extends JpaRepository<Todo, UUID> {
+
+    @Query("""
+        SELECT t.id AS id, t.task AS task, t.createdAt AS createdAt
+        FROM Todo t JOIN t.category c
+        WHERE t.user.id = :userId AND t.isDeleted = false
+          AND c.isDeleted = false AND c.user.id = :userId
+          AND (:afterCreatedAt IS NULL OR t.createdAt < :afterCreatedAt
+               OR (t.createdAt = :afterCreatedAt AND t.id < :afterId))
+        ORDER BY t.createdAt DESC, t.id DESC
+        """)
+    List<TodoSearchCandidate> findSearchCandidates(@Param("userId") UUID userId,
+            @Param("afterCreatedAt") LocalDateTime afterCreatedAt, @Param("afterId") UUID afterId,
+            Pageable pageable);
+
+    @Query("""
+        SELECT t FROM Todo t JOIN FETCH t.category c
+        WHERE t.user.id = :userId AND t.isDeleted = false AND t.id IN :ids
+          AND c.isDeleted = false AND c.user.id = :userId
+        """)
+    List<Todo> findSearchResults(@Param("userId") UUID userId, @Param("ids") List<UUID> ids);
 
     // 유저와 특정 날짜로 모든 To-do 조회 (생성순)
     List<Todo> findAllByUserAndDateOrderByCreatedAtAsc(User user, LocalDate date);

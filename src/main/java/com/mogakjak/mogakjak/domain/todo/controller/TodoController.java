@@ -8,11 +8,13 @@ import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import com.mogakjak.mogakjak.domain.todo.service.TodoService;
 import com.mogakjak.mogakjak.domain.todo.service.TodoSidebarService;
+import com.mogakjak.mogakjak.domain.todo.service.TodoSearchService;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +31,20 @@ public class TodoController {
 
     private final TodoService todoService;
     private final TodoSidebarService todoSidebarService;
+    private final TodoSearchService todoSearchService;
+
+    @Operation(summary = "할 일 실시간 초성·부분 검색",
+            description = "본인 미삭제 제목을 검색합니다. ㄱㅂ은 연속 초성, 가ㅂ은 완성형+초성 혼합 입력이며 공백/특수문자는 문자 그대로 비교합니다. 빈 검색어는 완료 포함 전체 목록, 최신 생성순입니다. 기본 20개·최대 100개이며 nextCursor로 이어 조회합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200",
+            content = @Content(examples = @ExampleObject(name = "검색 결과 없음", value = """
+                    {"statusCode":200,"message":"요청이 성공적으로 처리되었습니다.","data":{"items":[],"hasNext":false,"nextCursor":null}}
+                    """)))
+    @GetMapping("/search")
+    public ApiResponse<TodoSearchResponse> searchTodos(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @ParameterObject @ModelAttribute TodoSearchRequest request) {
+        return ApiResponse.success(SuccessCode.OK, todoSearchService.search(getUserId(userDetails), request));
+    }
 
     @Operation(summary = "선택한 할 일의 사이드바 상세 조회",
             description = "본인 소유·미삭제 할 일과 동일 할 일의 활성 RUNNING/PAUSED 세션을 조회합니다. 저장 누적시간과 진행 중 집중시간을 구분하며 휴식은 집중시간에서 제외합니다. 세션 없으면 activeSession은 null, 공개 기본값은 true입니다. 조회는 저장하지 않습니다.")
