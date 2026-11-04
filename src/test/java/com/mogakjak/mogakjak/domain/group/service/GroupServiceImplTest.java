@@ -12,6 +12,8 @@ import com.mogakjak.mogakjak.domain.group.repository.GroupRepository;
 import com.mogakjak.mogakjak.domain.invitation.repository.InvitationRepository;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeMemberResponse;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeSummaryResponse;
+import com.mogakjak.mogakjak.domain.lounge.dto.LoungeNpcMemberResponse;
+import com.mogakjak.mogakjak.domain.lounge.npc.LoungeNpcType;
 import com.mogakjak.mogakjak.domain.lounge.service.OfficialLoungeService;
 import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
 import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
@@ -106,6 +108,34 @@ class GroupServiceImplTest {
 
     @InjectMocks
     private GroupServiceImpl groupService;
+
+    @Test
+    void officialLoungeDetailAndMyGroupKeepNpcSeparateFromActualMembers() {
+        UUID userId = UUID.randomUUID();
+        UUID groupId = UUID.randomUUID();
+        User user = User.builder().name("member").build();
+        Group group = Group.builder().name("공식 라운지").build();
+        group.markAsOfficialLounge(10);
+        var npc = new LoungeNpcMemberResponse("A", LoungeNpcType.A, "모각이", null, 1,
+                GroupParticipationStatus.PARTICIPATING, java.time.LocalDateTime.of(2026, 11, 4, 18, 0),
+                10L, "코딩테스트 준비");
+        var summary = OfficialLoungeSummaryResponse.builder().currentMemberCount(0L).displayMemberCount(1L)
+                .members(List.of()).npcMembers(List.of(npc)).build();
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+        when(officialLoungeService.getSummary(userId)).thenReturn(summary);
+        var detail = groupService.getGroupDetail(groupId, userId);
+        assertEquals(0L, detail.getParticipatingMemberCount());
+        assertEquals(0L, detail.getTotalMemberCount());
+        assertEquals(1L, detail.getDisplayMemberCount());
+        assertEquals(List.of(npc), detail.getNpcMembers());
+        assertTrue(detail.getMembers().isEmpty());
+        var myGroup = MyGroupResponse.fromOfficialLounge(summary);
+        assertEquals(0L, myGroup.getCurrentMemberCount());
+        assertEquals(1L, myGroup.getDisplayMemberCount());
+        assertEquals(List.of(npc), myGroup.getNpcMembers());
+        assertTrue(myGroup.getMembers().isEmpty());
+    }
 
     @Test
     void getGroupDetail_returnsSessionParticipationAndTotalMemberCountsAfterEntry() {

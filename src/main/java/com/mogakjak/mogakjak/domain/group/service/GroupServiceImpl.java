@@ -151,7 +151,10 @@ public class GroupServiceImpl implements GroupService {
             long currentMemberCount = officialLoungeSummary.getCurrentMemberCount() != null
                     ? officialLoungeSummary.getCurrentMemberCount()
                     : 0L;
-            return GroupDetailResponse.from(group, members, currentMemberCount, currentMemberCount);
+            long displayMemberCount = officialLoungeSummary.getDisplayMemberCount() != null
+                    ? officialLoungeSummary.getDisplayMemberCount() : currentMemberCount;
+            return GroupDetailResponse.from(group, members, currentMemberCount, currentMemberCount,
+                    officialLoungeSummary.getNpcMembers(), displayMemberCount);
         }
 
         UserGroup userGroup = checkUserInGroup(user, group);
