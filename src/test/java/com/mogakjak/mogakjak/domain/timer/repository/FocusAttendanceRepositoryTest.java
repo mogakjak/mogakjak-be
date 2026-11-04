@@ -5,14 +5,21 @@ import com.mogakjak.mogakjak.domain.timer.entity.FocusSession;
 import com.mogakjak.mogakjak.domain.timer.enumerate.ParticipationType;
 import com.mogakjak.mogakjak.domain.timer.enumerate.PomodoroPhaseType;
 import com.mogakjak.mogakjak.domain.timer.service.FocusAttendanceService;
+import com.mogakjak.mogakjak.domain.timer.service.FocusTimeAggregationService;
 import com.mogakjak.mogakjak.domain.user.entity.Category;
 import com.mogakjak.mogakjak.domain.todo.entity.Todo;
 import com.mogakjak.mogakjak.global.enumerate.CategoryColor;
 import com.mogakjak.mogakjak.domain.user.repository.CategoryRepository;
 import com.mogakjak.mogakjak.domain.todo.repository.TodoRepository;
 import com.mogakjak.mogakjak.domain.user.entity.User;
+import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
+import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
+import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserRepository;
 import com.mogakjak.mogakjak.domain.user.service.MyPageAttendanceService;
+import com.mogakjak.mogakjak.domain.user.service.CharacterGrowthService;
+import com.mogakjak.mogakjak.domain.user.service.ImageCharacterServiceImpl;
+import com.mogakjak.mogakjak.domain.user.service.MyPageServiceImpl;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +34,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,7 +44,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest(showSql = false)
-@Import({FocusAttendanceService.class, MyPageAttendanceService.class, FocusAttendanceRepositoryTest.TestClock.class})
+@Import({FocusAttendanceService.class, MyPageAttendanceService.class, FocusAttendanceRepositoryTest.TestClock.class,
+        FocusTimeAggregationService.class, CharacterGrowthService.class, ImageCharacterServiceImpl.class, MyPageServiceImpl.class})
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @TestPropertySource(properties = {
@@ -55,6 +64,10 @@ class FocusAttendanceRepositoryTest {
     @Autowired private FocusAttendanceService attendance;
     @Autowired private MyPageAttendanceService calendar;
     @Autowired private EntityManager em;
+    @Autowired private ImageCharacterRepository characters;
+    @Autowired private UserCharacterRepository ownership;
+    @Autowired private ImageCharacterServiceImpl awards;
+    @Autowired private MyPageServiceImpl myPage;
     private User user;
     private Todo todo;
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 19);
@@ -139,6 +152,57 @@ class FocusAttendanceRepositoryTest {
         assertEquals(1_800, response.days().get(5).focusTimeInSeconds());
         assertTrue(response.days().get(5).attended());
         assertEquals(1, response.days().stream().filter(day -> day.attended()).count());
+    }
+
+    @Test
+    void thirtyMinuteBoundaryUnlocksOnlyWithBothConditionsAndAllReadApisAgree() {
+        characters.saveAndFlush(ImageCharacter.builder().level(1).name("씨앗")
+                .imageUrl("https://example.com/1.png").isActive(true).unlockTimeInSeconds(0).build());
+        // 레거시 DB 시간값 대신 정책 2.0의 일수·시간 조건으로 판정해야 한다.
+        characters.saveAndFlush(ImageCharacter.builder().level(2).name("새싹")
+                .imageUrl("https://example.com/2.png").isActive(true).unlockTimeInSeconds(0).build());
+        for (int daysAgo = 14; daysAgo >= 1; daysAgo--) {
+            LocalDateTime start = TODAY.minusDays(daysAgo).atTime(9, 0);
+            recordWork(start, start.plusMinutes(90));
+        }
+        recordWork(TODAY.atTime(9, 0), TODAY.atTime(9, 0).plusSeconds(1_799));
+        em.flush();
+
+        assertEquals(14, attendance.getSummary(user.getId()).attendanceDays());
+        assertTrue(awards.checkAndAwardCharacters(user).stream().noneMatch(character -> character.getLevel() == 2));
+        recordWork(TODAY.atTime(10, 0), TODAY.atTime(10, 0, 1));
+        em.flush();
+
+        var granted = awards.checkAndAwardCharacters(user);
+        assertEquals(1, granted.size());
+        assertEquals(2, granted.getFirst().getLevel());
+        assertTrue(awards.checkAndAwardCharacters(user).isEmpty());
+        var basket = myPage.getCharacterBasket(user.getId());
+        var calendarResponse = calendar.getAttendance(user.getId());
+        var guide = myPage.getCharacterGuide(user);
+        long expectedSeconds = 14 * 90 * 60L + 1_800;
+
+        assertEquals(15, calendarResponse.totalAttendanceDays());
+        assertTrue(calendarResponse.days().get(5).attended());
+        assertEquals(15, basket.getGrowthProgress().getCurrentAttendanceDays());
+        assertEquals(expectedSeconds, basket.getGrowthProgress().getCurrentFocusTimeInSeconds());
+        assertEquals(expectedSeconds, myPage.getTotalStudyTime(user).getTotalStudyTime());
+        assertEquals(2, basket.getCollectedCharacterCount());
+        assertEquals(2, basket.getMainCharacter().getLevel());
+        assertEquals(2, basket.getGrowthProgress().getCurrentLevel());
+        assertEquals(0, basket.getGrowthProgress().getLevelProgressRate());
+        assertEquals(100.0 / 11, basket.getGrowthProgress().getOverallProgressRate(), 1e-9);
+        assertTrue(guide.stream().allMatch(character -> character.getCurrentAttendanceDays() == 15
+                && character.getCurrentFocusTimeInSeconds() == expectedSeconds && character.isUnlocked()));
+        assertEquals(2, ownership.findAllByUser(user).size());
+    }
+
+    private void recordWork(LocalDateTime start, LocalDateTime end) {
+        FocusSession session = sessions.saveAndFlush(FocusSession.createStopwatchSession(user.getId(), todo,
+                start, ParticipationType.INDIVIDUAL, null, true, true));
+        interval(session, start, end, PomodoroPhaseType.NORMAL);
+        session.addDuration(Duration.between(start, end).getSeconds());
+        session.end(end, 0);
     }
 
     private FocusSession session(User owner, UUID groupId) {
