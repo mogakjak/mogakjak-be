@@ -3,6 +3,7 @@ package com.mogakjak.mogakjak.domain.lounge.service;
 import com.mogakjak.mogakjak.domain.group.entity.Group;
 import com.mogakjak.mogakjak.domain.group.repository.GroupRepository;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeMemberResponse;
+import com.mogakjak.mogakjak.domain.lounge.dto.LoungeNpcMemberResponse;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeSummaryResponse;
 import com.mogakjak.mogakjak.domain.lounge.entity.OfficialLoungeAccessLog;
 import com.mogakjak.mogakjak.domain.lounge.repository.OfficialLoungeAccessLogRepository;
@@ -75,6 +76,7 @@ public class OfficialLoungeService {
     private final CheerNotificationService cheerNotificationService;
     private final RedisPubSubService redisPubSubService;
     private final UserGroupRepository userGroupRepository;
+    private final LoungeNpcViewService npcViewService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     {
@@ -176,6 +178,8 @@ public class OfficialLoungeService {
             Group lounge = getOfficialLounge();
             List<UUID> memberIds = officialLoungePresenceService.findAllUserIds();
             List<OfficialLoungeMemberResponse> members = loadMembers(null, memberIds);
+            npcViewService.reconcile(lounge.getMaxMemberCount());
+            List<LoungeNpcMemberResponse> npcMembers = npcViewService.members(members.size(), lounge.getMaxMemberCount());
             OfficialLoungePresenceUpdateDto payload = OfficialLoungePresenceUpdateDto.builder()
                     .loungeId(loungeId != null ? loungeId : lounge.getId())
                     .eventType(eventType)
@@ -183,6 +187,8 @@ public class OfficialLoungeService {
                     .currentMemberCount((long) members.size())
                     .maxMemberCount(lounge.getMaxMemberCount())
                     .members(members)
+                    .npcMembers(npcMembers)
+                    .displayMemberCount((long) members.size() + npcMembers.size())
                     .build();
 
             String message = objectMapper.writeValueAsString(payload);
@@ -209,6 +215,7 @@ public class OfficialLoungeService {
             List<OfficialLoungeMemberResponse> members,
             QuoteResponse todayQuote
     ) {
+        List<LoungeNpcMemberResponse> npcMembers = npcViewService.members(members.size(), lounge.getMaxMemberCount());
         return OfficialLoungeSummaryResponse.builder()
                 .loungeId(lounge.getId())
                 .loungeName(lounge.getName())
@@ -219,6 +226,8 @@ public class OfficialLoungeService {
                 .myFocusCheckEnabled(userId != null && isFocusCheckEnabled(userId))
                 .todayQuote(todayQuote)
                 .members(members)
+                .npcMembers(npcMembers)
+                .displayMemberCount((long) members.size() + npcMembers.size())
                 .build();
     }
 

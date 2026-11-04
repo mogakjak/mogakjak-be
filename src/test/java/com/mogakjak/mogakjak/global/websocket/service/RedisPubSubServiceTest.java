@@ -21,6 +21,29 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class RedisPubSubServiceTest {
 
+    @Test
+    void npcPresenceSurvivesRedisJsonAndRoutesToExistingLoungeTopic() throws Exception {
+        RedisPubSubService service = new RedisPubSubService(stringRedisTemplate, messageTemplate);
+        var npc = new com.mogakjak.mogakjak.domain.lounge.dto.LoungeNpcMemberResponse(
+                "A", com.mogakjak.mogakjak.domain.lounge.npc.LoungeNpcType.A, "모각이", null, 1,
+                com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus.PARTICIPATING,
+                java.time.LocalDateTime.of(2026, 11, 4, 18, 0), 30L, "코딩테스트 준비");
+        var payload = OfficialLoungePresenceUpdateDto.builder().eventType("NPC_UPDATE")
+                .currentMemberCount(0L).displayMemberCount(1L).maxMemberCount(10)
+                .members(List.of()).npcMembers(List.of(npc)).build();
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper()
+                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+        when(message.getBody()).thenReturn(mapper.writeValueAsBytes(payload));
+        service.onMessage(message, "official-lounge-presence".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        ArgumentCaptor<Object> captured = ArgumentCaptor.forClass(Object.class);
+        verify(messageTemplate).convertAndSend(org.mockito.ArgumentMatchers.eq("/topic/lounge/presence"), captured.capture());
+        var routed = assertInstanceOf(OfficialLoungePresenceUpdateDto.class, captured.getValue());
+        assertEquals(List.of(npc), routed.getNpcMembers());
+        assertEquals(0L, routed.getCurrentMemberCount());
+        assertEquals(1L, routed.getDisplayMemberCount());
+        assertEquals(List.of(), routed.getMembers());
+    }
+
     @Mock
     private StringRedisTemplate stringRedisTemplate;
 

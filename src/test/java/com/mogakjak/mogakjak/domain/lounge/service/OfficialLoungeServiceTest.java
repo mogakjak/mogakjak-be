@@ -97,6 +97,9 @@ class OfficialLoungeServiceTest {
     @Mock
     private UserGroupRepository userGroupRepository;
 
+    @Mock
+    private LoungeNpcViewService npcViewService;
+
     @InjectMocks
     private OfficialLoungeService officialLoungeService;
 

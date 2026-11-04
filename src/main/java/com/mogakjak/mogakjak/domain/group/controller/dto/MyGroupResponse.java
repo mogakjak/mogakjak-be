@@ -2,6 +2,7 @@ package com.mogakjak.mogakjak.domain.group.controller.dto;
 
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeMemberResponse;
 import com.mogakjak.mogakjak.domain.lounge.dto.OfficialLoungeSummaryResponse;
+import com.mogakjak.mogakjak.domain.lounge.dto.LoungeNpcMemberResponse;
 import com.mogakjak.mogakjak.domain.user.entity.GroupParticipationStatus;
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +24,9 @@ public class MyGroupResponse {
     private Boolean hasEntered;
     private Boolean myFocusCheckEnabled;
     private List<GroupMemberDto> members;
+    @Builder.Default
+    private List<LoungeNpcMemberResponse> npcMembers = List.of();
+    private Long displayMemberCount;
 
     @Getter
     @Builder
@@ -69,6 +73,8 @@ public class MyGroupResponse {
                 .hasEntered(summary.getHasEntered())
                 .myFocusCheckEnabled(summary.getMyFocusCheckEnabled())
                 .members(loungeMembers)
+                .npcMembers(summary.getNpcMembers())
+                .displayMemberCount(summary.getDisplayMemberCount())
                 .build();
     }
 

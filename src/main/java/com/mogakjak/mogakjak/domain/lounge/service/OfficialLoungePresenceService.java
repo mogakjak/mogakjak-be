@@ -20,7 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OfficialLoungePresenceService {
 
-    private static final String PRESENCE_KEY = "official-lounge:presence";
+    public static final String PRESENCE_KEY = "official-lounge:presence";
     private static final String SESSION_COUNT_KEY = "official-lounge:websocket-sessions";
     private static final String CHEER_COUNT_KEY = "official-lounge:cheer-count";
 

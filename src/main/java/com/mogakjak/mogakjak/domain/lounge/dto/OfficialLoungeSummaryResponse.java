@@ -19,4 +19,7 @@ public class OfficialLoungeSummaryResponse {
     private Boolean myFocusCheckEnabled;
     private QuoteResponse todayQuote;
     private List<OfficialLoungeMemberResponse> members;
+    @Builder.Default
+    private List<LoungeNpcMemberResponse> npcMembers = List.of();
+    private Long displayMemberCount;
 }

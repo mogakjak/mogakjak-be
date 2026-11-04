@@ -1,6 +1,7 @@
 package com.mogakjak.mogakjak.domain.group.controller.dto;
 
 import com.mogakjak.mogakjak.domain.group.entity.Group;
+import com.mogakjak.mogakjak.domain.lounge.dto.LoungeNpcMemberResponse;
 import com.mogakjak.mogakjak.domain.user.entity.GroupRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -42,6 +43,9 @@ public class GroupDetailResponse {
 
     @Schema(description = "그룹 멤버 목록")
     private List<MemberInfo> members;
+    @Builder.Default
+    private List<LoungeNpcMemberResponse> npcMembers = List.of();
+    private Long displayMemberCount;
 
     @Getter
     @Builder
@@ -65,6 +69,13 @@ public class GroupDetailResponse {
             long participatingMemberCount,
             long totalMemberCount
     ) {
+        return from(group, members, participatingMemberCount, totalMemberCount, List.of(), participatingMemberCount);
+    }
+
+    public static GroupDetailResponse from(
+            Group group, List<MemberInfo> members, long participatingMemberCount, long totalMemberCount,
+            List<LoungeNpcMemberResponse> npcMembers, long displayMemberCount
+    ) {
         long accumulated = group.getAccumulatedDuration() != null ? group.getAccumulatedDuration() : 0L;
         long goalSeconds = group.getGoalSeconds() != null ? group.getGoalSeconds() : 0L;
 
@@ -84,6 +95,8 @@ public class GroupDetailResponse {
                 .participatingMemberCount(participatingMemberCount)
                 .totalMemberCount(totalMemberCount)
                 .members(members)
+                .npcMembers(npcMembers)
+                .displayMemberCount(displayMemberCount)
                 .build();
     }
 }
