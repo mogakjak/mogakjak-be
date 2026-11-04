@@ -41,3 +41,17 @@ active characters whose policy requirements are now satisfied.
 The level-based policy table is authoritative. Existing character image and name
 records remain unchanged, and legacy `unlock_time_in_seconds` values do not drive
 award decisions.
+
+## My Page Calendar and Overall Progress
+
+`GET /api/mypage/attendance` exposes the retroactive daily attendance results in a
+fixed ten-day Seoul calendar, together with the lifetime attendance count.
+The shared attendance query excludes invalid intervals and intervals ending
+after the request's snapshot time, including future-dated history.
+
+The basket's `growthProgress.levelProgressRate` is the slower of attendance and
+focus progress within the current level's segment. `overallProgressRate` maps
+that segment onto all eleven intervals between levels 1 and 12. Existing absolute
+per-condition progress fields keep their previous meaning. See
+[mypage-attendance-growth.md](mypage-attendance-growth.md) for the API contract,
+maximum-level behavior, examples, and verification procedure.
