@@ -3,6 +3,7 @@ package com.mogakjak.mogakjak.domain.user.service;
 import com.mogakjak.mogakjak.domain.user.controller.dto.ImageCharacterResponse;
 import com.mogakjak.mogakjak.domain.user.entity.ImageCharacter;
 import com.mogakjak.mogakjak.domain.user.entity.User;
+import com.mogakjak.mogakjak.domain.user.entity.UserCharacter;
 import com.mogakjak.mogakjak.domain.user.repository.ImageCharacterRepository;
 import com.mogakjak.mogakjak.domain.user.repository.UserCharacterRepository;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.anyList;
 
 @ExtendWith(MockitoExtension.class)
 class ImageCharacterServiceImplTest {
@@ -75,5 +78,36 @@ class ImageCharacterServiceImplTest {
         assertEquals(0, response.size());
         verify(userCharacterRepository, org.mockito.Mockito.never())
                 .saveAll(org.mockito.ArgumentMatchers.anyList());
+    }
+
+    @Test
+    void checkAndAwardCharacters_doesNotAwardWhenOnlyFocusTimeIsOneSecondShort() {
+        User user = User.builder().build();
+        ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
+        ImageCharacter character = ImageCharacter.builder().level(2).isActive(true)
+                .unlockTimeInSeconds(0).build();
+        when(characterGrowthService.getStatus(user.getId()))
+                .thenReturn(new CharacterGrowthStatus(100, 20 * 3_600L - 1));
+        when(repository.findAllByOrderByLevelAsc()).thenReturn(List.of(character));
+        when(userCharacterRepository.findAllByUser(user)).thenReturn(List.of());
+
+        assertEquals(0, service.checkAndAwardCharacters(user).size());
+        verify(userCharacterRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    void checkAndAwardCharacters_doesNotDuplicateAnAlreadyOwnedCharacter() {
+        User user = User.builder().build();
+        ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
+        ImageCharacter character = ImageCharacter.builder().level(2).isActive(true).build();
+        ReflectionTestUtils.setField(character, "id", UUID.randomUUID());
+        when(characterGrowthService.getStatus(user.getId()))
+                .thenReturn(new CharacterGrowthStatus(15, 20 * 3_600L));
+        when(repository.findAllByOrderByLevelAsc()).thenReturn(List.of(character));
+        when(userCharacterRepository.findAllByUser(user))
+                .thenReturn(List.of(UserCharacter.builder().user(user).imageCharacter(character).build()));
+
+        assertEquals(0, service.checkAndAwardCharacters(user).size());
+        verify(userCharacterRepository, never()).saveAll(anyList());
     }
 }

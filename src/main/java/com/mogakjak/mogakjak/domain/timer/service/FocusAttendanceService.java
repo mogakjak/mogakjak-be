@@ -7,8 +7,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.EnumSet;
@@ -25,12 +27,18 @@ public class FocusAttendanceService {
     public static final ZoneId ATTENDANCE_ZONE = ZoneId.of("Asia/Seoul");
 
     private final FocusIntervalRepository focusIntervalRepository;
+    private final Clock clock;
 
     public FocusAttendanceSummary getSummary(UUID userId) {
+        return getSummary(userId, LocalDateTime.now(clock.withZone(ATTENDANCE_ZONE)));
+    }
+
+    public FocusAttendanceSummary getSummary(UUID userId, LocalDateTime asOf) {
         Map<LocalDate, Long> dailyFocusSeconds = new HashMap<>();
         focusIntervalRepository.findCompletedFocusIntervalsByUser(
                         userId,
-                        EnumSet.of(PomodoroPhaseType.FOCUS, PomodoroPhaseType.NORMAL)
+                        EnumSet.of(PomodoroPhaseType.FOCUS, PomodoroPhaseType.NORMAL),
+                        asOf
                 )
                 .forEach(interval -> addBySeoulDate(interval, dailyFocusSeconds));
 

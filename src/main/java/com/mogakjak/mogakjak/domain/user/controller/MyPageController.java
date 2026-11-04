@@ -8,6 +8,7 @@ import com.mogakjak.mogakjak.global.auth.security.resolver.CurrentUser;
 import com.mogakjak.mogakjak.global.common.ApiResponse;
 import com.mogakjak.mogakjak.global.exception.status.SuccessCode;
 import com.mogakjak.mogakjak.domain.user.service.MyPageService;
+import com.mogakjak.mogakjak.domain.user.service.MyPageAttendanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +26,15 @@ import java.util.UUID;
 public class MyPageController {
 
     private final MyPageService myPageService;
+    private final MyPageAttendanceService myPageAttendanceService;
+
+    @Operation(summary = "출석 현황 조회", description = "KST 기준 과거 5일·오늘·미래 4일의 날짜별 집중시간과 출석 여부, 전체 누적 출석일을 반환합니다. 저장된 집중 구간의 하루 합계가 30분 이상이면 출석으로 인정합니다.")
+    @GetMapping("/attendance")
+    public ApiResponse<MyPageAttendanceResponse> getAttendance(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.success(SuccessCode.OK, myPageAttendanceService.getAttendance(getUserId(userDetails)));
+    }
 
     @Operation(summary = "내 채소 바구니 조회", description = "마이페이지의 '내 채소 바구니' 탭 정보를 조회합니다.")
     @GetMapping("/character-basket")
